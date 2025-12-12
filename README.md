@@ -85,11 +85,12 @@ Run:
 
 ### 4) With gauge-derived C only, EM/strong/weak coupling fits land within 5% (integer m)
 
-Scanning only gauge-derived $C\in\{360,180,120,60,45,15\}$ we found $(C,m)$ pairs within 5% for:
+Scanning only gauge-derived **C candidates** (`{360, 180, 120, 60, 45, 15}`) we found `(C, m)` pairs within 5% for:
 
-- **EM**: $1/\alpha$ via $C=360, m=2$
-- **Strong** (strict inverse benchmark $1/\alpha_s(m_Z)$): $C=60, m=4$ within 5%
-- **Weak** (strict inverse benchmark $1/\alpha_w(m_Z)$): $C=120, m=3$ within 5%
+- **EM**: target `1/alpha` via `C=360, m=2`
+- **Strong** (benchmark at `mZ`): target `1/alpha_s(mZ)` via `C=60, m=4` (within 5%)
+- **Weak** (benchmark at `mZ`): target `1/alpha_w(mZ)` via `C=120, m=3` (within 5%)
+
 
 Run:
 
