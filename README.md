@@ -2,13 +2,14 @@
 
 Tiny playground for exploring a proposed coupling:
 
-\[
-G = \\frac{C}{\\phi^m}
-\\qquad\\text{and}\\qquad
-F_0 = \\phi^m \\frac{k_B K}{h}
-\\]
+$$
+G = \frac{C}{\phi^m}
+\qquad\text{and}\qquad
+F_0 = \phi^m \frac{k_B K}{h}
+$$
 
 Where:
+
 - **G**: dimensionless “topological gauge”
 - **C**: dimensionless constant
 - **φ**: golden ratio
@@ -20,74 +21,78 @@ Where:
 
 Derived relation:
 
-\[
-G\\,F_0 = C\\,\\frac{k_B K}{h}
-\\]
+$$
+G\,F_0 = C\,\frac{k_B K}{h}
+$$
 
 ## What this repo is doing (in one sentence)
 
-We’re testing whether **non-arbitrary “topological constants”** \(C\) together with integer “harmonic steps” \(m\) can connect **dimensionless coupling strengths** (via \(G\)) to **frequency/temperature scales** (via \(F_0\)) in a coherent way.
+We’re testing whether **non-arbitrary “topological constants”** $C$ together with integer “harmonic steps” $m$ can connect **dimensionless coupling strengths** (via $G$) to **frequency/temperature scales** (via $F_0$) in a coherent way.
 
 ## Key formulas (core model)
 
 - **Topological gauge (dimensionless)**:
 
-\[
-G = \\frac{C}{\\phi^m}
-\]
+$$
+G = \frac{C}{\phi^m}
+$$
 
 - **Frequency coupling**:
 
-\[
-F_0 = \\phi^m\\,\\frac{k_B K}{h}
-\]
+$$
+F_0 = \phi^m\,\frac{k_B K}{h}
+$$
 
-- **Invariant relation (eliminates \\(\\phi^m\\))**:
+- **Invariant relation (eliminates $\phi^m$)**:
 
-\[
-G\\,F_0 = C\\,\\frac{k_B K}{h}
-\]
+$$
+G\,F_0 = C\,\frac{k_B K}{h}
+$$
 
 - **Inverse frequency → temperature (used in “Option 2”)**:
 
-\[
-K = \\frac{F_0 h}{k_B\\,\\phi^m}
-\]
+$$
+K = \frac{F_0 h}{k_B\,\phi^m}
+$$
 
 ## Key findings so far
 
 ### 1) 360 looks special for EM (1/alpha alignment)
 
 - Your example is reproduced exactly:
-  - \(G=360/\\phi^2 \\approx 137.507764\\)
-  - This is close to **\(1/\\alpha\\approx 137.035999\\)** (relative error \\(\~0.34\\%\\)).
+  - $G=360/\phi^2 \approx 137.507764$
+  - This is close to **$1/\alpha\approx 137.035999$** (relative error $\sim 0.34\%$).
 
 Run:
+
 - `python -m physics_test.cli check-example`
 
 ### 2) Integer m behaves like a harmonic ladder
 
-We enforced **integer \(m\)** throughout the CLI and scans, so each \(m\\to m\\pm1\) is a discrete step.
+We enforced **integer $m$** throughout the CLI and scans, so each $m \to m \pm 1$ is a discrete step.
 
 ### 3) Non-arbitrary C values can come from gauge invariants (base=360)
 
-We added a small gauge-invariant generator for **U(1), SU(2), SU(3)** and derived candidate \(C\) values from rank/dimension/Coxeter-type invariants using a single base “360”. This produces familiar non-arbitrary values:
+We added a small gauge-invariant generator for **U(1), SU(2), SU(3)** and derived candidate $C$ values from rank/dimension/Coxeter-type invariants using a single base “360”. This produces familiar non-arbitrary values:
 
-- **U(1)**: \(C=360\)
-- **SU(2)**: \(360/\\dim=120\), \(360/(\\dim\\cdot h)=60\), etc.
-- **SU(3)**: \(360/\\dim=45\), \(360/(\\dim\\cdot h)=15\), etc.
+- **U(1)**: $C=360$
+- **SU(2)**: $360/\dim=120$, $360/(\dim\cdot h)=60$, etc.
+- **SU(3)**: $360/\dim=45$, $360/(\dim\cdot h)=15$, etc.
 
 Run:
+
 - `python -m physics_test.cli list-gauge-Cs`
 
 ### 4) With gauge-derived C only, EM/strong/weak coupling fits land within 5% (integer m)
 
-Scanning only gauge-derived \(C\\in\\{360,180,120,60,45,15\\}\\) we found \((C,m)\) pairs within 5% for:
-- **EM**: \(1/\\alpha\\) via \(C=360, m=2\)
-- **Strong** (strict inverse benchmark \(1/\\alpha_s(m_Z)\\)): \(C=60, m=4\) within 5%
-- **Weak** (strict inverse benchmark \(1/\\alpha_w(m_Z)\\)): \(C=120, m=3\) within 5%
+Scanning only gauge-derived $C\in\{360,180,120,60,45,15\}$ we found $(C,m)$ pairs within 5% for:
+
+- **EM**: $1/\alpha$ via $C=360, m=2$
+- **Strong** (strict inverse benchmark $1/\alpha_s(m_Z)$): $C=60, m=4$ within 5%
+- **Weak** (strict inverse benchmark $1/\alpha_w(m_Z)$): $C=120, m=3$ within 5%
 
 Run:
+
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)"`
@@ -95,22 +100,22 @@ Run:
 
 ### 5) Gravity “type” matters; CMB K implies a specific m window per GW band
 
-If we fix gravity’s temperature \(K\\) to the **CMB** (default 2.725 K), then for a chosen GW frequency band the 2nd equation implies a narrow window of \(m\) values (because \(F_0 \\propto \\phi^m\\)).
+If we fix gravity’s temperature $K$ to the **CMB** (default 2.725 K), then for a chosen GW frequency band the 2nd equation implies a narrow window of $m$ values (because $F_0 \propto \phi^m$).
 
 We found:
-- With CMB \(K\), **CMB/primordial GW frequencies** correspond to roughly \(m\\approx -137\\) to \\(-129\\) (integerized).
+- With CMB $K$, **CMB/primordial GW frequencies** correspond to roughly $m\approx -137$ to $-129$ (integerized).
 
 ### 6) “Quantum gravity” mass-scale targets can reconcile gauge-derived C + CMB band
 
 We introduced a family of gravity couplings:
 
-\[
-\\alpha_G(m) = \\frac{G_N m^2}{\\hbar c}
-\\qquad\\text{and}\\qquad
-\\frac{1}{\\alpha_G(m)}
-\]
+$$
+\alpha_G(m) = \frac{G_N m^2}{\hbar c}
+\qquad\text{and}\qquad
+\frac{1}{\alpha_G(m)}
+$$
 
-where \(m\\) is a chosen mass scale (proton/electron, or a TeV-scale mass interpreted as \(m=E/c^2\)).
+where $m$ is a chosen mass scale (proton/electron, or a TeV-scale mass interpreted as $m=E/c^2$).
 
 Under strict constraints:
 - **C restricted to gauge-derived values only**
@@ -122,6 +127,7 @@ Under strict constraints:
 we found viable solutions when using inverse gravity couplings at TeV scales (a “quantum gravity” style target). A sweep over 1–1000 TeV found many passing scales (not a single needle).
 
 Run:
+
 - `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e6 --n-scales 121 --top 30`
 
 ## How to run the main workflows
@@ -152,9 +158,9 @@ Run:
   - **material response** (screening/dispersion in matter), and/or
   - **scale dependence** in high-energy processes (people write alpha(Q)).
 - **Strong/weak**: their dimensionless couplings are **scale-dependent** (they “run” with energy), so there isn't one single number unless you specify a reference scale.
-- **Gravity**: a common dimensionless coupling is \\(\\alpha_G(m)=G_N m^2/(\\hbar c)\\), which depends on the chosen mass scale \\(m\\).
+- **Gravity**: a common dimensionless coupling is $\alpha_G(m)=G_N m^2/(\hbar c)$, which depends on the chosen mass scale $m$.
 
-This repo supports scanning **multiple target options** (different scales / definitions) to see what—if anything—lands on simple \\((C,m)\\) patterns.
+This repo supports scanning **multiple target options** (different scales / definitions) to see what—if anything—lands on simple $(C,m)$ patterns.
 
 ## Quickstart
 
