@@ -1,0 +1,19 @@
+[project]
+name = "physics-test"
+version = "0.1.0"
+description = "Playground for exploring a simple topological gauge / frequency coupling model."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=2.3.0",
+  "scipy>=1.16.0",
+  "matplotlib>=3.10.0",
+]
+
+[project.scripts]
+topogauge = "physics_test.cli:main"
+
+[tool.ruff]
+line-length = 100
+
+
