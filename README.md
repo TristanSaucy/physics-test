@@ -8,6 +8,8 @@ G = \frac{C}{\phi^m}
 F_0 = \phi^m \frac{k_B K}{h}
 $$
 
+For the full manuscript-style writeup, see `paper.md`. For the frozen contract, see `freezing_the_rules.md`.
+
 Where:
 
 - **G**: dimensionless “topological gauge”
@@ -91,6 +93,7 @@ Scanning only gauge-derived **C candidates** (`{360, 180, 120, 60, 45, 15}`) we 
 - **Strong** (benchmark at `mZ`): target `1/alpha_s(mZ)` via `C=60, m=4` (within 5%)
 - **Weak** (benchmark at `mZ`): target `1/alpha_w(mZ)` via `C=120, m=3` (within 5%)
 
+Note: `mZ` means $m_Z$, the **Z boson mass** (~91.1876 GeV). It’s a standard reference energy scale where strong/electroweak couplings are commonly quoted (because couplings “run” with energy).
 
 Run:
 
@@ -104,9 +107,10 @@ Run:
 If we fix gravity’s temperature $K$ to the **CMB** (default 2.725 K), then for a chosen GW frequency band the 2nd equation implies a narrow window of $m$ values (because $F_0 \propto \phi^m$).
 
 We found:
+
 - With CMB $K$, **CMB/primordial GW frequencies** correspond to roughly $m\approx -137$ to $-129$ (integerized).
 
-### 6) “Quantum gravity” mass-scale targets can reconcile gauge-derived C + CMB band
+### 6) Gravity targets: ordinary-matter anchor vs GW-band “types”
 
 We introduced a family of gravity couplings:
 
@@ -118,39 +122,52 @@ $$
 
 where $m$ is a chosen mass scale (proton/electron, or a TeV-scale mass interpreted as $m=E/c^2$).
 
+**Frozen (strict) orientation:** use inverse gravity targets `1/alpha_G(mass)`.
+
+**Frozen (ordinary matter gravity):**
+
+- Canonical target: `1/alpha_G(p)` (proton mass scale)
+- Cross-check (not a free alternative): `1/alpha_G(e)` (electron mass scale)
+
 Under strict constraints:
+
 - **C restricted to gauge-derived values only**
 - **integer m**
 - **coupling fits within 5%**
 - **gravity K fixed to CMB**
 - **gravity F0 constrained to CMB GW band**
 
-we found viable solutions when using inverse gravity couplings at TeV scales (a “quantum gravity” style target). A sweep over 1–1000 TeV found many passing scales (not a single needle).
+we found viable solutions when using inverse gravity couplings at an **effective high-energy mass scale** for GW-band “gravity types” (not a single needle; see `paper.md` for the key identity and band tables).
 
 Run:
 
-- `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e6 --n-scales 121 --top 30`
+- `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e19 --n-scales 241 --top 12`
+  - Try `--gravity-band pta`, `--gravity-band lisa`, or `--gravity-band ligo` to explore other GW “gravity types”.
 
 ## How to run the main workflows
 
 ### List targets and presets
+
 - `python -m physics_test.cli list-targets`
 - `python -m physics_test.cli list-frequency-presets`
 - `python -m physics_test.cli list-gravity-bands`
 
 ### Option 1 (energy → K → F0)
+
 - `python -m physics_test.cli pair-forces-all ...`
 
 ### Option 2 (phenomenon F0 → solve K)
+
 - `python -m physics_test.cli pair-forces-option2 ...`
 
 ### Gauge-derived C only (non-arbitrary C set)
+
 - `python -m physics_test.cli pair-forces-gaugeCs ...`
 
 ## Caveats (important)
 
-- **Couplings run with scale**: strong/weak (and effective EM) depend on the energy scale; targets like `alpha_s(mZ)` are benchmark values at a reference scale.
-- **What “K” means**: for micro physics, treating K as an “energy-scale temperature” (i.e., \(E=k_BK\)) is often more coherent than interpreting it as literal thermodynamic temperature.
+- **Couplings run with scale**: strong/weak (and effective EM) depend on the energy scale; targets like `alpha_s(mZ)` (and therefore `1/alpha_s(mZ)`) are benchmark values at a reference scale.
+- **What “K” means**: for micro physics, treating $K$ as an “energy-scale temperature” (i.e., $E=k_BK$) is often more coherent than interpreting it as literal thermodynamic temperature.
 - **Avoiding overfitting**: as you allow larger families of C values, matches become easier. The most meaningful tests are the strict ones: discrete, justified C sets + fixed target definitions + fixed band constraints.
 
 ## Note on "different alpha" and the 4 forces (why we scan options)
