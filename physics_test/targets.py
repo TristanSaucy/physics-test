@@ -184,6 +184,11 @@ def known_targets() -> list[TargetConstant]:
         TargetConstant("alpha_G(mP)", alphaG_P, "Gravity: alpha_G using Planck mass scale (~1)"),
         TargetConstant("1/alpha_G(e)", 1.0 / alphaG_e, "Gravity: inverse alpha_G using electron mass scale"),
         TargetConstant("1/alpha_G(p)", 1.0 / alphaG_p, "Gravity: inverse alpha_G using proton mass scale"),
+        TargetConstant(
+            "1/alpha_G(mP)",
+            (1.0 / alphaG_P) if alphaG_P != 0 else float("inf"),
+            "Gravity: inverse alpha_G using Planck mass scale (~1)",
+        ),
         *extra_gravity_targets,
     ]
 

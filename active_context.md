@@ -97,7 +97,9 @@ Quantum-gravity mass sweep (CMB band):
 ### Open questions / next hypotheses
 
 - Are the gauge-derived C choices (360/120/60/45/15) actually the “right” non-arbitrary set, or do we need more invariants (rank, Casimirs, etc.)?
-- Which gravity coupling definition is the correct one for each “gravity type” (macro gravity, primordial GWs, quantum gravity)?
+- Gravity orientation is now frozen to inverse coupling targets (`1/alpha_G(mass)`).
+- Ordinary-matter gravity is now frozen to the **proton** target `1/alpha_G(p)`, with **electron** `1/alpha_G(e)` as a required cross-check (not a free alternative).
+- Remaining gravity open question: which mass anchors correspond to GW-band / primordial / quantum-gravity “types.”
 - EM is now frozen to `1/alpha` (low-energy) for strict runs (minimal scheme baggage; matches the 360 anchor cleanly). `1/alpha(mZ)` remains exploratory.
 - How to choose phenomenon frequencies F0 (Option 2) without introducing arbitrariness.
 

@@ -10,8 +10,13 @@ This is a living checklist for continuing the framework work in future sessions.
 - **Frozen (done): strong/weak default targets (strict)**
   - Strong strict target: **`1/alpha_s(mZ)`** (scale is explicit and frozen at \(m_Z\) for the benchmark).
   - Weak strict target: **`1/alpha_w(mZ)`** (same \(m_Z\) reference convention).
-- **Still open (needs freeze): gravity definition**
-  - Decide whether gravity’s canonical target is `alpha_G(mass)` or `1/alpha_G(mass)`, and which mass scale(s) define each “gravity type.”
+- **Frozen (done): gravity orientation**
+  - Gravity strict targets use **inverse coupling**: `1/alpha_G(mass)`.
+- **Frozen (done): ordinary-matter gravity anchor + cross-check**
+  - Canonical ordinary-matter gravity target: **`1/alpha_G(p)`** (proton mass scale).
+  - Mandatory cross-check (not a free alternative): **`1/alpha_G(e)`** (electron mass scale), which should appear with an \(m\)-shift consistent with \((m_p/m_e)^2\) (see `paper.md` §5.2).
+- **Still open (needs freeze): other gravity “types”**
+  - Decide which mass scale(s) define GW-band / primordial / “quantum gravity” types (prefer freezing a small set rather than sweeping).
 - **Frozen (done): strict C candidates**
   - Strict gauge-derived set: **\(C\\in\\{360,180,120,60,45,15\\}\\)** (derived from SM gauge-group invariants from base=360).
   - Avoid large “octave-union” families unless explicitly justified (keep them exploratory).

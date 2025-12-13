@@ -130,9 +130,20 @@ These were found within 5% (examples; run scans to reproduce):
 
 Gravity spans broad frequency bands and multiple plausible dimensionless coupling definitions.
 
+Frozen orientation:
+- Gravity uses the **inverse-coupling coordinate** in strict mode: `1/alpha_G(mass)`.
+
+Frozen “ordinary matter gravity” anchor (strict):
+- Canonical target: **`1/alpha_G(p)`** (proton mass scale).
+- Cross-check (required, not a free alternative): **`1/alpha_G(e)`** (electron mass scale). The model should reproduce an \(m\)-shift consistent with
+  \[
+  \frac{1/\alpha_G(e)}{1/\alpha_G(p)}=\left(\frac{m_p}{m_e}\right)^2
+  \]
+  up to the discrete allowed \(C\) ratio. (Derivation in `paper.md` §5.2.)
+
 We will defer final gravity “rules” until:
 - we decide which GW band is being targeted (CMB/PTA/LISA/LIGO), and
-- we decide which gravity coupling definition corresponds to “that gravity type.”
+- we decide which mass anchor(s) correspond to each “gravity type” (e.g., proton/electron for ordinary matter gravity vs an effective high-energy scale for GW-band gravity).
 
 ### 7) Option 2 (phenomenon-first) vs Option 1 (energy-first)
 
