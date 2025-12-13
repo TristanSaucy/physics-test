@@ -129,6 +129,14 @@ where $m$ is a chosen mass scale (proton/electron, or a TeV-scale mass interpret
 - Canonical target: `1/alpha_G(p)` (proton mass scale)
 - Cross-check (not a free alternative): `1/alpha_G(e)` (electron mass scale)
 
+**Frozen (GW-band gravity types; inverse coupling under CMB K):**
+
+- `1/alpha_G(GW_CMB)` (CMB/primordial band anchor)
+- `1/alpha_G(GW_PTA)` (PTA band anchor)
+- `1/alpha_G(GW_LISA)` (LISA band anchor)
+- `1/alpha_G(GW_LIGO)` (LIGO band anchor)
+- `1/alpha_G(mP)` (Planck/quantum type; ~1)
+
 Under strict constraints:
 
 - **C restricted to gauge-derived values only**

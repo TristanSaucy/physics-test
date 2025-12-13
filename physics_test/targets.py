@@ -70,16 +70,28 @@ def known_targets() -> list[TargetConstant]:
         ("10TeV", 10_000.0),
         ("40TeV", 40_000.0),
         ("100TeV", 100_000.0),
+        # Frozen GW-band / primordial gravity-type anchors (derived from strict inverse-gravity sweeps under CMB K).
+        ("GW_CMB", 2.93012e4),
+        ("GW_PTA", 1.58009e9),
+        ("GW_LISA", 2.15524e12),
+        ("GW_LIGO", 5.41086e13),
     ]
     extra_gravity_targets: list[TargetConstant] = []
     for label, gev in gravity_mass_scales_GeV:
         mkg = mass_kg_from_GeV(gev)
         a = alpha_gravity(mkg)
+        if label.startswith("GW_"):
+            band = label.split("_", 1)[1]
+            note_a = f"Gravity (frozen GW type): alpha_G using GW-{band} mass anchor {gev} GeV"
+            note_inv = f"Gravity (frozen GW type): inverse alpha_G using GW-{band} mass anchor {gev} GeV"
+        else:
+            note_a = f"Gravity: alpha_G using mass scale {gev} GeV"
+            note_inv = f"Gravity: inverse alpha_G using mass scale {gev} GeV"
         extra_gravity_targets.append(
-            TargetConstant(f"alpha_G({label})", a, f"Gravity: alpha_G using mass scale {gev} GeV")
+            TargetConstant(f"alpha_G({label})", a, note_a)
         )
         extra_gravity_targets.append(
-            TargetConstant(f"1/alpha_G({label})", 1.0 / a, f"Gravity: inverse alpha_G using mass scale {gev} GeV")
+            TargetConstant(f"1/alpha_G({label})", 1.0 / a, note_inv)
         )
 
     # Optional: toy running alpha_s(Q) values for a few Q points, just to scan patterns.

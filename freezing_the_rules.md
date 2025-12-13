@@ -126,7 +126,7 @@ These were found within 5% (examples; run scans to reproduce):
 - `alpha_Y(mZ)`:
   - C=60, m=18 (≈ +2.4%)
 
-### 6) Gravity (not frozen yet)
+### 6) Gravity (frozen targets + types)
 
 Gravity spans broad frequency bands and multiple plausible dimensionless coupling definitions.
 
@@ -141,9 +141,16 @@ Frozen “ordinary matter gravity” anchor (strict):
   \]
   up to the discrete allowed \(C\) ratio. (Derivation in `paper.md` §5.2.)
 
-We will defer final gravity “rules” until:
-- we decide which GW band is being targeted (CMB/PTA/LISA/LIGO), and
-- we decide which mass anchor(s) correspond to each “gravity type” (e.g., proton/electron for ordinary matter gravity vs an effective high-energy scale for GW-band gravity).
+Frozen GW-band / primordial “gravity types” (strict):
+- We freeze one mass anchor per band-derived type (from strict inverse-gravity band sweeps under **CMB K**, see `paper.md` §5.4):
+  - `1/alpha_G(GW_CMB)` with \(M=2.93012\\times 10^4\) GeV
+  - `1/alpha_G(GW_PTA)` with \(M=1.58009\\times 10^9\) GeV
+  - `1/alpha_G(GW_LISA)` with \(M=2.15524\\times 10^{12}\) GeV
+  - `1/alpha_G(GW_LIGO)` with \(M=5.41086\\times 10^{13}\) GeV
+  - For these GW-band types, gravity’s temperature is treated as **CMB** by default: \(K=2.725\\,K\).
+
+Frozen “Planck/quantum gravity” type (strict):
+- `1/alpha_G(mP)` (~1), using the Planck mass scale.
 
 ### 7) Option 2 (phenomenon-first) vs Option 1 (energy-first)
 

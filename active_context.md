@@ -88,18 +88,23 @@ Gauge-derived C exploration:
 Full pairing under gauge-derived C:
 
 - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band any`
-- `python -m physics_test.cli pair-forces-gaugeCs --gravity-band cmb --gravity-targets "1/alpha_G(p),1/alpha_G(40TeV),1/alpha_G(100TeV)" ...`
+- `python -m physics_test.cli pair-forces-gaugeCs --gravity-band cmb --gravity-targets "1/alpha_G(p),1/alpha_G(GW_CMB)" ...`
+- `python -m physics_test.cli pair-forces-gaugeCs --gravity-band pta --gravity-targets "1/alpha_G(GW_PTA)" ...`
+- `python -m physics_test.cli pair-forces-gaugeCs --gravity-band lisa --gravity-targets "1/alpha_G(GW_LISA)" ...`
+- `python -m physics_test.cli pair-forces-gaugeCs --gravity-band ligo --gravity-targets "1/alpha_G(GW_LIGO)" ...`
 
 Quantum-gravity mass sweep (CMB band):
 
-- `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e6 --n-scales 121 --top 30`
+- `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e19 --n-scales 241 --top 12`
 
 ### Open questions / next hypotheses
 
 - Are the gauge-derived C choices (360/120/60/45/15) actually the “right” non-arbitrary set, or do we need more invariants (rank, Casimirs, etc.)?
 - Gravity orientation is now frozen to inverse coupling targets (`1/alpha_G(mass)`).
-- Ordinary-matter gravity is now frozen to the **proton** target `1/alpha_G(p)`, with **electron** `1/alpha_G(e)` as a required cross-check (not a free alternative).
-- Remaining gravity open question: which mass anchors correspond to GW-band / primordial / quantum-gravity “types.”
+- Ordinary-matter gravity is frozen to the **proton** target `1/alpha_G(p)`, with **electron** `1/alpha_G(e)` as a required cross-check (not a free alternative).
+- GW-band gravity “types” are now frozen to these mass-anchor targets:
+  - `1/alpha_G(GW_CMB)`, `1/alpha_G(GW_PTA)`, `1/alpha_G(GW_LISA)`, `1/alpha_G(GW_LIGO)`
+- Planck/quantum gravity type is frozen to `1/alpha_G(mP)` (~1).
 - EM is now frozen to `1/alpha` (low-energy) for strict runs (minimal scheme baggage; matches the 360 anchor cleanly). `1/alpha(mZ)` remains exploratory.
 - How to choose phenomenon frequencies F0 (Option 2) without introducing arbitrariness.
 

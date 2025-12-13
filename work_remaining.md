@@ -15,8 +15,14 @@ This is a living checklist for continuing the framework work in future sessions.
 - **Frozen (done): ordinary-matter gravity anchor + cross-check**
   - Canonical ordinary-matter gravity target: **`1/alpha_G(p)`** (proton mass scale).
   - Mandatory cross-check (not a free alternative): **`1/alpha_G(e)`** (electron mass scale), which should appear with an \(m\)-shift consistent with \((m_p/m_e)^2\) (see `paper.md` §5.2).
-- **Still open (needs freeze): other gravity “types”**
-  - Decide which mass scale(s) define GW-band / primordial / “quantum gravity” types (prefer freezing a small set rather than sweeping).
+- **Frozen (done): other gravity “types” (GW-band / primordial / quantum)**
+  - Frozen GW-band type anchors (inverse gravity, derived under CMB K; see `paper.md` §5.4):
+    - **GW_CMB**: \(M = 2.93012\times 10^4\) GeV (~29.3 TeV)
+    - **GW_PTA**: \(M = 1.58009\times 10^9\) GeV
+    - **GW_LISA**: \(M = 2.15524\times 10^{12}\) GeV
+    - **GW_LIGO**: \(M = 5.41086\times 10^{13}\) GeV
+  - Frozen “Planck/quantum gravity” type (separate from GW bands):
+    - **mP**: \(M \sim 10^{19}\) GeV (Planck scale; \(1/\\alpha_G(m_P)\\approx 1\\), can land at positive \(m\) under strict gauge-\(C\))
 - **Frozen (done): strict C candidates**
   - Strict gauge-derived set: **\(C\\in\\{360,180,120,60,45,15\\}\\)** (derived from SM gauge-group invariants from base=360).
   - Avoid large “octave-union” families unless explicitly justified (keep them exploratory).

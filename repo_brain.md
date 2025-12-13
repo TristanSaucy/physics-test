@@ -91,10 +91,13 @@ Option 2 (“phenomenon-first”) is useful because it forces K to be implied by
 
 - Full pairing under gauge-derived C:
   - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band any`
-  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band cmb --gravity-targets "1/alpha_G(p),1/alpha_G(40TeV)"`
+  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band cmb --gravity-targets "1/alpha_G(p),1/alpha_G(GW_CMB)"`
+  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band pta --gravity-targets "1/alpha_G(GW_PTA)"`
+  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band lisa --gravity-targets "1/alpha_G(GW_LISA)"`
+  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band ligo --gravity-targets "1/alpha_G(GW_LIGO)"`
 
 - Quantum gravity mass sweep:
-  - `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e6 --n-scales 121 --top 30`
+  - `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e19 --n-scales 241 --top 12`
 
 ### 7) Visualization
 
