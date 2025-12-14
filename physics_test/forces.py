@@ -61,3 +61,47 @@ def alpha_s_run_1loop_from_ref(
     return 1.0 / alpha_inv_Q
 
 
+def alpha_s_run_1loop_from_ref_nf_switch(
+    Q_GeV: float,
+    *,
+    alpha_s_Q0: float,
+    Q0_GeV: float,
+    Q_switch_GeV: float,
+    n_f_below: int,
+    n_f_above: int,
+) -> float:
+    """
+    1-loop running with a single "active flavor" switch at Q_switch_GeV.
+
+    This is a minimal step toward a more realistic running prescription:
+      - use n_f_below for the segment(s) with Q < Q_switch
+      - use n_f_above for the segment(s) with Q > Q_switch
+
+    NOTE: this still ignores proper threshold matching and higher loops; it is
+    intended for *out-of-sample* robustness checks, not precision QCD.
+    """
+
+    if Q_switch_GeV <= 0:
+        raise ValueError("Q_switch_GeV must be positive")
+
+    # Same-side: reduce to the constant-nf runner
+    if (Q0_GeV <= Q_switch_GeV and Q_GeV <= Q_switch_GeV) or (Q0_GeV >= Q_switch_GeV and Q_GeV >= Q_switch_GeV):
+        n_f = n_f_below if Q_GeV <= Q_switch_GeV else n_f_above
+        return alpha_s_run_1loop_from_ref(Q_GeV, alpha_s_Q0=alpha_s_Q0, Q0_GeV=Q0_GeV, n_f=n_f)
+
+    # Cross the switch: run in two segments via Q_switch
+    if Q0_GeV < Q_switch_GeV < Q_GeV:
+        a_switch = alpha_s_run_1loop_from_ref(
+            Q_switch_GeV, alpha_s_Q0=alpha_s_Q0, Q0_GeV=Q0_GeV, n_f=n_f_below
+        )
+        return alpha_s_run_1loop_from_ref(Q_GeV, alpha_s_Q0=a_switch, Q0_GeV=Q_switch_GeV, n_f=n_f_above)
+    if Q_GeV < Q_switch_GeV < Q0_GeV:
+        a_switch = alpha_s_run_1loop_from_ref(
+            Q_switch_GeV, alpha_s_Q0=alpha_s_Q0, Q0_GeV=Q0_GeV, n_f=n_f_above
+        )
+        return alpha_s_run_1loop_from_ref(Q_GeV, alpha_s_Q0=a_switch, Q0_GeV=Q_switch_GeV, n_f=n_f_below)
+
+    # Should be unreachable with the cases above
+    raise RuntimeError("Unhandled nf-switch case")
+
+

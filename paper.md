@@ -506,6 +506,7 @@ Out-of-sample report (frozen test suites v1/v2):
 ```bash
 python -m physics_test.cli oos-report --suite v1 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
+python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 ```
 
 Gravity band sweeps (inverse gravity targets, CMB K):

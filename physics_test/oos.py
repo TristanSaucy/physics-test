@@ -96,10 +96,38 @@ def oos_targets_v2() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v3() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v3).
+
+    v3 focuses specifically on strong-running robustness: it uses a slightly more
+    realistic 1-loop prescription above the top threshold by switching n_f from 5 to 6
+    at mt (still no matching + no higher loops).
+    """
+
+    return [
+        # High-scale cross-checks: nf changes above mt; this tests robustness of the
+        # "discrete lattice" picture under a more realistic (still toy) running prescription.
+        OOSTarget(
+            "1/alpha_s_1loop_nf56_from_mZ(1TeV)",
+            "Strong-running cross-check at 1 TeV using 1-loop running with nf=5 below mt and nf=6 above (no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_1loop_nf56_from_mZ(10TeV)",
+            "Strong-running cross-check at 10 TeV using 1-loop running with nf=5 below mt and nf=6 above (no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_1loop_from_mZ(mW)",
+            "Strong-running cross-check at mW (still nf=5). This tests whether the lattice prefers the Z/H anchoring vs W anchoring.",
+        ),
+    ]
+
+
 def oos_suites() -> dict[str, list[OOSTarget]]:
     return {
         "v1": oos_targets_v1(),
         "v2": oos_targets_v2(),
+        "v3": oos_targets_v3(),
     }
 
 

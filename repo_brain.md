@@ -111,6 +111,7 @@ python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --stro
 # out-of-sample (frozen test suites)
 python -m physics_test.cli oos-report --suite v1 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
+python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 ```
 
 Optional gravity mass sweep (inverse gravity; CMB $K$):
