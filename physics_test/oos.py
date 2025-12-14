@@ -169,3 +169,89 @@ def resolve_oos_targets(oos: list[OOSTarget]) -> list[TargetConstant]:
     return [by_name[x.key] for x in oos]
 
 
+def predictive_force_suites() -> dict[str, tuple[dict[str, OOSTarget], dict[str, list[OOSTarget]]]]:
+    """
+    Predictive OOS suites.
+
+    Unlike `oos_suites()` (which lets C vary per target), these suites are designed to
+    freeze *one* best-fit C per force using a strict anchor target, then evaluate
+    additional targets with C held fixed.
+    """
+
+    return {
+        "v1": predictive_force_suite_v1(),
+    }
+
+
+def predictive_force_suite_v1() -> tuple[dict[str, OOSTarget], dict[str, list[OOSTarget]]]:
+    """
+    Predictive OOS suite v1.
+
+    - Anchors are the frozen strict targets (one per force).
+    - Predictive targets are a small, force-local menu of OOS checks.
+    """
+
+    anchors: dict[str, OOSTarget] = {
+        "em": OOSTarget("1/alpha", "Strict EM anchor (vacuum, low-energy)."),
+        "strong": OOSTarget("1/alpha_s_1loop_from_mZ(mH)", "Strict strong anchor (1-loop-from-mZ at mH)."),
+        "weak": OOSTarget(
+            "1/alpha2(alpha(mZ),sin2_on_shell)",
+            "Strict weak anchor (alpha2 derived from alpha(mZ) and on-shell sin^2thetaW).",
+        ),
+        "gravity": OOSTarget("1/alpha_G(p)", "Strict gravity anchor (ordinary matter; proton mass)."),
+    }
+
+    targets: dict[str, list[OOSTarget]] = {
+        "em": [
+            OOSTarget(
+                "1/alpha(mZ)",
+                "OOS: effective EM inverse coupling at the Z pole (vacuum polarization) vs the low-energy anchor.",
+            ),
+        ],
+        "strong": [
+            OOSTarget(
+                "1/alpha_s_1loop_from_mZ(mW)",
+                "OOS: strong-running cross-check at mW (same fixed 1-loop-from-mZ prescription).",
+            ),
+            OOSTarget(
+                "1/alpha_s_1loop_from_mZ(mt)",
+                "OOS: strong-running cross-check at mt (same fixed 1-loop-from-mZ prescription).",
+            ),
+            OOSTarget(
+                "1/alpha_s_1loop_from_mZ(1TeV)",
+                "OOS: strong-running cross-check at 1 TeV (same fixed 1-loop-from-mZ prescription).",
+            ),
+            OOSTarget(
+                "1/alpha_s_1loop_from_mZ(10TeV)",
+                "OOS: strong-running cross-check at 10 TeV (same fixed 1-loop-from-mZ prescription).",
+            ),
+        ],
+        "weak": [
+            OOSTarget(
+                "sin2thetaW(mZ)",
+                "OOS: EW diagnostic (scheme-dependent). Tests whether the weak-lattice anchor predicts the quoted MSbar-ish value.",
+            ),
+            OOSTarget(
+                "1/alpha2(alpha(mZ),sin2)",
+                "OOS: inverse alpha2 using the MSbar-ish sin^2thetaW(mZ) value (contrast vs on-shell strict anchor).",
+            ),
+            OOSTarget(
+                "1/alpha_w(mZ)",
+                "OOS: legacy proxy 1/alpha_w(mZ) from g≈0.652 (comparison target).",
+            ),
+        ],
+        "gravity": [
+            OOSTarget(
+                "1/alpha_G(e)",
+                "OOS: mandatory cross-check using electron mass anchor (should imply a discrete Δm relative to proton anchor).",
+            ),
+            OOSTarget(
+                "1/alpha_G(mP)",
+                "OOS: extreme cross-check using Planck mass anchor (~1).",
+            ),
+        ],
+    }
+
+    return anchors, targets
+
+

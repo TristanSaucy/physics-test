@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import sys
 
 from physics_test import constants
 from physics_test.forces import alpha_gravity
@@ -16,7 +17,7 @@ from physics_test.model import (
 from physics_test.scan import filter_hits_by_rel_err, frange, scan_candidates
 from physics_test.toponumbers import candidate_sets, get_candidate_set
 from physics_test.targets import known_targets
-from physics_test.oos import oos_suites, resolve_oos_targets
+from physics_test.oos import oos_suites, predictive_force_suites, resolve_oos_targets
 from physics_test.gravity_bands import bands as gravity_band_list
 from physics_test.units import (
     energy_J_from_GeV,
@@ -29,6 +30,27 @@ from physics_test.presets import em_frequency_presets, get_preset, particle_prox
 from physics_test.gauge_groups import candidate_Cs_from_group, standard_model_gauge_groups
 from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
+
+
+def _try_configure_utf8_stdio() -> None:
+    """
+    Windows consoles often default to legacy encodings (e.g. cp1252), which can crash
+    `print()` if notes contain symbols like α, ≈, etc. Reconfigure to UTF-8 when possible.
+    """
+
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    try:
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
+_try_configure_utf8_stdio()
 
 
 def _add_common_args(p: argparse.ArgumentParser) -> None:
@@ -156,6 +178,108 @@ def cmd_oos_report(args: argparse.Namespace) -> int:
         )
         print(f"       rationale: {ot.rationale}")
     print(f"\nSummary: {n_pass}/{len(oos)} PASS at tol={args.max_rel_err}")
+    return 0
+
+
+def cmd_oos_predictive(args: argparse.Namespace) -> int:
+    """
+    Predictive OOS report:
+      1) For each force, fit (C,m) for a strict anchor target using the strict gauge-derived C menu.
+      2) Freeze C for that force.
+      3) Evaluate additional targets for that force with C held fixed (only m can vary).
+    """
+
+    suites = predictive_force_suites()
+    if args.suite not in suites:
+        raise SystemExit(f"Unknown predictive OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
+
+    anchors, by_force = suites[args.suite]
+    target_map = {t.name: t.value for t in known_targets()}
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    # Which forces to run
+    if args.force == "all":
+        forces = ["em", "strong", "weak", "gravity"]
+    else:
+        forces = [args.force]
+
+    print(f"Predictive OOS suite: {args.suite}")
+    print(f"tol(|rel_err|) = {args.max_rel_err}")
+    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]")
+    print("Rule: fit anchor with free C, then HOLD C fixed per force.\n")
+
+    total_pass = 0
+    total_n = 0
+
+    for force in forces:
+        if force not in anchors:
+            raise SystemExit(f"Unknown force {force!r}. Options: {', '.join(sorted(anchors.keys()))}")
+        if force not in by_force:
+            raise SystemExit(f"Predictive suite {args.suite!r} missing targets for force {force!r}")
+
+        anchor = anchors[force]
+        if anchor.key not in target_map:
+            raise SystemExit(f"Unknown anchor key {anchor.key!r} for force {force!r}. Run `list-targets`.")
+
+        # Fit the anchor with the strict gauge-derived menu (choose best C and m)
+        anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=target_map[anchor.key])
+        best_anchor = anchor_hits[0]
+        C0 = best_anchor.C
+        m0 = int(best_anchor.m)
+        lab = label_by_C.get(C0, "")
+
+        print(f"{force.upper():7s} anchor: {anchor.key:28s} target={target_map[anchor.key]:.12g}")
+        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, G={best_anchor.G:.12g}, rel_err={best_anchor.rel_err:.3e}")
+        print(f"         note: {anchor.rationale}")
+
+        n_pass = 0
+        n = 0
+        for ot in by_force[force]:
+            if ot.key not in target_map:
+                raise SystemExit(f"Unknown predictive target key {ot.key!r}. Run `list-targets`.")
+            hits = scan_candidates(Cs=[C0], m_values=m_values, target_G=target_map[ot.key])
+            best = hits[0]
+            ok = abs(best.rel_err) <= args.max_rel_err
+            status = "PASS" if ok else "FAIL"
+            if ok:
+                n_pass += 1
+            n += 1
+            dm = int(best.m) - m0
+            print(
+                f"  [{status}] {ot.key:28s} target={target_map[ot.key]:.12g}  "
+                f"m={int(best.m):d} (dm={dm:+d})  G={best.G:.12g}  rel_err={best.rel_err:.3e}"
+            )
+            print(f"         rationale: {ot.rationale}")
+        print(f"  Force summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
+
+        total_pass += n_pass
+        total_n += n
+
+    print(f"Overall predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -1164,6 +1288,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
     p_oos.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos.set_defaults(func=cmd_oos_report)
+
+    p_oos_pred = sub.add_parser(
+        "oos-predictive",
+        help="Predictive OOS: freeze one best-fit C per force (from strict anchors), then evaluate OOS targets with C fixed",
+    )
+    p_oos_pred.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos_pred.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_oos_pred.add_argument("--suite", choices=["v1"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred.add_argument(
+        "--force",
+        choices=["all", "em", "strong", "weak", "gravity"],
+        default="all",
+        help="Which force group(s) to run (default: all)",
+    )
+    p_oos_pred.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_oos_pred.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_oos_pred.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_oos_pred.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
+    p_oos_pred.set_defaults(func=cmd_oos_predictive)
 
     p_gbands = sub.add_parser("list-gravity-bands", help="List built-in gravity-wave frequency band presets")
     p_gbands.set_defaults(func=cmd_list_gravity_bands)

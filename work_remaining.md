@@ -59,6 +59,7 @@ This is a living checklist for continuing the framework work in future sessions.
   - penalties for free choices.
 - Document what would count as a **failure mode** (no configurations survive under strict constraints).
 - Added frozen out-of-sample test suites (v1/v2/v3/v4): `python -m physics_test.cli oos-report --suite v1|v2|v3|v4`
+- Added predictive OOS (fit one C per force from strict anchors, then hold C fixed): `python -m physics_test.cli oos-predictive --suite v1`
 
 ## 6) Make analysis easier to inspect
 
