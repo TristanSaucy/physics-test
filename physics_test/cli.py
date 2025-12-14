@@ -1158,7 +1158,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
         help="Comma-separated gauge C constructions to include.",
     )
-    p_oos.add_argument("--suite", choices=["v1", "v2", "v3"], default="v1", help="Frozen OOS suite to run (default: v1)")
+    p_oos.add_argument("--suite", choices=["v1", "v2", "v3", "v4"], default="v1", help="Frozen OOS suite to run (default: v1)")
     p_oos.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
     p_oos.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
     p_oos.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")

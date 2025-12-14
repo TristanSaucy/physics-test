@@ -123,11 +123,37 @@ def oos_targets_v3() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v4() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v4).
+
+    v4 upgrades the strong-running cross-checks to a 2-loop beta function, while still
+    avoiding any new free parameters by anchoring to alpha_s(mZ). We also keep the same
+    minimal threshold story: switch n_f from 5 to 6 at mt (no matching).
+    """
+
+    return [
+        OOSTarget(
+            "1/alpha_s_2loop_from_mZ(mW)",
+            "Strong-running cross-check at mW using 2-loop running from alpha_s(mZ) (nf=5; no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_2loop_nf56_from_mZ(1TeV)",
+            "Strong-running cross-check at 1 TeV using 2-loop running with nf=5 below mt and nf=6 above (no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_2loop_nf56_from_mZ(10TeV)",
+            "Strong-running cross-check at 10 TeV using 2-loop running with nf=5 below mt and nf=6 above (no thresholds).",
+        ),
+    ]
+
+
 def oos_suites() -> dict[str, list[OOSTarget]]:
     return {
         "v1": oos_targets_v1(),
         "v2": oos_targets_v2(),
         "v3": oos_targets_v3(),
+        "v4": oos_targets_v4(),
     }
 
 

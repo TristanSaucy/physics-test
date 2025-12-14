@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from physics_test import constants
-from physics_test.forces import alpha_gravity, alpha_s_1loop, alpha_s_run_1loop_from_ref, alpha_s_run_1loop_from_ref_nf_switch
+from physics_test.forces import (
+    alpha_gravity,
+    alpha_s_1loop,
+    alpha_s_run_1loop_from_ref,
+    alpha_s_run_1loop_from_ref_nf_switch,
+    alpha_s_run_2loop_from_ref,
+    alpha_s_run_2loop_from_ref_nf_switch,
+)
 from physics_test.units import mass_kg_from_GeV
 
 
@@ -73,6 +80,16 @@ def known_targets() -> list[TargetConstant]:
         1_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, Q_switch_GeV=mt_GeV, n_f_below=5, n_f_above=6
     )
     alpha_s_10TeV_1loop_nf56_from_mZ = alpha_s_run_1loop_from_ref_nf_switch(
+        10_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, Q_switch_GeV=mt_GeV, n_f_below=5, n_f_above=6
+    )
+
+    # 2-loop variants (still toy, but closer to standard QCD running). We keep the
+    # same minimal threshold story: nf=5 below mt and nf=6 above mt.
+    alpha_s_mW_2loop_from_mZ = alpha_s_run_2loop_from_ref(mW_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+    alpha_s_1TeV_2loop_nf56_from_mZ = alpha_s_run_2loop_from_ref_nf_switch(
+        1_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, Q_switch_GeV=mt_GeV, n_f_below=5, n_f_above=6
+    )
+    alpha_s_10TeV_2loop_nf56_from_mZ = alpha_s_run_2loop_from_ref_nf_switch(
         10_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, Q_switch_GeV=mt_GeV, n_f_below=5, n_f_above=6
     )
 
@@ -296,6 +313,36 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_nf56_from_mZ(10TeV)",
             (1.0 / alpha_s_10TeV_1loop_nf56_from_mZ) if alpha_s_10TeV_1loop_nf56_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_nf56_from_mZ(10TeV)",
+        ),
+        TargetConstant(
+            "alpha_s_2loop_from_mZ(mW)",
+            alpha_s_mW_2loop_from_mZ,
+            "Strong (OOS): alpha_s at mW via 2-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_2loop_from_mZ(mW)",
+            (1.0 / alpha_s_mW_2loop_from_mZ) if alpha_s_mW_2loop_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_2loop_from_mZ(mW)",
+        ),
+        TargetConstant(
+            "alpha_s_2loop_nf56_from_mZ(1TeV)",
+            alpha_s_1TeV_2loop_nf56_from_mZ,
+            "Strong (OOS): alpha_s at 1 TeV via 2-loop running with nf=5 below mt and nf=6 above (no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_2loop_nf56_from_mZ(1TeV)",
+            (1.0 / alpha_s_1TeV_2loop_nf56_from_mZ) if alpha_s_1TeV_2loop_nf56_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_2loop_nf56_from_mZ(1TeV)",
+        ),
+        TargetConstant(
+            "alpha_s_2loop_nf56_from_mZ(10TeV)",
+            alpha_s_10TeV_2loop_nf56_from_mZ,
+            "Strong (OOS): alpha_s at 10 TeV via 2-loop running with nf=5 below mt and nf=6 above (no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_2loop_nf56_from_mZ(10TeV)",
+            (1.0 / alpha_s_10TeV_2loop_nf56_from_mZ) if alpha_s_10TeV_2loop_nf56_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_2loop_nf56_from_mZ(10TeV)",
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(

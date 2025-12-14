@@ -58,7 +58,7 @@ This is a living checklist for continuing the framework work in future sessions.
   - any K plausibility windows,
   - penalties for free choices.
 - Document what would count as a **failure mode** (no configurations survive under strict constraints).
-- Added frozen out-of-sample test suites (v1/v2/v3): `python -m physics_test.cli oos-report --suite v1|v2|v3`
+- Added frozen out-of-sample test suites (v1/v2/v3/v4): `python -m physics_test.cli oos-report --suite v1|v2|v3|v4`
 
 ## 6) Make analysis easier to inspect
 
