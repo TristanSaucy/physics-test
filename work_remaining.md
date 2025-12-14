@@ -46,6 +46,7 @@ This is a living checklist for continuing the framework work in future sessions.
 ## 4) Elevate “gauge-derived C” from toy to principled
 
 - Right now we derive C from base=360 using simple invariants (dim, Coxeter).
+- Added background doc: `gauge_invariants.md` (dim/rank/Coxeter/dual Coxeter + “next tier” invariants like roots/Weyl group + Casimir/Dynkin index and the representation/normalization pitfalls).
 - Next: test other invariant constructions (e.g., Casimir factors, representation choices) and document them.
 - Goal: a *short* list of allowed C values with a clear derivation and minimal tuning.
 

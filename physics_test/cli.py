@@ -120,7 +120,8 @@ def cmd_list_frequency_presets(args: argparse.Namespace) -> int:
 def cmd_list_gauge_candidates(args: argparse.Namespace) -> int:
     groups = standard_model_gauge_groups()
     for g in groups:
-        cs = candidate_Cs_from_group(g, base=args.base)
+        include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
         print(f"{g.name}: rank={g.rank}, dim={g.dim}, h={g.coxeter_h}, h*={g.dual_coxeter_h}")
         for k, v in cs.items():
             print(f"  - {k:18s} C={v:.15g}")
@@ -138,8 +139,9 @@ def cmd_scan_gauge_Cs(args: argparse.Namespace) -> int:
     # Build candidate Cs from gauge groups and constructions
     Cs: list[float] = []
     labels: list[str] = []
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
     for g in standard_model_gauge_groups():
-        cs = candidate_Cs_from_group(g, base=args.base)
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
         for k, v in cs.items():
             Cs.append(float(v))
             labels.append(f"{g.name}:{k}")
@@ -160,6 +162,7 @@ def cmd_scan_gauge_Cs(args: argparse.Namespace) -> int:
 
     print(f"Target {args.target} = {targets[args.target]:.15g}")
     print(f"Gauge-derived Cs (unique) = {len(uniq_Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
     print(f"m range = [{min(m_values)}, {max(m_values)}] step={args.m_step} (integerized)")
     print(f"Kept: {len(hits)} hits with |rel_err| <= {args.max_rel_err}\n")
 
@@ -1095,10 +1098,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_gc = sub.add_parser("list-gauge-Cs", help="List gauge-derived candidate C values from group invariants")
     p_gc.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_gc.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include (see gauge_invariants.md).",
+    )
     p_gc.set_defaults(func=cmd_list_gauge_candidates)
 
     p_sgc = sub.add_parser("scan-gauge-Cs", help="Scan gauge-derived C candidates across integer m for a target coupling")
     p_sgc.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_sgc.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include (see gauge_invariants.md).",
+    )
     p_sgc.add_argument("--target", default="1/alpha", help="Target key (see list-targets)")
     p_sgc.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
     p_sgc.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")

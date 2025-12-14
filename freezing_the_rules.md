@@ -32,6 +32,11 @@ To avoid arbitrary fitting, strict mode uses **only gauge-derived C values** fro
 
 - $C\in\{360, 180, 120, 60, 45, 15\}$
 
+Notes:
+
+- These come from dividing base=360 by a small menu of **representation-independent Lie algebra/root-system invariants**, currently $\dim(\mathfrak{g})$ and Coxeter/dual Coxeter numbers.
+- For background and “next tier” invariants (Weyl group order, roots, Casimirs/Dynkin index + representation choice), see `gauge_invariants.md`.
+
 Generate/inspect:
 
 - `python -m physics_test.cli list-gauge-Cs`

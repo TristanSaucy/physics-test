@@ -109,6 +109,13 @@ where $\dim$ is the Lie algebra dimension and $h$ is the Coxeter number (for $SU
 
 - $C\in\{360,180,120,60,45,15\}$.
 
+Interpretation: these invariants are **representation-independent integers** attached to the Lie algebra / root system. For the SM factors:
+
+- $SU(2)$: $\dim=3$, $h=h^\vee=2$
+- $SU(3)$: $\dim=8$, $h=h^\vee=3$
+
+This is intentionally “toy-simple”: divide a fixed base by 1–2 canonical integers and deduplicate. For a deeper discussion of these invariants (rank, Coxeter/dual Coxeter) and “next tier” candidates (Weyl group order, root counts, Casimirs/Dynkin indices and the representation/normalization pitfalls), see `gauge_invariants.md`.
+
 ### 3.3 Frozen: canonical target orientation (inverse couplings)
 
 To avoid doubling the hypothesis space, we freeze the “gauge strength coordinate” to inverse couplings:
@@ -367,7 +374,57 @@ The identity $\phi^m=hF_0/(k_BK)$ suggests a concrete meaning for the sign of $m
 
 If a system sustains high-$m$ dynamics in a warm environment, it typically requires non-equilibrium structure and dissipation. This can be consistent with the intuition that “positive $m$” phenomena correlate with entropy export (maintained order), while “negative $m$” phenomena correlate with entropy import/bath-like behavior. This remains interpretive and should be treated as a hypothesis to test against concrete phenomenon choices.
 
-### 6.3 Limitations and failure modes
+### 6.3 Hypothesis: m as a discrete strength coordinate (why strong > weak > EM > gravity)
+
+In strict mode we map the topology variable $G$ to **inverse couplings** ($G\sim 1/\alpha$). Under that convention, the model implies:
+
+$$
+G=\frac{C}{\phi^m}
+\quad\Rightarrow\quad
+\alpha \sim \frac{\phi^m}{C}.
+$$
+
+Taking a base-$\phi$ logarithm makes the role of $m$ explicit:
+
+$$
+\log_\phi(\alpha) \sim m-\log_\phi(C).
+$$
+
+So, **holding $C$ fixed**, each +1 step in $m$ multiplies $\alpha$ by a factor of $\phi\approx 1.618$ (and divides the inverse coupling by $\phi$). In that sense, $m$ can be interpreted as a **discrete log-strength index**.
+
+In the strict best fits for the gauge forces (all at 5% tolerance, with frozen inverse targets at the $m_Z$ benchmark where applicable), the ordering is:
+
+- strong: $(C,m)=(60,4)$
+- weak: $(C,m)=(120,3)$
+- EM: $(C,m)=(360,2)$
+
+This is consistent with the usual hierarchy $\alpha_s>\alpha_w>\alpha$. Here, the **relative inverse-strengths** are explained by a small number of discrete factors coming from *both* the $m$ steps and the discrete $C$ ratios. For adjacent pairs:
+
+$$
+\frac{G_{\text{weak}}}{G_{\text{strong}}}
+=\frac{C_w}{C_s}\,\phi^{m_s-m_w}
+\approx 2\phi,
+\qquad
+\frac{G_{\text{EM}}}{G_{\text{weak}}}
+=\frac{C_{em}}{C_w}\,\phi^{m_w-m_{em}}
+\approx 3\phi,
+$$
+
+so a one-step $m$ shift plus a small integer $C$ ratio produces an $\mathcal{O}(1\text{–}10)$ hierarchy across the gauge forces.
+
+For **ordinary-matter gravity**, using the canonical inverse target at the proton mass anchor gives a strict fit around $(C,m)\approx(45,-175)$ (see §5.2). Relative to the EM fit $(360,2)$, the inverse-coupling hierarchy is dominated by the large $m$ gap:
+
+$$
+\frac{G_{\text{grav}}}{G_{\text{EM}}}
+=\frac{C_g}{C_{em}}\,\phi^{m_{em}-m_g}
+\approx \frac{1}{8}\,\phi^{177}\sim 10^{36},
+$$
+
+which matches the observed enormous separation between $1/\alpha_G(p)$ and $1/\alpha$.
+
+Interpretation (hypothesis): if $m$ is a real discrete “harmonic level,” then the observed hierarchy of interaction strengths could be reframed as: the gauge forces occupy **nearby positive-$m$ micro levels** (few steps apart), while ordinary-matter gravity occupies a **far negative-$m$ macro level**, producing an exponential weakness in the inverse-coupling coordinate. This is only meaningful under the strict contract; if $C$ or target definitions are allowed to drift freely, $m$ can be made to absorb almost anything.
+
+### 6.4 Limitations and failure modes
 
 - **Scale dependence**: strong/weak couplings are not single numbers without specifying a reference scale and scheme.
 - **Gravity ambiguity**: $\alpha_G$ depends on mass scale; without freezing “gravity type” one can sweep mass anchors and fit many outcomes.

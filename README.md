@@ -75,6 +75,15 @@ Run:
 
 We enforced **integer $m$** throughout the CLI and scans, so each $m \to m \pm 1$ is a discrete step.
 
+Interpretive hypothesis (under the frozen inverse-coupling convention $G\sim 1/\alpha$): $m$ can be treated as a **discrete log-strength index**. In the strict best fits we see:
+
+- strong: $m=4$
+- weak: $m=3$
+- EM: $m=2$
+- ordinary-matter gravity (proton anchor): large negative $m$ (e.g. $\sim -175$)
+
+See `paper.md` §6.3 for the full hypothesis and the simple $\phi$-step scaling argument.
+
 ### 3) Non-arbitrary C values can come from gauge invariants (base=360)
 
 We added a small gauge-invariant generator for **U(1), SU(2), SU(3)** and derived candidate $C$ values from rank/dimension/Coxeter-type invariants using a single base “360”. This produces familiar non-arbitrary values:
@@ -114,15 +123,23 @@ We found:
 
 ### 6) Gravity targets: ordinary-matter anchor vs GW-band “types”
 
-We introduced a family of gravity couplings:
+We introduced a family of (dimensionless) gravity couplings **parameterized by a mass scale** $M$:
 
 $$
-\alpha_G(m) = \frac{G_N m^2}{\hbar c}
+\alpha_G(M) = \frac{G_N M^2}{\hbar c}
 \qquad\text{and}\qquad
-\frac{1}{\alpha_G(m)}
+\frac{1}{\alpha_G(M)} = \frac{\hbar c}{G_N M^2}
 $$
 
-where $m$ is a chosen mass scale (proton/electron, or a TeV-scale mass interpreted as $m=E/c^2$).
+This is why gravity gives a **family** of dimensionless coupling targets rather than one number: you must specify **which mass anchor** you mean (electron, proton, Planck, or an effective “GW type” anchor). Because it scales as $M^2$, changing the mass anchor changes the coupling by a fixed factor:
+
+$$
+\frac{\alpha_G(M_2)}{\alpha_G(M_1)}=\left(\frac{M_2}{M_1}\right)^2
+\qquad\text{and}\qquad
+\frac{1/\alpha_G(M_2)}{1/\alpha_G(M_1)}=\left(\frac{M_1}{M_2}\right)^2.
+$$
+
+In this repo, $M$ can be a particle mass (proton/electron), the Planck mass, or an effective mass scale inferred for a frozen GW-band “gravity type” (see `gravity_types_report.md`).
 
 **Frozen (strict) orientation:** use inverse gravity targets `1/alpha_G(mass)`.
 
@@ -145,7 +162,7 @@ Under strict constraints:
 - **integer m**
 - **coupling fits within 5%**
 - **gravity K fixed to CMB**
-- **gravity F0 constrained to CMB GW band**
+- **gravity F0 constrained to the chosen GW band window** (CMB/PTA/LISA/LIGO)
 
 we found viable solutions when using inverse gravity couplings at an **effective high-energy mass scale** for GW-band “gravity types” (not a single needle; see `paper.md` for the key identity and band tables).
 The strict end-to-end “all-forces per GW band” results are summarized in `gravity_types_report.md` and in `paper.md` §5.4.2.
