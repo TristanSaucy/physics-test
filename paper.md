@@ -161,6 +161,29 @@ Notes:
 - Strong and weak couplings “run” with energy; in strict mode, we freeze a reference scale at the Z boson mass.
 - The hypercharge target uses the standard GUT normalization factor $5/3$.
 
+#### 4.1.1 Target-definition sensitivity (refinement without expanding $C$)
+
+The strong/weak sector “targets” are not single immutable numbers: both are **scale-dependent**, and the electroweak quantities also depend on **scheme/definition** (especially $\sin^2\theta_W$). This matters because our strict $C$ set is very small, so a few-percent target shift can move a fit from “fail” to “pass” at tighter thresholds.
+
+Two particularly relevant refinements (implemented as additional target keys in `physics_test.targets`) are:
+
+- **Weak (on-shell mixing angle)**: use the pole-mass definition
+  $$
+  \sin^2\theta_W^{\mathrm{OS}} \equiv 1-\frac{m_W^2}{m_Z^2},
+  \qquad
+  \alpha_2 \equiv \frac{\alpha(m_Z)}{\sin^2\theta_W},
+  $$
+  yielding the inverse target `1/alpha2(alpha(mZ),sin2_on_shell)`.
+
+- **Strong (run to a fixed physical scale)**: run the benchmark $\alpha_s(m_Z)$ to $m_H$ with a fixed 1-loop prescription (no free $\Lambda_{\mathrm{QCD}}$), yielding `1/alpha_s_1loop_from_mZ(mH)`.
+
+Under these refined definitions, the same $(C,m)$ patterns tighten from “few percent” to “$\sim$1%” without changing the strict $C$ set:
+
+| Sector | Refined target key | Best (C,m) | rel. err |
+|---|---|---:|---:|
+| Strong | `1/alpha_s_1loop_from_mZ(mH)` | (60, 4) | −1.27% |
+| Weak | `1/alpha2(alpha(mZ),sin2_on_shell)` | (120, 3) | −0.73% |
+
 ### 4.2 What is “mZ”?
 
 `mZ` means $m_Z$, the Z boson mass:

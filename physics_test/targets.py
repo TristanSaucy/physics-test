@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from physics_test import constants
-from physics_test.forces import alpha_gravity, alpha_s_1loop
+from physics_test.forces import alpha_gravity, alpha_s_1loop, alpha_s_run_1loop_from_ref
 from physics_test.units import mass_kg_from_GeV
 
 
@@ -43,6 +43,19 @@ def known_targets() -> list[TargetConstant]:
     # Electroweak mixing angle (common on-shell-ish reference near mZ; approximate).
     # sin^2(theta_W) is dimensionless and often quoted; it is scheme/scale dependent.
     sin2_thetaW_mZ = 0.23122
+
+    # On-shell weak mixing angle from pole masses:
+    #   sin^2(theta_W)_OS = 1 - (mW^2 / mZ^2)
+    # This is a different (standard) scheme than the MSbar-ish 0.23122 above.
+    mW_GeV = 80.379
+    mZ_GeV = 91.1876
+    sin2_thetaW_on_shell = 1.0 - (mW_GeV * mW_GeV) / (mZ_GeV * mZ_GeV)
+    alpha2_from_alpha_mZ_on_shell = alpha_mZ / sin2_thetaW_on_shell
+
+    # Refined strong-coupling targets at other fixed scales via 1-loop running from mZ
+    # (no free Lambda parameter).
+    mH_GeV = 125.0
+    alpha_s_mH_1loop_from_mZ = alpha_s_run_1loop_from_ref(mH_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
     # Hypercharge-like coupling g' (approx near mZ; note normalization conventions vary).
     gprime_ew = 0.357
@@ -118,12 +131,22 @@ def known_targets() -> list[TargetConstant]:
         TargetConstant("alpha_w(mZ)", alpha_w_mZ, "Weak: alpha_2=g^2/(4*pi) near EW scale (approx)"),
         TargetConstant("1/alpha_w(mZ)", 1.0 / alpha_w_mZ, "Weak: inverse alpha_2 near EW scale (approx)"),
         TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (approx)"),
+        TargetConstant(
+            "sin2thetaW(on-shell)",
+            sin2_thetaW_on_shell,
+            "Weak/EM: on-shell sin^2(theta_W)=1-mW^2/mZ^2 (pole-mass definition)",
+        ),
         TargetConstant("alpha_Y(mZ)", alpha_y_mZ, "Weak/EM: alpha_Y=g'^2/(4*pi) near mZ (approx; normalization depends)"),
         TargetConstant("1/alpha_Y(mZ)", 1.0 / alpha_y_mZ, "Weak/EM: inverse alpha_Y near mZ (approx)"),
         TargetConstant(
             "alpha2(alpha(mZ),sin2)",
             alpha2_from_alpha_mZ,
             "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW) (approx)",
+        ),
+        TargetConstant(
+            "alpha2(alpha(mZ),sin2_on_shell)",
+            alpha2_from_alpha_mZ_on_shell,
+            "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW)_on-shell (pole-mass definition)",
         ),
         TargetConstant(
             "alpha1(alpha(mZ),sin2)",
@@ -136,11 +159,27 @@ def known_targets() -> list[TargetConstant]:
             "Weak/EM: alpha_1 with 5/3 GUT normalization derived from alpha(mZ) and sin^2(thetaW) (approx)",
         ),
         TargetConstant("1/alpha2(alpha(mZ),sin2)", 1.0 / alpha2_from_alpha_mZ, "Inverse of alpha2(alpha(mZ),sin2)"),
+        TargetConstant(
+            "1/alpha2(alpha(mZ),sin2_on_shell)",
+            1.0 / alpha2_from_alpha_mZ_on_shell,
+            "Inverse of alpha2(alpha(mZ),sin2_on_shell)",
+        ),
         TargetConstant("1/alpha1(alpha(mZ),sin2)", 1.0 / alpha1_from_alpha_mZ, "Inverse of alpha1(alpha(mZ),sin2)"),
         TargetConstant(
             "1/alpha1_GUT(alpha(mZ),sin2)",
             1.0 / alpha1_gut_from_alpha_mZ,
             "Inverse of alpha1_GUT(alpha(mZ),sin2)",
+        ),
+        # Strong (refined: 1-loop running from mZ without free Lambda; fixed scale)
+        TargetConstant(
+            "alpha_s_1loop_from_mZ(mH)",
+            alpha_s_mH_1loop_from_mZ,
+            "Strong: alpha_s at mH via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_1loop_from_mZ(mH)",
+            (1.0 / alpha_s_mH_1loop_from_mZ) if alpha_s_mH_1loop_from_mZ != 0 else float("inf"),
+            "Strong: inverse of alpha_s_1loop_from_mZ(mH)",
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(

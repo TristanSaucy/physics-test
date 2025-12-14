@@ -32,3 +32,32 @@ def alpha_s_1loop(Q_GeV: float, *, Lambda_GeV: float = 0.2, n_f: int = 5) -> flo
     return 12.0 * math.pi / (b0 * math.log(x))
 
 
+def alpha_s_run_1loop_from_ref(
+    Q_GeV: float,
+    *,
+    alpha_s_Q0: float,
+    Q0_GeV: float,
+    n_f: int = 5,
+) -> float:
+    """
+    1-loop running for QCD using a *reference value* alpha_s(Q0) instead of a free Lambda:
+
+      α_s^{-1}(Q) = α_s^{-1}(Q0) + (b0/(2π)) ln(Q/Q0),
+      b0 = 11 - 2 n_f / 3.
+
+    This is still approximate (thresholds + higher loops ignored), but it removes the
+    "free Lambda" knob and is therefore a cleaner target-definition refinement.
+    """
+
+    if Q_GeV <= 0 or Q0_GeV <= 0:
+        raise ValueError("Q_GeV and Q0_GeV must be positive")
+    if alpha_s_Q0 <= 0:
+        raise ValueError("alpha_s_Q0 must be positive")
+    b0 = 11.0 - (2.0 / 3.0) * float(n_f)
+    alpha_inv_Q = (1.0 / float(alpha_s_Q0)) + (b0 / (2.0 * math.pi)) * math.log(float(Q_GeV) / float(Q0_GeV))
+    if alpha_inv_Q <= 0:
+        # Would indicate hitting the Landau pole / non-perturbative region in this toy model.
+        return float("inf")
+    return 1.0 / alpha_inv_Q
+
+
