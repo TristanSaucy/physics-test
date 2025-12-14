@@ -124,6 +124,39 @@ Example:
 python -m physics_test.cli list-gauge-Cs --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund"
 ```
 
+### 3.3 Exploratory scan snapshot (3% tolerance)
+
+We ran an exploratory check at **3%** tolerance to see whether the next-tier keys materially improve the strict inverse-coupling fits.
+
+With the extended `--include` menu above, the unique candidate set becomes:
+
+- $C\in\{15,45,60,120,180,270,360,480,720\}$ (the new values come from `base/C2_fund` and `base/T_fund`)
+
+Results at **3%**:
+
+- **EM inverse** still fits:
+  - `1/alpha`: $(C,m)=(360,2)$ with rel_err ≈ +0.344%
+- **Hypercharge (GUT norm.) inverse** still fits:
+  - `1/alpha1_GUT(alpha(mZ),sin2)`: $(C,m)=(60,0)$ with rel_err ≈ +1.66%
+- **Strong/weak inverse** do **not** fit at 3% under this candidate set:
+  - `1/alpha_s(mZ)`: **no hits**; best remains $(60,4)$ with rel_err ≈ +3.21%
+  - `1/alpha_w(mZ)`: **no hits**; best remains $(120,3)$ with rel_err ≈ −4.17%
+
+This implies that tightening the strict inverse-coupling contract from 5% → 3% would currently require either:
+
+- a broader (but still principled) $C$ menu, or
+- different strong/weak target choices (scale/scheme), or
+- revisiting the frozen orientation (exploratory only).
+
+Reproduce:
+
+```bash
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
+```
+
 ## 4) “More complex” invariants we can consider next (and what they buy us)
 
 There are two broad classes:
