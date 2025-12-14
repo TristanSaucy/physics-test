@@ -111,6 +111,15 @@ Pros/cons summary:
   - **Pros**: puts hypercharge on the same footing as $SU(2)$ and $SU(3)$ for convergence tests.
   - **Cons**: normalization is a convention; can confuse interpretation unless explicitly stated.
 
+### Principled normalization factors (new; exploratory, not frozen)
+
+Separately from choosing **which target definitions** are allowed, we also support an optional *multiplicative normalization* of targets before matching them to the lattice:
+
+- `python -m physics_test.cli list-norm-families`
+- `python -m physics_test.cli oos-predictive --suite v1 --norm-family <family>`
+
+These families are intentionally restricted to small, interpretable choices (Casimirs / Dynkin index / SM 1-loop beta coefficients / $2\pi$ factors) and are meant for exploration before freezing any additional rule.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

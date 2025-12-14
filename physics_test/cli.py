@@ -30,6 +30,7 @@ from physics_test.presets import em_frequency_presets, get_preset, particle_prox
 from physics_test.gauge_groups import candidate_Cs_from_group, standard_model_gauge_groups
 from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
+from physics_test.normalization import normalization_factor_for_force, normalization_families
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -118,6 +119,13 @@ def cmd_list_targets(args: argparse.Namespace) -> int:
     targets = known_targets()
     for t in targets:
         print(f"{t.name:20s}  {t.value:.15g}  note={t.note}")
+    return 0
+
+
+def cmd_list_norm_families(args: argparse.Namespace) -> int:
+    fams = normalization_families()
+    for k in sorted(fams.keys()):
+        print(f"{k:24s}  {fams[k].note}")
     return 0
 
 
@@ -230,6 +238,7 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
     print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
     print(f"include = {','.join(include)}")
     print(f"m range = [{min(m_values)}, {max(m_values)}]")
+    print(f"norm_family = {args.norm_family}")
     print("Rule: fit anchor with free C, then HOLD C fixed per force.\n")
 
     total_pass = 0
@@ -245,14 +254,19 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
         if anchor.key not in target_map:
             raise SystemExit(f"Unknown anchor key {anchor.key!r} for force {force!r}. Run `list-targets`.")
 
+        factor = normalization_factor_for_force(force, family=args.norm_family)
+
         # Fit the anchor with the strict gauge-derived menu (choose best C and m)
-        anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=target_map[anchor.key])
+        anchor_target = target_map[anchor.key] * factor
+        anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
         best_anchor = anchor_hits[0]
         C0 = best_anchor.C
         m0 = int(best_anchor.m)
         lab = label_by_C.get(C0, "")
 
         print(f"{force.upper():7s} anchor: {anchor.key:28s} target={target_map[anchor.key]:.12g}")
+        if abs(factor - 1.0) > 1e-12:
+            print(f"         norm: factor={factor:.12g}  target_norm={anchor_target:.12g}")
         print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, G={best_anchor.G:.12g}, rel_err={best_anchor.rel_err:.3e}")
         print(f"         note: {anchor.rationale}")
 
@@ -261,7 +275,8 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
         for ot in by_force[force]:
             if ot.key not in target_map:
                 raise SystemExit(f"Unknown predictive target key {ot.key!r}. Run `list-targets`.")
-            hits = scan_candidates(Cs=[C0], m_values=m_values, target_G=target_map[ot.key])
+            tgt = target_map[ot.key] * factor
+            hits = scan_candidates(Cs=[C0], m_values=m_values, target_G=tgt)
             best = hits[0]
             ok = abs(best.rel_err) <= args.max_rel_err
             status = "PASS" if ok else "FAIL"
@@ -273,6 +288,8 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
                 f"  [{status}] {ot.key:28s} target={target_map[ot.key]:.12g}  "
                 f"m={int(best.m):d} (dm={dm:+d})  G={best.G:.12g}  rel_err={best.rel_err:.3e}"
             )
+            if abs(factor - 1.0) > 1e-12:
+                print(f"         target_norm={tgt:.12g}")
             print(f"         rationale: {ot.rationale}")
         print(f"  Force summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
 
@@ -1275,6 +1292,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_targets = sub.add_parser("list-targets", help="List built-in dimensionless targets (EM/strong/gravity options)")
     p_targets.set_defaults(func=cmd_list_targets)
 
+    p_nf = sub.add_parser("list-norm-families", help="List principled normalization-factor families (for oos-predictive)")
+    p_nf.set_defaults(func=cmd_list_norm_families)
+
     p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run a frozen target suite against strict gauge-derived C")
     p_oos.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_oos.add_argument(
@@ -1305,6 +1325,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["all", "em", "strong", "weak", "gravity"],
         default="all",
         help="Which force group(s) to run (default: all)",
+    )
+    p_oos_pred.add_argument(
+        "--norm-family",
+        choices=sorted(normalization_families().keys()),
+        default="none",
+        help="Principled normalization family to apply to targets before lattice fitting (default: none).",
     )
     p_oos_pred.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
     p_oos_pred.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
