@@ -120,6 +120,15 @@ Separately from choosing **which target definitions** are allowed, we also suppo
 
 These families are intentionally restricted to small, interpretable choices (Casimirs / Dynkin index / SM 1-loop beta coefficients / $2\pi$ factors) and are meant for exploration before freezing any additional rule.
 
+### Integer-step / Δm signals (new; exploratory diagnostic)
+
+We also support a C-independent “step-signal” diagnostic: for a force-local anchor and target, test whether the ratio is close to a power of φ:
+
+- `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02`
+- `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.05`
+
+This is useful because it directly tests the *integer-step* hypothesis (Δm quantization) without involving the C menu.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

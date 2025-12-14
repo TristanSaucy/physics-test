@@ -31,6 +31,7 @@ from physics_test.gauge_groups import candidate_Cs_from_group, standard_model_ga
 from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
 from physics_test.normalization import normalization_factor_for_force, normalization_families
+from physics_test.steps import step_from_targets
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -297,6 +298,119 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
         total_n += n
 
     print(f"Overall predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
+    return 0
+
+
+def cmd_oos_steps(args: argparse.Namespace) -> int:
+    """
+    Step-signal OOS report (C-independent):
+
+    For each force, take a strict anchor and compute whether each additional target
+    is consistent with an *integer* Δm step under the assumption of the same C, i.e.:
+
+        (anchor/target) ≈ φ^(Δm),   with integer Δm.
+    """
+
+    suites = predictive_force_suites()
+    if args.suite not in suites:
+        raise SystemExit(f"Unknown step-suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
+
+    anchors, by_force = suites[args.suite]
+    target_map = {t.name: t.value for t in known_targets()}
+
+    # Which forces to run
+    if args.force == "all":
+        forces = ["em", "strong", "weak", "gravity"]
+    else:
+        forces = [args.force]
+
+    tol = float(args.max_ratio_err)
+    if tol < 0:
+        raise SystemExit("--max-ratio-err must be non-negative")
+
+    print(f"Step-signal suite: {args.suite}")
+    print(f"tol(|ratio_err_if_int|) = {tol}")
+    print("Rule: for each force, test whether (anchor/target) is close to φ^integer.\n")
+
+    total_pass = 0
+    total_n = 0
+
+    for force in forces:
+        if force not in anchors:
+            raise SystemExit(f"Unknown force {force!r}. Options: {', '.join(sorted(anchors.keys()))}")
+        if force not in by_force:
+            raise SystemExit(f"Step-suite {args.suite!r} missing targets for force {force!r}")
+
+        anchor = anchors[force]
+        if anchor.key not in target_map:
+            raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
+        anchor_val = target_map[anchor.key]
+
+        print(f"{force.upper():7s} anchor: {anchor.key:28s} value={anchor_val:.12g}")
+        print(f"         note: {anchor.rationale}")
+
+        n_pass = 0
+        n = 0
+        for ot in by_force[force]:
+            if ot.key not in target_map:
+                raise SystemExit(f"Unknown target key {ot.key!r}. Run `list-targets`.")
+            tgt_val = target_map[ot.key]
+            sr = step_from_targets(anchor_val, tgt_val)
+            ok = sr.ratio_err_if_int <= tol
+            status = "PASS" if ok else "FAIL"
+            if ok:
+                n_pass += 1
+            n += 1
+            print(
+                f"  [{status}] {ot.key:28s} ratio={sr.ratio:.12g}  "
+                f"dm_real={sr.dm_real:.6f}  dm_int={sr.dm_int:+d}  frac={sr.dm_frac:+.6f}  "
+                f"ratio_err={sr.ratio_err_if_int:.3%}"
+            )
+            print(f"         rationale: {ot.rationale}")
+        print(f"  Force summary: {n_pass}/{n} PASS at tol={tol}\n")
+
+        total_pass += n_pass
+        total_n += n
+
+    print(f"Overall step-signal summary: {total_pass}/{total_n} PASS at tol={tol}")
+
+    # Rough null baseline: if dm_frac is uniformly distributed in [-0.5, 0.5),
+    # what pass-rate would we expect at this tolerance?
+    #
+    # For dm_real = n + δ with |δ|<=0.5, the ratio error when snapping to n is:
+    #   ratio_err = |φ^{-δ} - 1|
+    #
+    # Solve |φ^{-δ} - 1| <= tol for δ.
+    try:
+        ln_phi = math.log((1.0 + math.sqrt(5.0)) / 2.0)
+        if tol >= 1.0:
+            delta_thr = 0.5
+        else:
+            # asymmetric bounds for +δ/-δ; take the larger magnitude as the threshold
+            d_pos = -math.log(max(1e-12, 1.0 - tol)) / ln_phi
+            d_neg = math.log(1.0 + tol) / ln_phi
+            delta_thr = min(0.5, max(d_pos, d_neg))
+        p_null = min(1.0, 2.0 * delta_thr)
+
+        # Binomial tail probability for >= total_pass successes (independence assumed; rough).
+        # We keep this simple to avoid external deps.
+        def binom_tail(n: int, k: int, p: float) -> float:
+            if k <= 0:
+                return 1.0
+            if k > n:
+                return 0.0
+            out = 0.0
+            for i in range(k, n + 1):
+                out += math.comb(n, i) * (p**i) * ((1.0 - p) ** (n - i))
+            return out
+
+        p_tail = binom_tail(total_n, total_pass, p_null) if total_n > 0 else float("nan")
+        print("\nNull baseline (rough): assume dm fractional part is uniform in [-0.5,0.5).")
+        print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => expected pass prob ≈ {p_null:.3%} per pair")
+        print(f"  binomial P(X >= {total_pass} | n={total_n}, p={p_null:.3%}) ≈ {p_tail:.3g}")
+    except Exception:
+        # Baseline is optional; never fail the command because of it.
+        pass
     return 0
 
 
@@ -1337,6 +1451,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
     p_oos_pred.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos_pred.set_defaults(func=cmd_oos_predictive)
+
+    p_oos_steps = sub.add_parser(
+        "oos-steps",
+        help="Step-signal OOS (C-independent): test whether anchor/target ratios land on integer Δm steps of φ",
+    )
+    p_oos_steps.add_argument("--suite", choices=["v1"], default="v1", help="Step-signal suite to run (default: v1)")
+    p_oos_steps.add_argument(
+        "--force",
+        choices=["all", "em", "strong", "weak", "gravity"],
+        default="all",
+        help="Which force group(s) to run (default: all)",
+    )
+    p_oos_steps.add_argument(
+        "--max-ratio-err",
+        type=float,
+        default=0.02,
+        help="Tolerance on ratio error when snapping dm to nearest integer (default: 0.02)",
+    )
+    p_oos_steps.set_defaults(func=cmd_oos_steps)
 
     p_gbands = sub.add_parser("list-gravity-bands", help="List built-in gravity-wave frequency band presets")
     p_gbands.set_defaults(func=cmd_list_gravity_bands)
