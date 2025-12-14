@@ -57,6 +57,11 @@ def known_targets() -> list[TargetConstant]:
     mH_GeV = 125.0
     alpha_s_mH_1loop_from_mZ = alpha_s_run_1loop_from_ref(mH_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
+    # Out-of-sample strong running cross-checks (same fixed 1-loop prescription from mZ).
+    # These are useful as "OOS targets" because they are *not* used to choose the strict targets.
+    mt_GeV = 172.76  # top pole mass (approx)
+    alpha_s_mt_1loop_from_mZ = alpha_s_run_1loop_from_ref(mt_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+
     # Hypercharge-like coupling g' (approx near mZ; note normalization conventions vary).
     gprime_ew = 0.357
     alpha_y_mZ = (gprime_ew**2) / (4.0 * constants.PI)
@@ -188,6 +193,16 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(mH)",
             (1.0 / alpha_s_mH_1loop_from_mZ) if alpha_s_mH_1loop_from_mZ != 0 else float("inf"),
             "Strong: inverse of alpha_s_1loop_from_mZ(mH) (strict strong inverse target)",
+        ),
+        TargetConstant(
+            "alpha_s_1loop_from_mZ(mt)",
+            alpha_s_mt_1loop_from_mZ,
+            "Strong (OOS): alpha_s at mt via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_1loop_from_mZ(mt)",
+            (1.0 / alpha_s_mt_1loop_from_mZ) if alpha_s_mt_1loop_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_1loop_from_mZ(mt)",
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(

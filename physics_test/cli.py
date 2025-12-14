@@ -16,6 +16,7 @@ from physics_test.model import (
 from physics_test.scan import filter_hits_by_rel_err, frange, scan_candidates
 from physics_test.toponumbers import candidate_sets, get_candidate_set
 from physics_test.targets import known_targets
+from physics_test.oos import oos_targets_v1, resolve_oos_targets
 from physics_test.gravity_bands import bands as gravity_band_list
 from physics_test.units import (
     energy_J_from_GeV,
@@ -95,6 +96,64 @@ def cmd_list_targets(args: argparse.Namespace) -> int:
     targets = known_targets()
     for t in targets:
         print(f"{t.name:20s}  {t.value:.15g}  note={t.note}")
+    return 0
+
+
+def cmd_oos_report(args: argparse.Namespace) -> int:
+    """
+    Out-of-sample report: evaluate a frozen list of targets against strict gauge-derived C
+    under integer m and report pass/fail.
+    """
+
+    # Resolve targets
+    oos = oos_targets_v1()
+    targets = resolve_oos_targets(oos)
+    target_map = {t.name: t.value for t in known_targets()}
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    print("Out-of-sample target suite: v1")
+    print(f"tol(|rel_err|) = {args.max_rel_err}")
+    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]\n")
+
+    n_pass = 0
+    for ot, t in zip(oos, targets):
+        hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=target_map[t.name])
+        best = hits[0]
+        ok = abs(best.rel_err) <= args.max_rel_err
+        status = "PASS" if ok else "FAIL"
+        if ok:
+            n_pass += 1
+        lab = label_by_C.get(best.C, "")
+        print(
+            f"[{status}] {t.name:28s} target={t.value:.12g}  "
+            f"best: {lab:22s} C={best.C:g}, m={int(best.m):d}, G={best.G:.12g}, rel_err={best.rel_err:.3e}"
+        )
+        print(f"       rationale: {ot.rationale}")
+    print(f"\nSummary: {n_pass}/{len(oos)} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -1089,6 +1148,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_targets = sub.add_parser("list-targets", help="List built-in dimensionless targets (EM/strong/gravity options)")
     p_targets.set_defaults(func=cmd_list_targets)
+
+    p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run frozen target suite v1 against strict gauge-derived C")
+    p_oos.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_oos.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_oos.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_oos.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_oos.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
+    p_oos.set_defaults(func=cmd_oos_report)
 
     p_gbands = sub.add_parser("list-gravity-bands", help="List built-in gravity-wave frequency band presets")
     p_gbands.set_defaults(func=cmd_list_gravity_bands)
