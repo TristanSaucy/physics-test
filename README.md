@@ -9,6 +9,8 @@ F_0 = \phi^m \frac{k_B K}{h}
 $$
 
 For the full manuscript-style writeup, see `paper.md`. For the frozen contract, see `freezing_the_rules.md`.
+For the frozen Option‑2 anchor menu (F0 presets), see `F0_anchors.md`.
+For the gravity-band/type report, see `gravity_types_report.md`.
 
 Where:
 
@@ -146,11 +148,32 @@ Under strict constraints:
 - **gravity F0 constrained to CMB GW band**
 
 we found viable solutions when using inverse gravity couplings at an **effective high-energy mass scale** for GW-band “gravity types” (not a single needle; see `paper.md` for the key identity and band tables).
+The strict end-to-end “all-forces per GW band” results are summarized in `gravity_types_report.md` and in `paper.md` §5.4.2.
 
 Run:
 
 - `python -m physics_test.cli sweep-quantum-gravity --gravity-band cmb --scale-min-GeV 1e3 --scale-max-GeV 1e19 --n-scales 241 --top 12`
   - Try `--gravity-band pta`, `--gravity-band lisa`, or `--gravity-band ligo` to explore other GW “gravity types”.
+
+## Reproduce strict core results (copy/paste)
+
+```bash
+# 360/phi^2 vs 1/alpha
+python -m physics_test.cli check-example
+
+# strict gauge-derived C set + core inverse-target scans
+python -m physics_test.cli list-gauge-Cs
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
+
+# strict all-forces per GW band (Option-2 anchors are frozen in F0_anchors.md)
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band cmb  --gravity-targets "1/alpha_G(GW_CMB)"  --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band pta  --gravity-targets "1/alpha_G(GW_PTA)"  --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band lisa --gravity-targets "1/alpha_G(GW_LISA)" --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band ligo --gravity-targets "1/alpha_G(GW_LIGO)" --max-hits 10 --max-results 5
+```
 
 ## How to run the main workflows
 
@@ -162,15 +185,21 @@ Run:
 
 ### Option 1 (energy → K → F0)
 
-- `python -m physics_test.cli pair-forces-all ...`
+- Exploratory broad search:
+  - `python -m physics_test.cli pair-forces-all --help`
+  - `python -m physics_test.cli pair-forces-all`
 
 ### Option 2 (phenomenon F0 → solve K)
 
-- `python -m physics_test.cli pair-forces-option2 ...`
+- Option‑2 pairing (general):
+  - `python -m physics_test.cli pair-forces-option2 --help`
+
+- Strict Option‑2 pairing (recommended; gauge-derived C only):
+  - `python -m physics_test.cli pair-forces-gaugeCs --gravity-band cmb --gravity-targets "1/alpha_G(GW_CMB)"`
 
 ### Gauge-derived C only (non-arbitrary C set)
 
-- `python -m physics_test.cli pair-forces-gaugeCs ...`
+- `python -m physics_test.cli pair-forces-gaugeCs --help`
 
 ## Caveats (important)
 

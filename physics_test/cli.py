@@ -1173,7 +1173,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p_pg.add_argument("--em-F0", type=float, default=None, help="EM F0 (Hz)")
-    p_pg.add_argument("--em-preset", default="em-visible-500THz", help="EM frequency preset key (default: em-visible-500THz)")
+    p_pg.add_argument("--em-preset", default="em-lyman-alpha", help="EM frequency preset key (default: em-lyman-alpha)")
     p_pg.add_argument("--strong-F0", type=float, default=None, help="Strong F0 (Hz)")
     p_pg.add_argument("--strong-preset", default="strong-QCD-200MeV", help="Strong frequency preset key (default: strong-QCD-200MeV)")
     p_pg.add_argument("--weak-F0", type=float, default=None, help="Weak F0 (Hz)")
@@ -1368,7 +1368,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Frequencies: either provide numeric F0 or a preset key.
     p_opt2.add_argument("--em-F0", type=float, default=None, help="EM phenomenon frequency F0 (Hz)")
-    p_opt2.add_argument("--em-preset", default=None, help="EM frequency preset key (see list-frequency-presets)")
+    p_opt2.add_argument("--em-preset", default="em-lyman-alpha", help="EM frequency preset key (default: em-lyman-alpha)")
     p_opt2.add_argument("--strong-F0", type=float, default=None, help="Strong phenomenon frequency F0 (Hz)")
     p_opt2.add_argument("--strong-preset", default="strong-QCD-200MeV", help="Strong frequency preset key (default: strong-QCD-200MeV)")
     p_opt2.add_argument("--weak-F0", type=float, default=None, help="Weak phenomenon frequency F0 (Hz)")

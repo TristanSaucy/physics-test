@@ -30,8 +30,11 @@ constraints under a fixed CMB temperature; this motivates a “gravity type”
 parameterization in terms of an effective mass scale $M$ in the dimensionless gravitational
 coupling $\alpha_G(M)=G_N M^2/(\hbar c)$. Sweeps over $M$ reveal distinct mass-scale
 bands compatible with CMB/PTA/LISA/LIGO frequency windows under strict constraints.
-We emphasize that this is exploratory and that falsifiability depends on freezing the
-remaining degrees of freedom (especially gravity “type” and frequency anchors).
+With frozen phenomenon-frequency anchors (Option 2), the strict end-to-end pairing yields a
+single configuration per GW band: the EM/strong/weak hits are identical across bands
+((360, 2), (60, 4), (120, 3)), while gravity’s $(C,m)$ shifts to land in the selected GW window.
+We emphasize that this is exploratory and that falsifiability depends on maintaining a small
+frozen menu of choices (especially gravity “types” and frequency anchors).
 
 ## 1. Motivation
 
@@ -124,6 +127,13 @@ Motivation:
 We define a hit if:
 
 - $|\text{relative error}|\le 5\%$.
+
+### 3.5 Frozen: Option 2 phenomenon-frequency anchors ($F_0$ menu)
+
+When using Option 2 (fix $F_0$ and solve for $K$), $F_0$ is treated as an observed phenomenon frequency.
+To limit degrees of freedom, this repo freezes a small menu of primary + cross-check anchors for EM/strong/weak
+and records the citations/notes in `F0_anchors.md` (e.g., EM `em-lyman-alpha`, strong `strong-QCD-200MeV`, weak
+`weak-W-80.379GeV`).
 
 ## 4. Results under strict constraints (gauge-derived C, integer m, inverse targets)
 
@@ -308,6 +318,27 @@ Connection to “celestial ordering” intuition: for a binary source, the GW fr
 
 Important caveat: these sweeps typically find **many** passing scales, not a single needle, so the result is better interpreted as a discrete “compatibility band” rather than a unique prediction unless additional freezes are introduced.
 
+#### 5.4.2 Strict end-to-end “all-forces” configurations per GW band (frozen $F_0$ anchors)
+
+After freezing GW-band gravity targets (see §5.4 and `gravity_types_report.md`), we can run a strict all-forces pairing search (`pair-forces-gaugeCs`) that simultaneously:
+
+- matches EM/strong/weak inverse targets within 5% using strict gauge-derived $C$ and integer $m$,
+- uses frozen phenomenon frequencies (Option 2) to solve for implied $K$ in EM/strong/weak, and
+- requires gravity (with $K=2.725$ K) to land in the chosen GW band window while matching the chosen frozen gravity type target.
+
+Using the primary frozen frequency anchors (EM `em-lyman-alpha`, strong `strong-QCD-200MeV`, weak `weak-W-80.379GeV`),
+the best strict configuration per GW band is:
+
+| GW band | Gravity target | EM (C,m,K) | Strong (C,m,K) | Weak (C,m,K) | Gravity (C,m) | $F_0$ (Hz, $K=2.725$ K) |
+|---|---|---|---|---|---:|---:|
+| CMB | `1/alpha_G(GW_CMB)` | (360, +2, $4.52\times 10^4$ K) | (60, +4, $3.39\times 10^{11}$ K) | (120, +3, $2.20\times 10^{14}$ K) | (45, −132) | $1.47\times 10^{-17}$ |
+| PTA | `1/alpha_G(GW_PTA)` | (360, +2, $4.52\times 10^4$ K) | (60, +4, $3.39\times 10^{11}$ K) | (120, +3, $2.20\times 10^{14}$ K) | (15, −89) | $1.43\times 10^{-8}$ |
+| LISA | `1/alpha_G(GW_LISA)` | (360, +2, $4.52\times 10^4$ K) | (60, +4, $3.39\times 10^{11}$ K) | (120, +3, $2.20\times 10^{14}$ K) | (15, −59) | $2.65\times 10^{-2}$ |
+| LIGO | `1/alpha_G(GW_LIGO)` | (360, +2, $4.52\times 10^4$ K) | (60, +4, $3.39\times 10^{11}$ K) | (120, +3, $2.20\times 10^{14}$ K) | (360, −39) | $4.02\times 10^{2}$ |
+
+**Key observation:** under these frozen anchors, EM/strong/weak are invariant across GW bands; band selection only changes gravity’s $(C,m)$.
+This is a stronger “coherence” check than fitting each sector independently.
+
 ### 5.5 Planck-strength coupling and positive m
 
 Using the Planck mass $m_P$ as the mass anchor yields $\alpha_G(m_P)\approx 1$, so both `alpha_G(mP)` and `1/alpha_G(mP)` are $\approx 1$. Under strict gauge-$C$, there are 5% hits at positive $m$, e.g.:
@@ -340,7 +371,7 @@ If a system sustains high-$m$ dynamics in a warm environment, it typically requi
 
 - **Scale dependence**: strong/weak couplings are not single numbers without specifying a reference scale and scheme.
 - **Gravity ambiguity**: $\alpha_G$ depends on mass scale; without freezing “gravity type” one can sweep mass anchors and fit many outcomes.
-- **Frequency anchoring**: Option 2 requires observed $F_0$. Choosing $F_0$ post-hoc is another pathway to overfitting.
+- **Frequency anchoring**: Option 2 requires observed $F_0$. This repo freezes a small anchor menu (`F0_anchors.md`), but post-hoc selection or expanding the menu remains an overfitting pathway.
 - **Overfitting risk**: relaxing the strict $C$ set or allowing orientation flips rapidly expands the hypothesis space.
 
 Failure modes worth watching:
@@ -350,11 +381,11 @@ Failure modes worth watching:
 
 ## 7. Next steps to increase falsifiability
 
-1) Freeze a **small table of phenomenon $F_0$ anchors** (with notes/citations) for Option 2.
-2) For gravity, freeze:
-   - orientation (already: inverse),
-   - temperature choice(s) per gravity type (e.g., CMB for primordial),
-   - a small set of mass anchors $M$ (instead of sweeping).
+1) **Done in this repo**: freeze a **small table of phenomenon $F_0$ anchors** (with notes/citations) for Option 2 (see `F0_anchors.md`).
+2) **Done in this repo**: for gravity, freeze:
+   - orientation (inverse),
+   - temperature choice for GW-band gravity types (CMB),
+   - a small set of mass/type anchors (ordinary matter + GW-band types; see §5.2–§5.4 and `gravity_types_report.md`).
 3) Tighten tolerance and re-test survival rates (e.g., 5% → 2% → 1%).
 4) Expand or justify $C$ derivations with additional group-invariant constructions only if they remain short and principled.
 
@@ -379,6 +410,15 @@ python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
+```
+
+Strict all-forces configurations per GW band (Option 2; frozen $F_0$ presets):
+
+```bash
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band cmb  --gravity-targets "1/alpha_G(GW_CMB)"  --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band pta  --gravity-targets "1/alpha_G(GW_PTA)"  --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band lisa --gravity-targets "1/alpha_G(GW_LISA)" --max-hits 10 --max-results 5
+python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band ligo --gravity-targets "1/alpha_G(GW_LIGO)" --max-hits 10 --max-results 5
 ```
 
 Gravity band sweeps (inverse gravity targets, CMB K):
