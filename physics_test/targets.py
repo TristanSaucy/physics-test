@@ -62,6 +62,12 @@ def known_targets() -> list[TargetConstant]:
     mt_GeV = 172.76  # top pole mass (approx)
     alpha_s_mt_1loop_from_mZ = alpha_s_run_1loop_from_ref(mt_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
+    # Additional fixed-scale strong-running cross-checks (same 1-loop-from-mZ prescription, nf=5, no thresholds).
+    # These are intended for the out-of-sample suite v2.
+    alpha_s_mW_1loop_from_mZ = alpha_s_run_1loop_from_ref(mW_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+    alpha_s_1TeV_1loop_from_mZ = alpha_s_run_1loop_from_ref(1_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+    alpha_s_10TeV_1loop_from_mZ = alpha_s_run_1loop_from_ref(10_000.0, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+
     # Hypercharge-like coupling g' (approx near mZ; note normalization conventions vary).
     gprime_ew = 0.357
     alpha_y_mZ = (gprime_ew**2) / (4.0 * constants.PI)
@@ -73,6 +79,15 @@ def known_targets() -> list[TargetConstant]:
     alpha2_from_alpha_mZ = alpha_mZ / sin2_thetaW_mZ
     alpha1_from_alpha_mZ = alpha_mZ / cos2_thetaW_mZ
     alpha1_gut_from_alpha_mZ = (5.0 / 3.0) * alpha1_from_alpha_mZ
+
+    # On-shell variants (use sin2_thetaW_on_shell)
+    cos2_thetaW_on_shell = 1.0 - sin2_thetaW_on_shell
+    alpha1_from_alpha_mZ_on_shell = alpha_mZ / cos2_thetaW_on_shell
+    alpha1_gut_from_alpha_mZ_on_shell = (5.0 / 3.0) * alpha1_from_alpha_mZ_on_shell
+
+    # Ratio-style unification probes using the on-shell EW definition
+    alpha2_over_alpha1_gut_on_shell = alpha2_from_alpha_mZ_on_shell / alpha1_gut_from_alpha_mZ_on_shell
+    alpha3_over_alpha2_on_shell = alpha_s_mZ / alpha2_from_alpha_mZ_on_shell
 
     # Gravity: choose mass scale -> dimensionless coupling changes with scale.
     alphaG_e = alpha_gravity(constants.MASS_ELECTRON)
@@ -171,6 +186,16 @@ def known_targets() -> list[TargetConstant]:
             alpha1_gut_from_alpha_mZ,
             "Weak/EM: alpha_1 with 5/3 GUT normalization derived from alpha(mZ) and sin^2(thetaW) (approx)",
         ),
+        TargetConstant(
+            "alpha1(alpha(mZ),sin2_on_shell)",
+            alpha1_from_alpha_mZ_on_shell,
+            "Weak/EM: alpha_1 derived from alpha(mZ)/cos^2(thetaW)_on-shell (pole-mass definition)",
+        ),
+        TargetConstant(
+            "alpha1_GUT(alpha(mZ),sin2_on_shell)",
+            alpha1_gut_from_alpha_mZ_on_shell,
+            "Weak/EM: alpha_1 with 5/3 GUT normalization derived from alpha(mZ) and sin^2(thetaW)_on-shell (pole-mass definition)",
+        ),
         TargetConstant("1/alpha2(alpha(mZ),sin2)", 1.0 / alpha2_from_alpha_mZ, "Inverse of alpha2(alpha(mZ),sin2)"),
         TargetConstant(
             "1/alpha2(alpha(mZ),sin2_on_shell)",
@@ -182,6 +207,16 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha1_GUT(alpha(mZ),sin2)",
             1.0 / alpha1_gut_from_alpha_mZ,
             "Inverse of alpha1_GUT(alpha(mZ),sin2)",
+        ),
+        TargetConstant(
+            "1/alpha1(alpha(mZ),sin2_on_shell)",
+            1.0 / alpha1_from_alpha_mZ_on_shell,
+            "Inverse of alpha1(alpha(mZ),sin2_on_shell)",
+        ),
+        TargetConstant(
+            "1/alpha1_GUT(alpha(mZ),sin2_on_shell)",
+            1.0 / alpha1_gut_from_alpha_mZ_on_shell,
+            "Inverse of alpha1_GUT(alpha(mZ),sin2_on_shell)",
         ),
         # Strong (refined: 1-loop running from mZ without free Lambda; fixed scale)
         TargetConstant(
@@ -195,6 +230,16 @@ def known_targets() -> list[TargetConstant]:
             "Strong: inverse of alpha_s_1loop_from_mZ(mH) (strict strong inverse target)",
         ),
         TargetConstant(
+            "alpha_s_1loop_from_mZ(mW)",
+            alpha_s_mW_1loop_from_mZ,
+            "Strong (OOS): alpha_s at mW via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_1loop_from_mZ(mW)",
+            (1.0 / alpha_s_mW_1loop_from_mZ) if alpha_s_mW_1loop_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_1loop_from_mZ(mW)",
+        ),
+        TargetConstant(
             "alpha_s_1loop_from_mZ(mt)",
             alpha_s_mt_1loop_from_mZ,
             "Strong (OOS): alpha_s at mt via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
@@ -203,6 +248,26 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(mt)",
             (1.0 / alpha_s_mt_1loop_from_mZ) if alpha_s_mt_1loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_from_mZ(mt)",
+        ),
+        TargetConstant(
+            "alpha_s_1loop_from_mZ(1TeV)",
+            alpha_s_1TeV_1loop_from_mZ,
+            "Strong (OOS): alpha_s at 1 TeV via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_1loop_from_mZ(1TeV)",
+            (1.0 / alpha_s_1TeV_1loop_from_mZ) if alpha_s_1TeV_1loop_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_1loop_from_mZ(1TeV)",
+        ),
+        TargetConstant(
+            "alpha_s_1loop_from_mZ(10TeV)",
+            alpha_s_10TeV_1loop_from_mZ,
+            "Strong (OOS): alpha_s at 10 TeV via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+        ),
+        TargetConstant(
+            "1/alpha_s_1loop_from_mZ(10TeV)",
+            (1.0 / alpha_s_10TeV_1loop_from_mZ) if alpha_s_10TeV_1loop_from_mZ != 0 else float("inf"),
+            "Strong (OOS): inverse of alpha_s_1loop_from_mZ(10TeV)",
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(
@@ -214,6 +279,16 @@ def known_targets() -> list[TargetConstant]:
             "alpha3/alpha2(mZ)",
             alpha_s_mZ / alpha2_from_alpha_mZ,
             "Unification probe: alpha3(alpha_s) / alpha2 at mZ (approx)",
+        ),
+        TargetConstant(
+            "alpha2/alpha1_GUT(mZ,sin2_on_shell)",
+            alpha2_over_alpha1_gut_on_shell,
+            "Unification probe: alpha2 / alpha1_GUT using sin2thetaW(on-shell) (pole-mass definition)",
+        ),
+        TargetConstant(
+            "alpha3/alpha2(mZ,sin2_on_shell)",
+            alpha3_over_alpha2_on_shell,
+            "Unification probe: alpha3(alpha_s) / alpha2 using sin2thetaW(on-shell) (pole-mass definition)",
         ),
         # Strong (toy running examples)
         TargetConstant("alpha_s_1loop(1GeV)", alpha_s_1, "Strong: toy 1-loop alpha_s at 1 GeV"),

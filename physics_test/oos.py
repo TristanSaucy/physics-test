@@ -57,6 +57,52 @@ def oos_targets_v1() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v2() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v2).
+
+    Design principle:
+      - push harder on "predictive cross-checks" that are implied by the strict contract
+        but not used to choose it
+      - emphasize: (a) strong running cross-checks at new scales, (b) unification-style
+        ratios computed using the on-shell EW definition
+    """
+
+    return [
+        OOSTarget(
+            "1/alpha_s_1loop_from_mZ(mW)",
+            "Strong-running cross-check at mW using the same fixed 1-loop-from-mZ prescription (nf=5; no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_1loop_from_mZ(1TeV)",
+            "Strong-running cross-check at 1 TeV using the same fixed 1-loop-from-mZ prescription (nf=5; no thresholds).",
+        ),
+        OOSTarget(
+            "1/alpha_s_1loop_from_mZ(10TeV)",
+            "Strong-running cross-check at 10 TeV using the same fixed 1-loop-from-mZ prescription (nf=5; no thresholds).",
+        ),
+        OOSTarget(
+            "alpha3/alpha2(mZ,sin2_on_shell)",
+            "Unification-style ratio probe at mZ, but using the on-shell EW definition for alpha2.",
+        ),
+        OOSTarget(
+            "alpha2/alpha1_GUT(mZ,sin2_on_shell)",
+            "Unification-style ratio probe at mZ (GUT normalization), using the on-shell EW definition.",
+        ),
+        OOSTarget(
+            "1/alpha1_GUT(alpha(mZ),sin2_on_shell)",
+            "Hypercharge inverse coupling derived from alpha(mZ) and on-shell sin2thetaW (GUT normalization).",
+        ),
+    ]
+
+
+def oos_suites() -> dict[str, list[OOSTarget]]:
+    return {
+        "v1": oos_targets_v1(),
+        "v2": oos_targets_v2(),
+    }
+
+
 def resolve_oos_targets(oos: list[OOSTarget]) -> list[TargetConstant]:
     """
     Resolve OOSTarget keys into TargetConstant entries using known_targets().

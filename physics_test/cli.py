@@ -16,7 +16,7 @@ from physics_test.model import (
 from physics_test.scan import filter_hits_by_rel_err, frange, scan_candidates
 from physics_test.toponumbers import candidate_sets, get_candidate_set
 from physics_test.targets import known_targets
-from physics_test.oos import oos_targets_v1, resolve_oos_targets
+from physics_test.oos import oos_suites, resolve_oos_targets
 from physics_test.gravity_bands import bands as gravity_band_list
 from physics_test.units import (
     energy_J_from_GeV,
@@ -105,8 +105,10 @@ def cmd_oos_report(args: argparse.Namespace) -> int:
     under integer m and report pass/fail.
     """
 
-    # Resolve targets
-    oos = oos_targets_v1()
+    suites = oos_suites()
+    if args.suite not in suites:
+        raise SystemExit(f"Unknown OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
+    oos = suites[args.suite]
     targets = resolve_oos_targets(oos)
     target_map = {t.name: t.value for t in known_targets()}
 
@@ -133,7 +135,7 @@ def cmd_oos_report(args: argparse.Namespace) -> int:
         Cs.append(c)
         label_by_C[c] = lab
 
-    print("Out-of-sample target suite: v1")
+    print(f"Out-of-sample target suite: {args.suite}")
     print(f"tol(|rel_err|) = {args.max_rel_err}")
     print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
     print(f"include = {','.join(include)}")
@@ -1149,13 +1151,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_targets = sub.add_parser("list-targets", help="List built-in dimensionless targets (EM/strong/gravity options)")
     p_targets.set_defaults(func=cmd_list_targets)
 
-    p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run frozen target suite v1 against strict gauge-derived C")
+    p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run a frozen target suite against strict gauge-derived C")
     p_oos.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_oos.add_argument(
         "--include",
         default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
         help="Comma-separated gauge C constructions to include.",
     )
+    p_oos.add_argument("--suite", choices=["v1", "v2"], default="v1", help="Frozen OOS suite to run (default: v1)")
     p_oos.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
     p_oos.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
     p_oos.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
