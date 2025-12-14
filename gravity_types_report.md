@@ -101,7 +101,7 @@ Here we run the strict “pair all forces” search with:
 
 - Gauge-derived $C\in\{360,180,120,60,45,15\}$
 - Fixed phenomenon frequencies (frozen in `F0_anchors.md`)
-- Targets: EM=`1/alpha`, strong=`1/alpha_s(mZ)`, weak=`1/alpha_w(mZ)`
+- Targets: EM=`1/alpha`, strong=`1/alpha_s_1loop_from_mZ(mH)`, weak=`1/alpha2(alpha(mZ),sin2_on_shell)`
 - Gravity target chosen per band (one of the frozen GW_* targets)
 - Gravity uses $K=2.725$ K and must land inside the named GW band window
 
@@ -119,8 +119,8 @@ Best configurations (first hit shown per band):
 Rel-error context (from the CLI run):
 
 - EM rel_err ≈ +3.44e−03
-- strong rel_err ≈ +3.21e−02
-- weak rel_err ≈ −4.17e−02
+- strong rel_err ≈ −1.27e−02
+- weak rel_err ≈ −7.27e−03
 - gravity rel_err is band-dependent but is $\ll 1\%$ for the PTA/LISA/LIGO rows above.
 
 ## 7) Reproduce

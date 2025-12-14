@@ -1132,8 +1132,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_qg.add_argument("--max-rel-err", type=float, default=0.05, help="Tolerance on |rel_err| (default: 0.05)")
     p_qg.add_argument("--em-target", default="1/alpha", help="EM target key (default: 1/alpha)")
-    p_qg.add_argument("--strong-target", default="1/alpha_s(mZ)", help="Strong target key (default: 1/alpha_s(mZ))")
-    p_qg.add_argument("--weak-target", default="1/alpha_w(mZ)", help="Weak target key (default: 1/alpha_w(mZ))")
+    p_qg.add_argument(
+        "--strong-target",
+        default="1/alpha_s_1loop_from_mZ(mH)",
+        help="Strong target key (default: 1/alpha_s_1loop_from_mZ(mH))",
+    )
+    p_qg.add_argument(
+        "--weak-target",
+        default="1/alpha2(alpha(mZ),sin2_on_shell)",
+        help="Weak target key (default: 1/alpha2(alpha(mZ),sin2_on_shell))",
+    )
     p_qg.add_argument(
         "--gravity-mode",
         default="inverse",
@@ -1177,8 +1185,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_pg.add_argument("--max-results", type=int, default=20, help="Stop after this many results.")
 
     p_pg.add_argument("--em-target", default="1/alpha", help="EM target key (default: 1/alpha)")
-    p_pg.add_argument("--strong-target", default="1/alpha_s(mZ)", help="Strong target key (default: 1/alpha_s(mZ))")
-    p_pg.add_argument("--weak-target", default="1/alpha_w(mZ)", help="Weak target key (default: 1/alpha_w(mZ))")
+    p_pg.add_argument("--strong-target", default="1/alpha_s_1loop_from_mZ(mH)", help="Strong target key (default: 1/alpha_s_1loop_from_mZ(mH))")
+    p_pg.add_argument("--weak-target", default="1/alpha2(alpha(mZ),sin2_on_shell)", help="Weak target key (default: 1/alpha2(alpha(mZ),sin2_on_shell))")
     p_pg.add_argument(
         "--gravity-targets",
         default="1/alpha_G(p)",
@@ -1254,8 +1262,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Default target choices (can change)
     p_pair.add_argument("--em-target", default="1/alpha", help="EM target key (default: 1/alpha)")
-    p_pair.add_argument("--strong-target", default="1/alpha_s(mZ)", help="Strong target key (default: 1/alpha_s(mZ))")
-    p_pair.add_argument("--weak-target", default="1/alpha_w(mZ)", help="Weak target key (default: 1/alpha_w(mZ))")
+    p_pair.add_argument("--strong-target", default="1/alpha_s_1loop_from_mZ(mH)", help="Strong target key (default: 1/alpha_s_1loop_from_mZ(mH))")
+    p_pair.add_argument("--weak-target", default="1/alpha2(alpha(mZ),sin2_on_shell)", help="Weak target key (default: 1/alpha2(alpha(mZ),sin2_on_shell))")
     p_pair.add_argument("--gravity-target", default="1/alpha_G(p)", help="Gravity target key (default: 1/alpha_G(p))")
 
     # Energy scale knobs for the quantum forces
@@ -1297,12 +1305,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_pair_all.add_argument(
         "--strong-targets",
-        default="1/alpha_s(mZ),1/alpha_s_1loop(10GeV)",
+        default="1/alpha_s_1loop_from_mZ(mH),1/alpha_s(mZ),1/alpha_s_1loop(10GeV)",
         help="Comma-separated strong target keys to try.",
     )
     p_pair_all.add_argument(
         "--weak-targets",
-        default="1/alpha_w(mZ)",
+        default="1/alpha2(alpha(mZ),sin2_on_shell),1/alpha_w(mZ)",
         help="Comma-separated weak target keys to try.",
     )
     p_pair_all.add_argument(
@@ -1375,8 +1383,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_opt2.add_argument("--max-results", type=int, default=20, help="Stop after this many solutions.")
 
     p_opt2.add_argument("--em-target", default="1/alpha", help="EM coupling target key (default: 1/alpha)")
-    p_opt2.add_argument("--strong-target", default="1/alpha_s(mZ)", help="Strong coupling target key (default: 1/alpha_s(mZ))")
-    p_opt2.add_argument("--weak-target", default="1/alpha_w(mZ)", help="Weak coupling target key (default: 1/alpha_w(mZ))")
+    p_opt2.add_argument(
+        "--strong-target",
+        default="1/alpha_s_1loop_from_mZ(mH)",
+        help="Strong coupling target key (default: 1/alpha_s_1loop_from_mZ(mH))",
+    )
+    p_opt2.add_argument(
+        "--weak-target",
+        default="1/alpha2(alpha(mZ),sin2_on_shell)",
+        help="Weak coupling target key (default: 1/alpha2(alpha(mZ),sin2_on_shell))",
+    )
     p_opt2.add_argument("--gravity-target", default="1/alpha_G(p)", help="Gravity coupling target key (default: 1/alpha_G(p))")
 
     # Frequencies: either provide numeric F0 or a preset key.

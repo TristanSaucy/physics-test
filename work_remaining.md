@@ -9,8 +9,8 @@ This is a living checklist for continuing the framework work in future sessions.
 - **Frozen (done): EM target**
   - EM strict target is **`1/alpha` (low-energy)**. (`1/alpha(mZ)` remains exploratory only.)
 - **Frozen (done): strong/weak default targets (strict)**
-  - Strong strict target: **`1/alpha_s(mZ)`** (scale is explicit and frozen at $m_Z$ for the benchmark).
-  - Weak strict target: **`1/alpha_w(mZ)`** (same $m_Z$ reference convention).
+  - Strong strict target: **`1/alpha_s_1loop_from_mZ(mH)`** (1-loop run from `alpha_s(mZ)` to $m_H=125$ GeV; no free $\Lambda_{\mathrm{QCD}}$ knob).
+  - Weak strict target: **`1/alpha2(alpha(mZ),sin2_on_shell)`** (derived using on-shell $\sin^2\theta_W=1-m_W^2/m_Z^2$).
 - **Frozen (done): gravity orientation**
   - Gravity strict targets use **inverse coupling**: `1/alpha_G(mass)`.
 - **Frozen (done): ordinary-matter gravity anchor + cross-check**

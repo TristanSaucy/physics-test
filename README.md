@@ -101,16 +101,16 @@ Run:
 Scanning only gauge-derived **C candidates** (`{360, 180, 120, 60, 45, 15}`) we found `(C, m)` pairs within 5% for:
 
 - **EM**: target `1/alpha` via `C=360, m=2`
-- **Strong** (benchmark at `mZ`): target `1/alpha_s(mZ)` via `C=60, m=4` (within 5%)
-- **Weak** (benchmark at `mZ`): target `1/alpha_w(mZ)` via `C=120, m=3` (within 5%)
+- **Strong** (strict): target `1/alpha_s_1loop_from_mZ(mH)` via `C=60, m=4` (within 5%)
+- **Weak** (strict): target `1/alpha2(alpha(mZ),sin2_on_shell)` via `C=120, m=3` (within 5%)
 
-Note: `mZ` means $m_Z$, the **Z boson mass** (~91.1876 GeV). It’s a standard reference energy scale where strong/electroweak couplings are commonly quoted (because couplings “run” with energy).
+Note: `mZ` means $m_Z$, the **Z boson mass** (~91.1876 GeV). It’s a standard reference energy scale where strong/electroweak couplings are commonly quoted (because couplings “run” with energy). `mH` means $m_H$, the **Higgs boson mass** (~125 GeV), which we use as a fixed physical scale for the refined strong target.
 
 Run:
 
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)"`
 
 ### 5) Gravity “type” matters; CMB K implies a specific m window per GW band
@@ -181,8 +181,8 @@ python -m physics_test.cli check-example
 # strict gauge-derived C set + core inverse-target scans
 python -m physics_test.cli list-gauge-Cs
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
 
 # strict all-forces per GW band (Option-2 anchors are frozen in F0_anchors.md)
@@ -220,7 +220,7 @@ python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --stro
 
 ## Caveats (important)
 
-- **Couplings run with scale**: strong/weak (and effective EM) depend on the energy scale; targets like `alpha_s(mZ)` (and therefore `1/alpha_s(mZ)`) are benchmark values at a reference scale.
+- **Couplings run with scale / depend on scheme**: strong depends on the chosen energy scale; weak depends on both scale and $\sin^2\theta_W$ definition. Our strict targets reflect this by using a fixed 1-loop run from `alpha_s(mZ)` to `mH` and an on-shell $\sin^2\theta_W$-derived $\alpha_2$ (see `paper.md` §4.1.1).
 - **What “K” means**: for micro physics, treating $K$ as an “energy-scale temperature” (i.e., $E=k_BK$) is often more coherent than interpreting it as literal thermodynamic temperature.
 - **Avoiding overfitting**: as you allow larger families of C values, matches become easier. The most meaningful tests are the strict ones: discrete, justified C sets + fixed target definitions + fixed band constraints.
 

@@ -42,8 +42,8 @@ We derived candidate $C$ values from simple gauge invariants (U(1), SU(2), SU(3)
 Scanning only those C values, integer m, and 5% tolerance gives plausible fits for:
 
 - EM (`1/alpha`) at C=360, m=2
-- Strong (strict inverse benchmark `1/alpha_s(mZ)`) at C=60, m=4
-- Weak (strict inverse benchmark `1/alpha_w(mZ)`) at C=120, m=3
+- Strong (strict) `1/alpha_s_1loop_from_mZ(mH)` at C=60, m=4
+- Weak (strict) `1/alpha2(alpha(mZ),sin2_on_shell)` at C=120, m=3
 
 This is valuable because it reduces “arbitrary C.”
 
@@ -98,8 +98,8 @@ python -m physics_test.cli check-example
 # strict gauge-derived C set + core inverse-target scans
 python -m physics_test.cli list-gauge-Cs
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
 
 # strict all-forces per GW band (Option-2 anchors are frozen in F0_anchors.md)

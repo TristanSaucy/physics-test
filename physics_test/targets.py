@@ -125,28 +125,36 @@ def known_targets() -> list[TargetConstant]:
         TargetConstant("alpha(mZ)", alpha_mZ, "EM: effective alpha at Z pole (approx)"),
         TargetConstant("1/alpha(mZ)", inv_alpha_mZ, "EM: effective inverse alpha at Z pole (approx)"),
         # Strong (benchmark)
-        TargetConstant("alpha_s(mZ)", alpha_s_mZ, "Strong: alpha_s at Z pole (benchmark ~0.118)"),
-        TargetConstant("1/alpha_s(mZ)", 1.0 / alpha_s_mZ, "Strong: inverse alpha_s at Z pole (benchmark)"),
+        TargetConstant(
+            "alpha_s(mZ)",
+            alpha_s_mZ,
+            "Strong: alpha_s at Z pole (benchmark; used as the reference input for alpha_s_1loop_from_mZ(mH))",
+        ),
+        TargetConstant(
+            "1/alpha_s(mZ)",
+            1.0 / alpha_s_mZ,
+            "Strong: inverse alpha_s at Z pole (legacy strict benchmark; kept for comparison)",
+        ),
         # Weak (multiple alternative dimensionless couplings)
-        TargetConstant("alpha_w(mZ)", alpha_w_mZ, "Weak: alpha_2=g^2/(4*pi) near EW scale (approx)"),
-        TargetConstant("1/alpha_w(mZ)", 1.0 / alpha_w_mZ, "Weak: inverse alpha_2 near EW scale (approx)"),
-        TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (approx)"),
+        TargetConstant("alpha_w(mZ)", alpha_w_mZ, "Weak: alpha_2=g^2/(4*pi) using g≈0.652 (legacy proxy; kept for comparison)"),
+        TargetConstant("1/alpha_w(mZ)", 1.0 / alpha_w_mZ, "Weak: inverse of alpha_w(mZ) (legacy proxy; kept for comparison)"),
+        TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (legacy scheme-dependent value; comparison)"),
         TargetConstant(
             "sin2thetaW(on-shell)",
             sin2_thetaW_on_shell,
-            "Weak/EM: on-shell sin^2(theta_W)=1-mW^2/mZ^2 (pole-mass definition)",
+            "Weak/EM: on-shell sin^2(theta_W)=1-mW^2/mZ^2 (pole-mass definition; strict input)",
         ),
         TargetConstant("alpha_Y(mZ)", alpha_y_mZ, "Weak/EM: alpha_Y=g'^2/(4*pi) near mZ (approx; normalization depends)"),
         TargetConstant("1/alpha_Y(mZ)", 1.0 / alpha_y_mZ, "Weak/EM: inverse alpha_Y near mZ (approx)"),
         TargetConstant(
             "alpha2(alpha(mZ),sin2)",
             alpha2_from_alpha_mZ,
-            "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW) (approx)",
+            "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW) (legacy scheme-dependent; comparison)",
         ),
         TargetConstant(
             "alpha2(alpha(mZ),sin2_on_shell)",
             alpha2_from_alpha_mZ_on_shell,
-            "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW)_on-shell (pole-mass definition)",
+            "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW)_on-shell (pole-mass definition; strict weak definition)",
         ),
         TargetConstant(
             "alpha1(alpha(mZ),sin2)",
@@ -162,7 +170,7 @@ def known_targets() -> list[TargetConstant]:
         TargetConstant(
             "1/alpha2(alpha(mZ),sin2_on_shell)",
             1.0 / alpha2_from_alpha_mZ_on_shell,
-            "Inverse of alpha2(alpha(mZ),sin2_on_shell)",
+            "Inverse of alpha2(alpha(mZ),sin2_on_shell) (strict weak inverse target)",
         ),
         TargetConstant("1/alpha1(alpha(mZ),sin2)", 1.0 / alpha1_from_alpha_mZ, "Inverse of alpha1(alpha(mZ),sin2)"),
         TargetConstant(
@@ -174,12 +182,12 @@ def known_targets() -> list[TargetConstant]:
         TargetConstant(
             "alpha_s_1loop_from_mZ(mH)",
             alpha_s_mH_1loop_from_mZ,
-            "Strong: alpha_s at mH via 1-loop running from alpha_s(mZ) (nf=5; no thresholds)",
+            "Strong: alpha_s at mH via 1-loop running from alpha_s(mZ) (nf=5; no thresholds) (strict strong definition)",
         ),
         TargetConstant(
             "1/alpha_s_1loop_from_mZ(mH)",
             (1.0 / alpha_s_mH_1loop_from_mZ) if alpha_s_mH_1loop_from_mZ != 0 else float("inf"),
-            "Strong: inverse of alpha_s_1loop_from_mZ(mH)",
+            "Strong: inverse of alpha_s_1loop_from_mZ(mH) (strict strong inverse target)",
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(

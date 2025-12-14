@@ -121,8 +121,8 @@ This is intentionally “toy-simple”: divide a fixed base by 1–2 canonical i
 To avoid doubling the hypothesis space, we freeze the “gauge strength coordinate” to inverse couplings:
 
 - EM strict target: `1/alpha` (low-energy fine-structure inverse)
-- Strong strict target: `1/alpha_s(mZ)` (Z-pole reference scale)
-- Weak strict target: `1/alpha_w(mZ)` (EW-scale reference; see §2.2 and §4)
+- Strong strict target: `1/alpha_s_1loop_from_mZ(mH)` (1-loop run from `alpha_s(mZ)` to $m_H=125$ GeV; no free $\Lambda_{\mathrm{QCD}}$ knob)
+- Weak strict target: `1/alpha2(alpha(mZ),sin2_on_shell)` (derived using on-shell $\sin^2\theta_W=1-m_W^2/m_Z^2$)
 
 Motivation:
 
@@ -151,8 +151,8 @@ Using strict gauge-derived $C$ candidates only, integer $m$, and the inverse tar
 | Sector | Target | Target value | Best (C,m) | G(C,m) | rel. err |
 |---|---:|---:|---:|---:|---:|
 | EM | `1/alpha` | 137.035999 | (360, 2) | 137.507764 | +0.344% |
-| Strong | `1/alpha_s(mZ)` | 8.481764 | (60, 4) | 8.753882 | +3.21% |
-| Weak | `1/alpha_w(mZ)` | 29.560697 | (120, 3) | 28.328157 | −4.17% |
+| Strong | `1/alpha_s_1loop_from_mZ(mH)` | 8.866605 | (60, 4) | 8.753882 | −1.27% |
+| Weak | `1/alpha2(alpha(mZ),sin2_on_shell)` | 28.535657 | (120, 3) | 28.328157 | −0.73% |
 | Hypercharge (GUT norm.) | `1/alpha1_GUT(alpha(mZ),sin2)` | 59.021547 | (60, 0) | 60.000000 | +1.66% |
 
 Notes:
@@ -161,11 +161,11 @@ Notes:
 - Strong and weak couplings “run” with energy; in strict mode, we freeze a reference scale at the Z boson mass.
 - The hypercharge target uses the standard GUT normalization factor $5/3$.
 
-#### 4.1.1 Target-definition sensitivity (refinement without expanding $C$)
+#### 4.1.1 Target-definition sensitivity (and why we freeze these strict targets)
 
 The strong/weak sector “targets” are not single immutable numbers: both are **scale-dependent**, and the electroweak quantities also depend on **scheme/definition** (especially $\sin^2\theta_W$). This matters because our strict $C$ set is very small, so a few-percent target shift can move a fit from “fail” to “pass” at tighter thresholds.
 
-Two particularly relevant refinements (implemented as additional target keys in `physics_test.targets`) are:
+Two particularly relevant target-definition choices (implemented as target keys in `physics_test.targets`) are:
 
 - **Weak (on-shell mixing angle)**: use the pole-mass definition
   $$
@@ -177,7 +177,7 @@ Two particularly relevant refinements (implemented as additional target keys in 
 
 - **Strong (run to a fixed physical scale)**: run the benchmark $\alpha_s(m_Z)$ to $m_H$ with a fixed 1-loop prescription (no free $\Lambda_{\mathrm{QCD}}$), yielding `1/alpha_s_1loop_from_mZ(mH)`.
 
-Under these refined definitions, the same $(C,m)$ patterns tighten from “few percent” to “$\sim$1%” without changing the strict $C$ set:
+Under these definitions, the same $(C,m)$ patterns tighten from “few percent” to “$\sim$1%” without changing the strict $C$ set. We therefore freeze them as the strict strong/weak targets, and treat the older $m_Z$ / proxy targets as legacy comparisons.
 
 | Sector | Refined target key | Best (C,m) | rel. err |
 |---|---|---:|---:|
@@ -487,8 +487,8 @@ Strict scans for the frozen inverse targets:
 
 ```bash
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
 ```
 

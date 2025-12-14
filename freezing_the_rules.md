@@ -68,10 +68,10 @@ Direct couplings (`alpha`, `alpha_s`, `alpha_w`) are still available for explora
 
 We also allow inverses as a hypothesis test (see §8 “inverse rule”):
 
-- `1/alpha_s(mZ)`
+- `1/alpha_s(mZ)` (legacy benchmark; see below)
 - `1/alpha_s_1loop(Q)`
 
-Target-definition refinement (exploratory):
+Strong strict target (frozen):
 
 - `alpha_s_1loop_from_mZ(mH)` / `1/alpha_s_1loop_from_mZ(mH)`
   - This uses 1-loop running from the benchmark `alpha_s(mZ)` to a fixed physical scale $m_H=125$ GeV (no free $\Lambda_{\mathrm{QCD}}$ knob). It is still approximate (thresholds + higher loops ignored), but it is a cleaner way to compare at another scale.
@@ -91,7 +91,7 @@ Pros/cons summary:
 - `sin2thetaW(mZ)` (dimensionless, scheme/scale dependent but widely quoted)
 - `sin2thetaW(on-shell)` (pole-mass definition: $1-m_W^2/m_Z^2$)
 - `alpha2(alpha(mZ),sin2)` (derived)
-- `alpha2(alpha(mZ),sin2_on_shell)` (derived using the on-shell mixing angle)
+- `alpha2(alpha(mZ),sin2_on_shell)` (derived using the on-shell mixing angle; strict weak target)
 - Optional hypercharge-like:
   - `alpha_Y(mZ)` and `alpha1(alpha(mZ),sin2)` (note normalization conventions)
 
@@ -123,20 +123,20 @@ Command pattern:
 
 These were found within 5% (examples; run scans to reproduce):
 
-- Under the **frozen inverse** convention:
-  - `1/alpha_s(mZ)`:
-    - C=60, m=4 (≈ +3.21%)
-  - `1/alpha_w(mZ)`:
-    - C=120, m=3 (≈ -4.17%)
+- Under the **frozen inverse** convention (strict targets):
+  - `1/alpha_s_1loop_from_mZ(mH)`:
+    - C=60, m=4 (≈ -1.27%)
+  - `1/alpha2(alpha(mZ),sin2_on_shell)`:
+    - C=120, m=3 (≈ -0.73%)
   - `1/alpha1_GUT(alpha(mZ),sin2)`:
     - C=60, m=0 (≈ +1.66%)
 
-Refined targets (exploratory) that tighten the fit without expanding the strict $C$ set:
+Legacy/exploratory comparison targets (not strict):
 
-- `1/alpha_s_1loop_from_mZ(mH)`:
-  - C=60, m=4 (≈ -1.27%)
-- `1/alpha2(alpha(mZ),sin2_on_shell)`:
-  - C=120, m=3 (≈ -0.73%)
+- `1/alpha_s(mZ)`:
+  - C=60, m=4 (≈ +3.21%)
+- `1/alpha_w(mZ)` (proxy from $g\approx 0.652$):
+  - C=120, m=3 (≈ -4.17%)
 
 - `alpha_s(mZ)`:
   - C=60, m=13 (≈ -2.3%)

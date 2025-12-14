@@ -57,9 +57,9 @@ We explored three tiers:
 ## Key empirical findings (high signal)
 
 - **EM (strict)**: $C=360, m=2$ matches $1/\alpha$ within ~0.34%.
-- **Strong/weak (strict inverse benchmarks at $m_Z$)**:
-  - `1/alpha_s(mZ)` best strict hit: $C=60, m=4$ (≈ +3.21%)
-  - `1/alpha_w(mZ)` best strict hit: $C=120, m=3$ (≈ −4.17%)
+- **Strong/weak (strict inverse targets)**:
+  - `1/alpha_s_1loop_from_mZ(mH)` best strict hit: $C=60, m=4$ (≈ −1.27%)
+  - `1/alpha2(alpha(mZ),sin2_on_shell)` best strict hit: $C=120, m=3$ (≈ −0.73%)
   - `1/alpha1_GUT(alpha(mZ),sin2)` best strict hit: $C=60, m=0$ (≈ +1.66%)
 - **Gravity band constraint (CMB K)**:
   - If gravity uses $K=2.725$ K and you require gravity-wave frequencies in a GW band, the frequency equation implies a narrow integer-$m$ window per band (CMB/PTA/LISA/LIGO).
@@ -83,8 +83,8 @@ Gauge-derived C exploration:
 
 - `python -m physics_test.cli list-gauge-Cs`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)"`
 
 Full pairing under gauge-derived C:
