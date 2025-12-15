@@ -213,6 +213,10 @@ python -m physics_test.cli oos-predictive --suite v1 --norm-family inv_C2_fund -
 
 # RG / dimensional transmutation helper (shows where 'e' naturally enters via exp(-const/alpha))
 python -m physics_test.cli rg-scales
+
+# RG+phi OOS (compute Lambda_QCD implied by lattice-fit inverse strong couplings)
+python -m physics_test.cli oos-rg --suite qcd-lambda-v1 --max-rel-err 0.06
+python -m physics_test.cli oos-rg --suite qcd-lambda-v2 --max-rel-err 0.05
 ```
 
 ## How to run the main workflows

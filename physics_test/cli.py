@@ -33,6 +33,7 @@ from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_con
 from physics_test.normalization import normalization_factor_for_force, normalization_families
 from physics_test.steps import best_step_with_C_ratio, step_from_targets
 from physics_test.rg_scales import lambda_qcd_from_alpha_s
+from physics_test.oos_rg import rg_suites
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -173,6 +174,118 @@ def cmd_rg_scales(args: argparse.Namespace) -> int:
     print("Interpretation:")
     print("  - 'e' enters through exp(-const/alpha). This is *not* a free multiplicative factor;")
     print("    it is the RG mechanism that generates large scale separations from dimensionless couplings.")
+    return 0
+
+
+def cmd_oos_rg(args: argparse.Namespace) -> int:
+    """
+    RG+φ out-of-sample style report.
+
+    This fits an anchor coupling on the φ-lattice, then uses the resulting lattice
+    couplings at additional scales to compute an RG-generated scale (Lambda_QCD).
+    """
+
+    suites = rg_suites()
+    if args.suite not in suites:
+        raise SystemExit(f"Unknown RG suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
+    suite = suites[args.suite]
+
+    target_map = {t.name: t.value for t in known_targets()}
+    if suite.anchor.key not in target_map:
+        raise SystemExit(f"Unknown anchor key {suite.anchor.key!r}. Run `list-targets`.")
+    for t in suite.targets:
+        if t.key not in target_map:
+            raise SystemExit(f"Unknown target key {t.key!r}. Run `list-targets`.")
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    print(f"RG+phi suite: {suite.key}")
+    print(f"force = {suite.force}")
+    print(f"base = {args.base}   include = {','.join(include)}   |Cs| = {len(Cs)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]")
+    print(f"Lambda_QCD: loops={suite.loops}, n_f={suite.n_f}\n")
+
+    anchor_target = float(target_map[suite.anchor.key])
+
+    # For each C candidate, fit anchor m and compute implied Lambda at anchor + targets.
+    rows: list[tuple[float, float, float, float, float, list[tuple[str, float, float]]]] = []
+    for C in Cs:
+        # Fit anchor
+        hits_anchor = scan_candidates(Cs=[C], m_values=m_values, target_G=anchor_target)
+        best_a = hits_anchor[0]
+        if args.max_rel_err is not None and abs(best_a.rel_err) > float(args.max_rel_err):
+            continue
+
+        # Interpret G as an inverse coupling for strong targets (our suite is strong-only for now)
+        inv_alpha_anchor = float(best_a.G)
+        alpha_anchor = 1.0 / inv_alpha_anchor if inv_alpha_anchor != 0 else float("inf")
+        lam_a = lambda_qcd_from_alpha_s(alpha_s_mu=alpha_anchor, mu_GeV=float(suite.anchor.Q_GeV), n_f=suite.n_f, loops=suite.loops)
+
+        per: list[tuple[str, float, float]] = []  # (key, rel_err, Lambda_GeV)
+        lambdas: list[float] = [lam_a.Lambda_GeV]
+        ok = True
+        for t in suite.targets:
+            tgt = float(target_map[t.key])
+            hits = scan_candidates(Cs=[C], m_values=m_values, target_G=tgt)
+            best = hits[0]
+            if args.max_rel_err is not None and abs(best.rel_err) > float(args.max_rel_err):
+                ok = False
+                break
+            inv_alpha = float(best.G)
+            alpha = 1.0 / inv_alpha if inv_alpha != 0 else float("inf")
+            lam = lambda_qcd_from_alpha_s(alpha_s_mu=alpha, mu_GeV=float(t.Q_GeV), n_f=suite.n_f, loops=suite.loops)
+            per.append((t.key, float(best.rel_err), float(lam.Lambda_GeV)))
+            lambdas.append(float(lam.Lambda_GeV))
+        if not ok:
+            continue
+
+        lam_min = min(lambdas)
+        lam_max = max(lambdas)
+        lam_mean = sum(lambdas) / float(len(lambdas))
+        spread = (lam_max - lam_min) / lam_mean if lam_mean != 0 else float("inf")
+
+        rows.append((spread, abs(best_a.rel_err), C, int(best_a.m), lam_a.Lambda_GeV, per))
+
+    rows.sort(key=lambda r: (r[0], r[1]))
+
+    if not rows:
+        print("No candidates survived filters.")
+        return 0
+
+    print(f"Anchor: {suite.anchor.key} at Q={suite.anchor.Q_GeV:g} GeV")
+    print(f"  target={anchor_target:.12g}")
+    if args.max_rel_err is not None:
+        print(f"  filter: |rel_err| <= {float(args.max_rel_err):g}\n")
+    else:
+        print("")
+
+    print(f"Top {min(args.top, len(rows))} candidates by Lambda spread:")
+    for i, (spread, aerr, C, m, lam_anchor, per) in enumerate(rows[: int(args.top)]):
+        lab = label_by_C.get(C, "")
+        print(f"- #{i+1:02d} {lab:22s} C={C:g}, m_anchor={m:+d}, anchor_rel_err={aerr:.3e}")
+        print(f"       Lambda(anchor)={lam_anchor:.6g} GeV   spread={(spread*100.0):.3g}%")
+        for key, rel_err, lam in per:
+            print(f"       {key:28s} rel_err={rel_err:.3e}  Lambda={lam:.6g} GeV")
     return 0
 
 
@@ -1539,6 +1652,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_rg.add_argument("--mu-GeV", type=float, default=91.1876, help="Scale mu in GeV (default: mZ)")
     p_rg.add_argument("--n-f", type=int, default=5, help="Active flavors n_f (default: 5)")
     p_rg.set_defaults(func=cmd_rg_scales)
+
+    p_oos_rg = sub.add_parser("oos-rg", help="RG+phi OOS: fit anchor on lattice, then test Lambda_QCD consistency across scales")
+    p_oos_rg.add_argument("--suite", default="qcd-lambda-v1", help="RG suite key (default: qcd-lambda-v1)")
+    p_oos_rg.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos_rg.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_oos_rg.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_oos_rg.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_oos_rg.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_oos_rg.add_argument(
+        "--max-rel-err",
+        type=float,
+        default=0.05,
+        help="Optional filter on each coupling fit before computing Lambda (default: 0.05)",
+    )
+    p_oos_rg.add_argument("--top", type=int, default=10, help="Show top N candidates (default: 10)")
+    p_oos_rg.set_defaults(func=cmd_oos_rg)
 
     p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run a frozen target suite against strict gauge-derived C")
     p_oos.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
