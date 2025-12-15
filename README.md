@@ -196,6 +196,7 @@ python -m physics_test.cli oos-report --suite v1 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
+python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05
 
 # predictive OOS (fit one C per force from strict anchors, then hold C fixed)
 python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02

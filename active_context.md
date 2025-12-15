@@ -78,6 +78,11 @@ We explored three tiers:
 - **GUT convergence diagnostic (new; exploratory)**:
   - `gut-run-lattice` initializes \(\alpha_1^{-1},\alpha_2^{-1},\alpha_3^{-1}\) at \(m_Z\) from lattice fits (running the strong anchor \(m_H\to m_Z\) deterministically) and scans for best 1-loop convergence at high scales.
   - In current runs, the SM convergence score improves vs baseline `gut-run` (≈3.67 → ≈2.16), and the MSSM-beta scan finds best convergence near \(Q\sim 4\times 10^{16}\) GeV (score ≈1.55).
+- **External EW cross-check (new; exploratory)**:
+  - Suite `v5` adds `1/alpha2_tree_from_GF(mW)`, a tree-level extraction of \(\alpha_2^{-1}(m_W)\) from muon-decay \(G_F\) and \(m_W\) (no Δr).
+  - Under strict gauge-\(C\), the best hit is still \((C,m)=(120,3)\) but it misses by ~3.9% (fails at 2%, passes at 5%), which is consistent with known electroweak radiative corrections.
+- **Δr diagnostic (new; exploratory)**:
+  - `1/delta_r(on-shell;alpha0,GF,mW,mZ)` lands very close to \((C,m)=(120,3)\) (≈ +0.3%), a notable coincidence to track as more independent EW inputs are added.
 - **Gravity band constraint (CMB K)**:
   - If gravity uses $K=2.725$ K and you require gravity-wave frequencies in a GW band, the frequency equation implies a narrow integer-$m$ window per band (CMB/PTA/LISA/LIGO).
   - Ordinary-matter inverse targets `1/alpha_G(p)` and `1/alpha_G(e)` fit at much more negative $m$ and therefore do **not** land in GW detector bands under CMB $K$.
@@ -115,6 +120,7 @@ RG-within-band predictive tests (no re-fitting \(m\) per target):
 - `python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02`
 - `python -m physics_test.cli gut-run-lattice --model sm --n 400`
+- `python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05`
 
 Strict all-forces per GW band (frozen Option‑2 presets; see `F0_anchors.md`):
 

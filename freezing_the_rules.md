@@ -160,6 +160,10 @@ In practice, this collapses:
 
 Status: **exploratory**. It is “principled” (deterministic; no free knobs added), but it is not yet part of the frozen strict contract for all forces.
 
+New external EW diagnostic (exploratory):
+
+- OOS suite `v5` adds `1/alpha2_tree_from_GF(mW)` (tree-level extraction from \(G_F,m_W\) with no Δr). This is intended to probe known electroweak radiative effects and is not expected to pass a strict 2% threshold without adding EW corrections.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

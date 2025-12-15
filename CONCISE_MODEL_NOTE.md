@@ -216,10 +216,21 @@ Using `oos-predictive-rg`:
 - **Weak** within‑band running of `alpha2^{-1}(Q)` becomes **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV` (suite `v2`).
 - **Hypercharge** within‑band running of `alpha1_GUT^{-1}(Q)` becomes **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV` (suite `v3`).
 - A derived **EW mixing** consistency check `oos-ew-mix` passes at **2%** across `mW`, `mH`, `1TeV`, `10TeV` (typical offset ~1%).
+- An **external EW cross-check** using muon-decay `G_F` (suite `v5`) lands on the same strict weak lattice point \((C,m)=(120,3)\) but is **off by ~3.9%** at 1-loop/2% tolerance. This is expected to be dominated by **electroweak radiative corrections** (Δr) rather than φ‑stepping.
 
 Interpretation: \(m\) behaves like a **coarse band index**, while **RG flow supplies within‑band motion**.
 
-### 7.4 GUT‑style convergence improves with lattice‑quantized inputs (exploratory)
+### 7.4 Δr shows a sharp lattice alignment (exploratory)
+
+If you compute the on-shell electroweak radiative correction parameter \(\Delta r\) from \(\alpha(0),G_F,m_W,m_Z\),
+its inverse lands very close to the strict weak lattice point:
+
+- `1/delta_r(on-shell;alpha0,GF,mW,mZ)` ≈ 28.244
+- best strict hit: \((C,m)=(120,3)\Rightarrow 120/\phi^3 \approx 28.328\) (≈ +0.30%).
+
+This does **not** mean the φ‑lattice “explains Δr”; it is a notable numerical coincidence worth tracking as we add more independent EW inputs.
+
+### 7.5 GUT‑style convergence improves with lattice‑quantized inputs (exploratory)
 
 The command `gut-run-lattice` initializes \(\alpha_1^{-1},\alpha_2^{-1},\alpha_3^{-1}\) at \(m_Z\) using the φ‑lattice anchors (and runs the strong anchor from \(m_H\to m_Z\) deterministically), then scans for best 1‑loop convergence at high scales.
 
@@ -314,4 +325,5 @@ python -m physics_test.cli gut-run-lattice --model mssm --n 400
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
+python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05
 ```

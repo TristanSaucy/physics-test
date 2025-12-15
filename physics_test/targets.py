@@ -68,6 +68,16 @@ def known_targets() -> list[TargetConstant]:
     mW_GeV = float(m_mW.value)
     sigma_mW_GeV = m_mW.sigma
 
+    m_GF = get_measurement(
+        "G_F_GeV_minus2",
+        default_value=1.1663787e-5,
+        default_sigma=6e-12,
+        default_scheme="Fermi constant from muon lifetime (GeV^-2)",
+        default_citation="PDG RPP (G_F)",
+    )
+    G_F_GeV_minus2 = float(m_GF.value)
+    sigma_G_F_GeV_minus2 = m_GF.sigma
+
     # Commonly cited effective EM coupling at the Z pole (vacuum polarization effects).
     # This is scheme-dependent and kept as an explicit target with metadata.
     m_inv_alpha_mZ = get_measurement(
@@ -102,6 +112,20 @@ def known_targets() -> list[TargetConstant]:
     g_ew = 0.652
     alpha_w_mZ = (g_ew**2) / (4.0 * constants.PI)
 
+    # Weak coupling from muon decay (tree-level): G_F / sqrt(2) = g^2 / (8 mW^2)
+    # => g^2 = 8 * G_F * mW^2 / sqrt(2),   alpha2 = g^2 / (4*pi)
+    #
+    # This ignores electroweak radiative corrections (Δr) and should be treated as
+    # an external, scheme-sensitive cross-check rather than a strict target.
+    sqrt2 = 2.0**0.5
+    g2_tree_from_GF_mW = 8.0 * G_F_GeV_minus2 * (mW_GeV * mW_GeV) / sqrt2
+    alpha2_tree_from_GF_mW = g2_tree_from_GF_mW / (4.0 * constants.PI)
+    inv_alpha2_tree_from_GF_mW = (1.0 / alpha2_tree_from_GF_mW) if alpha2_tree_from_GF_mW != 0 else float("inf")
+    sigma_inv_alpha2_tree_from_GF_mW: float | None = None
+    if sigma_G_F_GeV_minus2 is not None and sigma_mW_GeV is not None and G_F_GeV_minus2 != 0 and mW_GeV != 0:
+        rel2 = (float(sigma_G_F_GeV_minus2) / float(G_F_GeV_minus2)) ** 2 + (2.0 * float(sigma_mW_GeV) / float(mW_GeV)) ** 2
+        sigma_inv_alpha2_tree_from_GF_mW = abs(float(inv_alpha2_tree_from_GF_mW)) * (rel2**0.5)
+
     # Electroweak mixing angle (common on-shell-ish reference near mZ; approximate).
     # sin^2(theta_W) is dimensionless and often quoted; it is scheme/scale dependent.
     sin2_thetaW_mZ = 0.23122
@@ -133,6 +157,15 @@ def known_targets() -> list[TargetConstant]:
             sigma_inv_alpha2_from_alpha_mZ_on_shell = float(sigma_alpha2_from_alpha_mZ_on_shell) / (
                 float(alpha2_from_alpha_mZ_on_shell) ** 2
             )
+
+    # Electroweak radiative correction parameter Δr (on-shell relation; exploratory diagnostic).
+    # Using the tree-level relation corrected by Δr:
+    #   mW^2 (1 - mW^2/mZ^2) = (π α(0)) / (√2 G_F) * 1/(1-Δr)
+    # => 1-Δr = (π α(0)) / (√2 G_F mW^2 sin^2θW_OS)
+    denom = sqrt2 * G_F_GeV_minus2 * (mW_GeV * mW_GeV) * sin2_thetaW_on_shell
+    one_minus_delta_r = (constants.PI * alpha0 / denom) if denom != 0 else float("nan")
+    delta_r_on_shell = 1.0 - one_minus_delta_r if one_minus_delta_r == one_minus_delta_r else float("nan")
+    inv_delta_r_on_shell = (1.0 / delta_r_on_shell) if (delta_r_on_shell != 0.0 and delta_r_on_shell == delta_r_on_shell) else float("inf")
 
     # Refined strong-coupling targets at other fixed scales via 1-loop running from mZ
     # (no free Lambda parameter).
@@ -359,6 +392,31 @@ def known_targets() -> list[TargetConstant]:
         # Weak (multiple alternative dimensionless couplings)
         TargetConstant("alpha_w(mZ)", alpha_w_mZ, "Weak: alpha_2=g^2/(4*pi) using g≈0.652 (legacy proxy; kept for comparison)"),
         TargetConstant("1/alpha_w(mZ)", 1.0 / alpha_w_mZ, "Weak: inverse of alpha_w(mZ) (legacy proxy; kept for comparison)"),
+        TargetConstant(
+            "1/alpha2_tree_from_GF(mW)",
+            inv_alpha2_tree_from_GF_mW,
+            "Weak: tree-level inverse alpha2 from muon-decay G_F and mW (no electroweak radiative corrections Δr; external cross-check)",
+            sigma=sigma_inv_alpha2_tree_from_GF_mW,
+            Q_GeV=mW_GeV,
+            scheme="tree-level: G_F/sqrt(2)=g^2/(8 mW^2); alpha2=g^2/(4*pi)",
+            citation=f"{m_GF.citation}; {m_mW.citation}",
+        ),
+        TargetConstant(
+            "delta_r(on-shell;alpha0,GF,mW,mZ)",
+            delta_r_on_shell,
+            "EW: on-shell radiative correction Δr implied by alpha(0), G_F, mW, mZ (exploratory diagnostic)",
+            Q_GeV=mZ_GeV,
+            scheme="Δr from mW^2(1-mW^2/mZ^2) = (π α0)/(√2 G_F) * 1/(1-Δr)",
+            citation=f"{m_alpha0.citation}; {m_GF.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/delta_r(on-shell;alpha0,GF,mW,mZ)",
+            inv_delta_r_on_shell,
+            "EW: inverse Δr (exploratory diagnostic; often ~O(10^1))",
+            Q_GeV=mZ_GeV,
+            scheme="inverse of Δr from the on-shell relation",
+            citation=f"{m_alpha0.citation}; {m_GF.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
         TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (legacy scheme-dependent value; comparison)"),
         TargetConstant(
             "sin2thetaW(on-shell)",

@@ -148,12 +148,35 @@ def oos_targets_v4() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v5() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v5).
+
+    v5 introduces an **external EW cross-check** derived from the muon-decay Fermi
+    constant G_F and the W mass:
+
+      - 1/alpha2_tree_from_GF(mW)
+
+    This is intentionally marked as scheme-sensitive / tree-level (no Δr), so it is
+    best interpreted as an exploratory probe of electroweak “missing physics” rather
+    than a strict claim of failure/success at 2%.
+    """
+
+    return [
+        OOSTarget(
+            "1/alpha2_tree_from_GF(mW)",
+            "External EW cross-check: infer alpha2 at mW from G_F and mW at tree-level (no Δr).",
+        ),
+    ]
+
+
 def oos_suites() -> dict[str, list[OOSTarget]]:
     return {
         "v1": oos_targets_v1(),
         "v2": oos_targets_v2(),
         "v3": oos_targets_v3(),
         "v4": oos_targets_v4(),
+        "v5": oos_targets_v5(),
     }
 
 

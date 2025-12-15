@@ -76,6 +76,13 @@
     "Q_GeV": 91.1876,
     "scheme": "top vacuum polarization contribution at mZ^2 (approx)",
     "citation": "PDG RPP (Delta alpha_top)"
+  },
+  "G_F_GeV_minus2": {
+    "value": 1.1663787e-05,
+    "sigma": 6e-12,
+    "Q_GeV": null,
+    "scheme": "Fermi constant from muon lifetime (GeV^-2)",
+    "citation": "PDG RPP (G_F)"
   }
 }
 
