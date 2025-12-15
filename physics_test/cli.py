@@ -32,6 +32,7 @@ from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
 from physics_test.normalization import normalization_factor_for_force, normalization_families
 from physics_test.steps import best_step_with_C_ratio, step_from_targets
+from physics_test.rg_scales import lambda_qcd_from_alpha_s
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -127,6 +128,51 @@ def cmd_list_norm_families(args: argparse.Namespace) -> int:
     fams = normalization_families()
     for k in sorted(fams.keys()):
         print(f"{k:24s}  {fams[k].note}")
+    return 0
+
+
+def cmd_rg_scales(args: argparse.Namespace) -> int:
+    """
+    Small RG/dimensional-transmutation helpers that make the role of e explicit.
+
+    The key point: many physical scale hierarchies are not multiplicative constants,
+    but exponentials like exp(-const/alpha). This is where 'e' naturally enters.
+    """
+
+    # QCD Lambda from alpha_s(mu)
+    res1 = lambda_qcd_from_alpha_s(alpha_s_mu=args.alpha_s, mu_GeV=args.mu_GeV, n_f=args.n_f, loops=1)
+    res2 = lambda_qcd_from_alpha_s(alpha_s_mu=args.alpha_s, mu_GeV=args.mu_GeV, n_f=args.n_f, loops=2)
+
+    # Show equivalent temperatures/frequencies as a bridge back to the F0/K side.
+    E1_J = energy_J_from_GeV(res1.Lambda_GeV)
+    E2_J = energy_J_from_GeV(res2.Lambda_GeV)
+    T1_K = temperature_K_from_energy_J(E1_J)
+    T2_K = temperature_K_from_energy_J(E2_J)
+    f1_Hz = frequency_Hz_from_energy_J(E1_J)
+    f2_Hz = frequency_Hz_from_energy_J(E2_J)
+
+    # How many φ-steps is μ/Λ ?
+    p = (1.0 + math.sqrt(5.0)) / 2.0
+    dm1 = math.log(res1.mu_GeV / res1.Lambda_GeV) / math.log(p) if res1.Lambda_GeV > 0 else float("nan")
+    dm2 = math.log(res2.mu_GeV / res2.Lambda_GeV) / math.log(p) if res2.Lambda_GeV > 0 else float("nan")
+
+    print("QCD dimensional transmutation (Lambda_QCD) from alpha_s(mu):")
+    print(f"  inputs: alpha_s(mu)={args.alpha_s:.8g}, mu={args.mu_GeV:.8g} GeV, n_f={args.n_f}")
+    print(f"  beta0={res2.beta0:.8g}, beta1={res2.beta1:.8g}")
+    print("")
+    print("  1-loop:")
+    print(f"    Lambda = {res1.Lambda_GeV:.8g} GeV")
+    print(f"    equiv  = {T1_K:.6g} K,  f=E/h ≈ {f1_Hz:.6g} Hz")
+    print(f"    log_phi(mu/Lambda) ≈ {dm1:.6f}")
+    print("")
+    print("  2-loop (approx):")
+    print(f"    Lambda = {res2.Lambda_GeV:.8g} GeV")
+    print(f"    equiv  = {T2_K:.6g} K,  f=E/h ≈ {f2_Hz:.6g} Hz")
+    print(f"    log_phi(mu/Lambda) ≈ {dm2:.6f}")
+    print("")
+    print("Interpretation:")
+    print("  - 'e' enters through exp(-const/alpha). This is *not* a free multiplicative factor;")
+    print("    it is the RG mechanism that generates large scale separations from dimensionless couplings.")
     return 0
 
 
@@ -1487,6 +1533,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_nf = sub.add_parser("list-norm-families", help="List principled normalization-factor families (for oos-predictive)")
     p_nf.set_defaults(func=cmd_list_norm_families)
+
+    p_rg = sub.add_parser("rg-scales", help="RG/dimensional-transmutation helper: compute Lambda_QCD from alpha_s(mu)")
+    p_rg.add_argument("--alpha-s", dest="alpha_s", type=float, default=0.1179, help="Input alpha_s(mu) (default: 0.1179)")
+    p_rg.add_argument("--mu-GeV", type=float, default=91.1876, help="Scale mu in GeV (default: mZ)")
+    p_rg.add_argument("--n-f", type=int, default=5, help="Active flavors n_f (default: 5)")
+    p_rg.set_defaults(func=cmd_rg_scales)
 
     p_oos = sub.add_parser("oos-report", help="Out-of-sample report: run a frozen target suite against strict gauge-derived C")
     p_oos.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")

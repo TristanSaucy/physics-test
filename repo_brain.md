@@ -127,6 +127,9 @@ python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02 --allow-c-r
 # optional: apply a principled normalization family (see list-norm-families)
 python -m physics_test.cli list-norm-families
 python -m physics_test.cli oos-predictive --suite v1 --norm-family inv_C2_fund --max-rel-err 0.02
+
+# RG / dimensional transmutation helper (shows where 'e' naturally enters via exp(-const/alpha))
+python -m physics_test.cli rg-scales
 ```
 
 Optional gravity mass sweep (inverse gravity; CMB $K$):
