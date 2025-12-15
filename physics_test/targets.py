@@ -237,7 +237,23 @@ def known_targets() -> list[TargetConstant]:
         default_citation="PDG RPP (mt)",
     )
     mt_GeV = float(m_mt.value)
+    sigma_mt_GeV = m_mt.sigma
     alpha_s_mt_1loop_from_mZ = alpha_s_run_1loop_from_ref(mt_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
+
+    # Leading top-loop electroweak correction to the rho parameter (Δρ_top), using the pole mass.
+    # Standard leading term: Δρ_top ≈ 3 G_F m_t^2 / (8 √2 π^2).
+    delta_rho_top = (3.0 * G_F_GeV_minus2 * (mt_GeV * mt_GeV)) / (8.0 * sqrt2 * (constants.PI**2))
+    inv_delta_rho_top = (1.0 / delta_rho_top) if delta_rho_top != 0 else float("inf")
+    sigma_inv_delta_rho_top: float | None = None
+    if sigma_G_F_GeV_minus2 is not None or sigma_mt_GeV is not None:
+        rel2 = 0.0
+        if sigma_G_F_GeV_minus2 is not None and G_F_GeV_minus2 != 0:
+            rel2 += (float(sigma_G_F_GeV_minus2) / float(G_F_GeV_minus2)) ** 2
+        if sigma_mt_GeV is not None and mt_GeV != 0:
+            rel2 += (2.0 * float(sigma_mt_GeV) / float(mt_GeV)) ** 2
+        sigma_delta_rho_top = abs(float(delta_rho_top)) * (rel2**0.5)
+        if delta_rho_top != 0:
+            sigma_inv_delta_rho_top = float(sigma_delta_rho_top) / (float(delta_rho_top) ** 2)
 
     # Additional fixed-scale strong-running cross-checks (same 1-loop-from-mZ prescription, nf=5, no thresholds).
     # These are intended for the out-of-sample suite v2.
@@ -510,6 +526,23 @@ def known_targets() -> list[TargetConstant]:
             Q_GeV=mZ_GeV,
             scheme="inverse of Δr from the on-shell relation",
             citation=f"{m_alpha0.citation}; {m_GF.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "delta_rho_top(GF,mt)",
+            delta_rho_top,
+            "EW: leading top-loop correction to rho parameter Δρ_top ≈ 3 G_F m_t^2 / (8 √2 π^2) (exploratory diagnostic)",
+            Q_GeV=mZ_GeV,
+            scheme="leading top loop (pole mt; no subleading EW/QCD corrections)",
+            citation=f"{m_GF.citation}; {m_mt.citation}",
+        ),
+        TargetConstant(
+            "1/delta_rho_top(GF,mt)",
+            inv_delta_rho_top,
+            "EW: inverse Δρ_top (exploratory diagnostic; often ~O(10^2))",
+            sigma=sigma_inv_delta_rho_top,
+            Q_GeV=mZ_GeV,
+            scheme="inverse of leading top-loop Δρ_top (pole mt)",
+            citation=f"{m_GF.citation}; {m_mt.citation}",
         ),
         TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (legacy scheme-dependent value; comparison)"),
         TargetConstant(

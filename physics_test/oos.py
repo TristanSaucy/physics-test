@@ -199,6 +199,28 @@ def oos_targets_v6() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v7() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v7).
+
+    v7 extends v6 with an additional standard EW radiative diagnostic:
+
+      - 1/delta_rho_top(GF,mt)
+
+    This is still exploratory: Δρ_top is a *computed* leading term rather than a direct
+    measurement, but it introduces a new, independent dimensionless structure
+    (GF * mt^2 / (π^2)) not already present in the Δα/Δr probes.
+    """
+
+    return [
+        *oos_targets_v6(),
+        OOSTarget(
+            "1/delta_rho_top(GF,mt)",
+            "Exploratory: inverse leading top-loop rho correction Δρ_top (computed from G_F and mt).",
+        ),
+    ]
+
+
 def oos_suites() -> dict[str, list[OOSTarget]]:
     return {
         "v1": oos_targets_v1(),
@@ -207,6 +229,7 @@ def oos_suites() -> dict[str, list[OOSTarget]]:
         "v4": oos_targets_v4(),
         "v5": oos_targets_v5(),
         "v6": oos_targets_v6(),
+        "v7": oos_targets_v7(),
     }
 
 

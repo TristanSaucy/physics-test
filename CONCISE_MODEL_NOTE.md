@@ -251,6 +251,10 @@ Suite `v6` probes inverse vacuum-polarization pieces and an inferred \(\Delta r\
 
 At 2% tolerance, 2/4 pass; at 5% tolerance, 4/4 pass. These are **diagnostics** (not strict couplings), but they strengthen the pattern that “RG/log physics” quantities often land near the same small set of strict lattice points.
 
+Suite `v7` extends this with a standard leading EW loop term:
+
+- `1/delta_rho_top(GF,mt)` (inverse leading top-loop \(\Delta\rho\)) lands **within ~4%** of strict lattice points (e.g. \((C,m)=(180,1)\) or \((15,-4)\)), so it passes at 5% but not 2%.
+
 ---
 
 ## 8) Predictability and falsifiability (what would count as “wrong”)
@@ -336,4 +340,5 @@ python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05
 python -m physics_test.cli oos-report --suite v6 --max-rel-err 0.05
+python -m physics_test.cli oos-report --suite v7 --max-rel-err 0.05
 ```

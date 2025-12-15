@@ -167,6 +167,7 @@ New external EW diagnostic (exploratory):
 Radiative-piece diagnostics (exploratory):
 
 - OOS suite `v6` adds inverse vacuum-polarization pieces `1/delta_alpha_*` and `1/delta_r(...)` to probe whether “RG/log physics” quantities show additional φ-lattice structure.
+- OOS suite `v7` extends this with `1/delta_rho_top(GF,mt)` (inverse leading top-loop \(\Delta\rho\)) as an additional EW radiative diagnostic.
 
 ## 4) Pass/fail criterion (frozen)
 
