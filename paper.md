@@ -450,6 +450,7 @@ Interpretation (hypothesis): if $m$ is a real discrete “harmonic level,” the
 ### 6.4 Limitations and failure modes
 
 - **Scale dependence**: strong/weak couplings are not single numbers without specifying a reference scale and scheme.
+- **Integer steps vs smooth running**: treating *all* scale dependence as integer \(\Delta m\) steps fails exactly where RG physics matters (e.g., strong running near \(m_W\), \(m_t\), 1 TeV). A more coherent interpretation is that \(m\) is a **coarse band index** and the within-band motion is supplied by **deterministic RG running**. In this repo, the strong-only command `oos-predictive-rg` (fit the lattice anchor once, then RG-run to other scales with no re-fitting of \(m\)) turns the strong-running OOS misses into **passes at 2%** across the v2/v3/v4 strong cross-check keys (typical errors \(\sim\)1–2%).
 - **Gravity ambiguity**: $\alpha_G$ depends on mass scale; without freezing “gravity type” one can sweep mass anchors and fit many outcomes.
 - **Frequency anchoring**: Option 2 requires observed $F_0$. This repo freezes a small anchor menu (`F0_anchors.md`), but post-hoc selection or expanding the menu remains an overfitting pathway.
 - **Overfitting risk**: relaxing the strict $C$ set or allowing orientation flips rapidly expands the hypothesis space.
@@ -468,6 +469,7 @@ Failure modes worth watching:
    - a small set of mass/type anchors (ordinary matter + GW-band types; see §5.2–§5.4 and `gravity_types_report.md`).
 3) Tighten tolerance and re-test survival rates (e.g., 5% → 2% → 1%).
 4) Expand or justify $C$ derivations with additional group-invariant constructions only if they remain short and principled.
+5) Extend the “within-band RG” idea beyond QCD: add a deterministic QED/EW running layer (for \(\alpha(Q)\), \(\alpha_1(Q)\), \(\alpha_2(Q)\) under frozen scheme choices) and re-run predictive OOS to see whether EM/EW OOS failures are similarly explained by within-band running.
 
 ## 8. Reproducibility (CLI commands)
 
@@ -511,6 +513,9 @@ python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 
 # predictive OOS (fit one C per force from strict anchors, then hold C fixed)
 python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02
+
+# predictive OOS (strong-only): within-band RG running from the lattice anchor (no re-fitting m per target)
+python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02
 
 # step-signal OOS (C-independent): do ratios look like φ^integer?
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02

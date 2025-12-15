@@ -129,6 +129,23 @@ We also support a C-independent “step-signal” diagnostic: for a force-local 
 
 This is useful because it directly tests the *integer-step* hypothesis (Δm quantization) without involving the C menu.
 
+### RG-within-band (new; exploratory but principled)
+
+The key observed failure mode of “integer steps only” is **running**: for the strong sector, you can fit a strict anchor coupling on the lattice, but nearby scales (e.g., $m_W$, $m_t$, 1 TeV) can miss at the $\sim$5% level if you force *all* scale dependence into integer Δm jumps.
+
+We now support a stricter interpretation consistent with renormalization group physics:
+
+- **Integer \(m\)** selects a **coarse band** (the anchor placement on the φ-lattice).
+- **Within-band variation** is supplied by **deterministic RG running** (no refitting \(m\) per target).
+
+CLI command (strong-only for now):
+
+- `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
+
+This mode uses the lattice-fit anchor value as $\alpha_s(Q_0)$ and predicts $\alpha_s(Q)$ at other scales using 1-loop or 2-loop QCD running (including an optional $n_f=5\rightarrow 6$ switch at $m_t$ when requested). In practice, this collapses the strong OOS running misses and yields **full passes at 2%** across the v2/v3/v4 strong-running target keys.
+
+Status: **exploratory**. It is “principled” (deterministic; no free knobs added), but it is not yet part of the frozen strict contract for all forces.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

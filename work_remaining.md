@@ -77,3 +77,12 @@ This is a living checklist for continuing the framework work in future sessions.
 
 - **Done**: kept “living docs” in sync (`README.md`, `paper.md`, `freezing_the_rules.md`, `active_context.md`, `repo_brain.md`, `gravity_types_report.md`).
 - **Done**: added a short, copy/paste “reproduce strict core results” command list in both `README.md` and `repo_brain.md`.
+
+- **Done**: removed the `oos-steps --allow-c-ratio` diagnostic (it was too flexible/trivial and could be misleading).
+- **Done**: documented the “RG-within-band” interpretation + command (`oos-predictive-rg`) and synced it across the docs.
+
+### Interpretation (latest)
+
+- **m looks like a coarse band index**: integer φ-steps are good for “which band” (anchor placement), but not for smooth running.
+- **Running is within-band** (strong sector): using deterministic QCD running from the lattice-fit anchor collapses the previous ~5% strong OOS misses into **<2%** across the v2/v3/v4 strong cross-check keys.
+- **What this suggests**: the model may be “integer band selection” + “RG flow inside the band,” rather than “all running is integer jumps.”

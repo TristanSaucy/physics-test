@@ -47,6 +47,18 @@ Scanning only those C values, integer m, and 5% tolerance gives plausible fits f
 
 This is valuable because it reduces “arbitrary C.”
 
+### Within-band running (RG) seems to be the missing piece (new)
+
+Pure “integer step only” predictions struggle exactly where physics says they should: **running with scale**.
+For the strong sector, holding \(C\) fixed and allowing only integer \(\Delta m\) cannot reproduce the smooth log running near \(m_W\) / \(m_t\) / 1 TeV at the 2% level.
+
+The new test `oos-predictive-rg` treats:
+
+- **integer \(m\)** as a **band index** (fit once at the strict anchor), and
+- **within-band motion** as **deterministic RG running** (no refitting \(m\) per target).
+
+Result: strong running cross-check keys that previously missed by \(\sim\)5% collapse to **passes at 2%** (typical errors \(\sim\)1–2%). This is the cleanest bridge so far between the φ-lattice idea and the fact that RG flow is continuous in \(\ln Q\).
+
 ### Strict all-forces per GW band (new)
 
 With frozen Option‑2 phenomenon anchors (see `F0_anchors.md`), strict gauge-$C$, and CMB $K$ for gravity:

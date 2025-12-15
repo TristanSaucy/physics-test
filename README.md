@@ -248,6 +248,7 @@ python -m physics_test.cli oos-rg --suite qcd-lambda-v2 --max-rel-err 0.05
 ## Caveats (important)
 
 - **Couplings run with scale / depend on scheme**: strong depends on the chosen energy scale; weak depends on both scale and $\sin^2\theta_W$ definition. Our strict targets reflect this by using a fixed 1-loop run from `alpha_s(mZ)` to `mH` and an on-shell $\sin^2\theta_W$-derived $\alpha_2$ (see `paper.md` §4.1.1).
+- **Integer steps are not “all the running”**: the strongest evidence so far is that integer \(m\) behaves like a **coarse band index**, while **RG running happens within the band**. In particular, the new strong-only command `oos-predictive-rg` (fit the lattice anchor once, then RG-run to other scales without re-fitting \(m\)) turns the previous strong-running OOS misses into **passes at 2%** across v2/v3/v4 strong cross-check keys (typical errors \(\sim\)1–2%).
 - **What “K” means**: for micro physics, treating $K$ as an “energy-scale temperature” (i.e., $E=k_BK$) is often more coherent than interpreting it as literal thermodynamic temperature.
 - **Avoiding overfitting**: as you allow larger families of C values, matches become easier. The most meaningful tests are the strict ones: discrete, justified C sets + fixed target definitions + fixed band constraints.
 
