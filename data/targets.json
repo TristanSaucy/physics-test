@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "note": "Curated external inputs (values + 1σ uncertainties + context). Keep this small and auditable.",
+    "status": "exploratory",
+    "sources": [
+      "CODATA 2018 / NIST constants",
+      "PDG Review of Particle Physics (RPP)"
+    ]
+  },
+  "alpha0": {
+    "value": 0.0072973525693,
+    "sigma": 1.1e-12,
+    "Q_GeV": null,
+    "scheme": "vacuum (Thomson limit); CODATA 2018",
+    "citation": "NIST CODATA 2018 (alpha)"
+  },
+  "alpha_inv_mZ": {
+    "value": 127.955,
+    "sigma": 0.01,
+    "Q_GeV": 91.1876,
+    "scheme": "effective EM coupling at mZ (scheme-dependent; commonly quoted)",
+    "citation": "PDG RPP (alpha(mZ))"
+  },
+  "alpha_s_mZ": {
+    "value": 0.1179,
+    "sigma": 0.0009,
+    "Q_GeV": 91.1876,
+    "scheme": "MSbar world average at mZ (approx)",
+    "citation": "PDG RPP (alpha_s(mZ))"
+  },
+  "mW_GeV": {
+    "value": 80.379,
+    "sigma": 0.012,
+    "Q_GeV": null,
+    "scheme": "pole mass (benchmark)",
+    "citation": "PDG RPP (mW)"
+  },
+  "mZ_GeV": {
+    "value": 91.1876,
+    "sigma": 0.0021,
+    "Q_GeV": null,
+    "scheme": "pole mass (benchmark)",
+    "citation": "PDG RPP (mZ)"
+  },
+  "mH_GeV": {
+    "value": 125.0,
+    "sigma": null,
+    "Q_GeV": null,
+    "scheme": "chosen benchmark scale for strict strong target",
+    "citation": "project convention (mH benchmark)"
+  },
+  "mt_GeV": {
+    "value": 172.76,
+    "sigma": 0.3,
+    "Q_GeV": null,
+    "scheme": "pole mass (approx benchmark)",
+    "citation": "PDG RPP (mt)"
+  },
+  "delta_alpha_lept_mZ2": {
+    "value": 0.0314977,
+    "sigma": 0.0,
+    "Q_GeV": 91.1876,
+    "scheme": "leptonic vacuum polarization contribution at mZ^2 (approx)",
+    "citation": "PDG RPP (Delta alpha_lept)"
+  },
+  "delta_alpha_had5_mZ2": {
+    "value": 0.02764,
+    "sigma": 0.00007,
+    "Q_GeV": 91.1876,
+    "scheme": "hadronic vacuum polarization (5 flavors) at mZ^2 (approx)",
+    "citation": "PDG RPP (Delta alpha_had^(5))"
+  },
+  "delta_alpha_top_mZ2": {
+    "value": -0.00007,
+    "sigma": 0.0,
+    "Q_GeV": 91.1876,
+    "scheme": "top vacuum polarization contribution at mZ^2 (approx)",
+    "citation": "PDG RPP (Delta alpha_top)"
+  }
+}
+
+

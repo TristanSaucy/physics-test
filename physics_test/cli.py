@@ -35,7 +35,8 @@ from physics_test.steps import step_from_targets
 from physics_test.rg_scales import lambda_qcd_from_alpha_s
 from physics_test.oos_rg import rg_suites
 from physics_test.rg_within_band import QCDRunSpec, alpha_s_from_ref, qcd_run_spec_from_key, scale_GeV_from_target_key
-from physics_test.qed_running import qed_run_alpha_inv_1loop_from_ref
+from physics_test.qed_running import alpha_inv_mZ_from_delta_alpha, qed_run_alpha_inv_1loop_from_ref
+from physics_test.target_registry import get_measurement
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -123,7 +124,13 @@ def cmd_list_sets(args: argparse.Namespace) -> int:
 def cmd_list_targets(args: argparse.Namespace) -> int:
     targets = known_targets()
     for t in targets:
-        print(f"{t.name:20s}  {t.value:.15g}  note={t.note}")
+        sigma_s = f"{t.sigma:.3g}" if getattr(t, "sigma", None) is not None else "NA"
+        q_s = f"{t.Q_GeV:g}" if getattr(t, "Q_GeV", None) is not None else ""
+        scheme = getattr(t, "scheme", "") or ""
+        if q_s:
+            q_s = f"Q={q_s}GeV"
+        meta = " ".join(x for x in [f"sigma={sigma_s}", q_s, scheme] if x)
+        print(f"{t.name:28s}  {t.value:.15g}  {meta}  note={t.note}")
     return 0
 
 
@@ -302,7 +309,7 @@ def cmd_oos_report(args: argparse.Namespace) -> int:
         raise SystemExit(f"Unknown OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
     oos = suites[args.suite]
     targets = resolve_oos_targets(oos)
-    target_map = {t.name: t.value for t in known_targets()}
+    all_targets = {t.name: t for t in known_targets()}
 
     # Integer m grid
     m_values = frange(args.m_min, args.m_max, args.m_step)
@@ -334,20 +341,33 @@ def cmd_oos_report(args: argparse.Namespace) -> int:
     print(f"m range = [{min(m_values)}, {max(m_values)}]\n")
 
     n_pass = 0
+    n_sigma = 0
+    chi2 = 0.0
     for ot, t in zip(oos, targets):
-        hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=target_map[t.name])
+        tgt = all_targets[t.name]
+        hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=tgt.value)
         best = hits[0]
         ok = abs(best.rel_err) <= args.max_rel_err
         status = "PASS" if ok else "FAIL"
         if ok:
             n_pass += 1
         lab = label_by_C.get(best.C, "")
+        if tgt.sigma is not None and tgt.sigma > 0:
+            z = best.abs_err / float(tgt.sigma)
+            n_sigma += 1
+            chi2 += float(z * z)
+            z_s = f"  z={z:.3g}"
+        else:
+            z_s = ""
         print(
-            f"[{status}] {t.name:28s} target={t.value:.12g}  "
-            f"best: {lab:22s} C={best.C:g}, m={int(best.m):d}, G={best.G:.12g}, rel_err={best.rel_err:.3e}"
+            f"[{status}] {t.name:28s} target={tgt.value:.12g}  "
+            f"best: {lab:22s} C={best.C:g}, m={int(best.m):d}, G={best.G:.12g}, rel_err={best.rel_err:.3e}{z_s}"
         )
         print(f"       rationale: {ot.rationale}")
-    print(f"\nSummary: {n_pass}/{len(oos)} PASS at tol={args.max_rel_err}")
+    if n_sigma:
+        print(f"\nSummary: {n_pass}/{len(oos)} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})")
+    else:
+        print(f"\nSummary: {n_pass}/{len(oos)} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -364,7 +384,7 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
         raise SystemExit(f"Unknown predictive OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
 
     anchors, by_force = suites[args.suite]
-    target_map = {t.name: t.value for t in known_targets()}
+    all_targets = {t.name: t for t in known_targets()}
 
     # Integer m grid
     m_values = frange(args.m_min, args.m_max, args.m_step)
@@ -405,6 +425,8 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
 
     total_pass = 0
     total_n = 0
+    total_n_sigma = 0
+    total_chi2 = 0.0
 
     for force in forces:
         if force not in anchors:
@@ -413,31 +435,46 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
             raise SystemExit(f"Predictive suite {args.suite!r} missing targets for force {force!r}")
 
         anchor = anchors[force]
-        if anchor.key not in target_map:
+        if anchor.key not in all_targets:
             raise SystemExit(f"Unknown anchor key {anchor.key!r} for force {force!r}. Run `list-targets`.")
 
         factor = normalization_factor_for_force(force, family=args.norm_family)
 
         # Fit the anchor with the strict gauge-derived menu (choose best C and m)
-        anchor_target = target_map[anchor.key] * factor
+        anchor_target = all_targets[anchor.key].value * factor
         anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
         best_anchor = anchor_hits[0]
         C0 = best_anchor.C
         m0 = int(best_anchor.m)
         lab = label_by_C.get(C0, "")
 
-        print(f"{force.upper():7s} anchor: {anchor.key:28s} target={target_map[anchor.key]:.12g}")
+        print(f"{force.upper():7s} anchor: {anchor.key:28s} target={all_targets[anchor.key].value:.12g}")
         if abs(factor - 1.0) > 1e-12:
             print(f"         norm: factor={factor:.12g}  target_norm={anchor_target:.12g}")
-        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, G={best_anchor.G:.12g}, rel_err={best_anchor.rel_err:.3e}")
+        if all_targets[anchor.key].sigma is not None:
+            sigma_norm = abs(float(factor)) * float(all_targets[anchor.key].sigma)
+        else:
+            sigma_norm = None
+        if sigma_norm is not None and sigma_norm > 0:
+            z_a = (best_anchor.G - anchor_target) / sigma_norm
+            z_s = f"  z={z_a:.3g}"
+        else:
+            z_s = ""
+        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, G={best_anchor.G:.12g}, rel_err={best_anchor.rel_err:.3e}{z_s}")
         print(f"         note: {anchor.rationale}")
 
         n_pass = 0
         n = 0
+        n_sigma = 0
+        chi2 = 0.0
+        if sigma_norm is not None and sigma_norm > 0:
+            n_sigma += 1
+            chi2 += float(z_a * z_a)
         for ot in by_force[force]:
-            if ot.key not in target_map:
+            if ot.key not in all_targets:
                 raise SystemExit(f"Unknown predictive target key {ot.key!r}. Run `list-targets`.")
-            tgt = target_map[ot.key] * factor
+            tgt0 = all_targets[ot.key].value
+            tgt = tgt0 * factor
             hits = scan_candidates(Cs=[C0], m_values=m_values, target_G=tgt)
             best = hits[0]
             ok = abs(best.rel_err) <= args.max_rel_err
@@ -446,19 +483,41 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
                 n_pass += 1
             n += 1
             dm = int(best.m) - m0
+            if all_targets[ot.key].sigma is not None:
+                sigma_norm = abs(float(factor)) * float(all_targets[ot.key].sigma)
+            else:
+                sigma_norm = None
+            if sigma_norm is not None and sigma_norm > 0:
+                z = (best.G - tgt) / sigma_norm
+                n_sigma += 1
+                chi2 += float(z * z)
+                z_t = f"  z={z:.3g}"
+            else:
+                z_t = ""
             print(
-                f"  [{status}] {ot.key:28s} target={target_map[ot.key]:.12g}  "
-                f"m={int(best.m):d} (dm={dm:+d})  G={best.G:.12g}  rel_err={best.rel_err:.3e}"
+                f"  [{status}] {ot.key:28s} target={tgt0:.12g}  "
+                f"m={int(best.m):d} (dm={dm:+d})  G={best.G:.12g}  rel_err={best.rel_err:.3e}{z_t}"
             )
             if abs(factor - 1.0) > 1e-12:
                 print(f"         target_norm={tgt:.12g}")
             print(f"         rationale: {ot.rationale}")
-        print(f"  Force summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
+        if n_sigma:
+            print(f"  Force summary: {n_pass}/{n} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})\n")
+        else:
+            print(f"  Force summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
 
         total_pass += n_pass
         total_n += n
+        total_n_sigma += n_sigma
+        total_chi2 += chi2
 
-    print(f"Overall predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
+    if total_n_sigma:
+        print(
+            f"Overall predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}  "
+            f"(sigma-annotated: n={total_n_sigma}, chi2={total_chi2:.6g})"
+        )
+    else:
+        print(f"Overall predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -480,7 +539,7 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
         raise SystemExit(f"Unknown predictive OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
 
     anchors, by_force = suites[args.suite]
-    target_map = {t.name: t.value for t in known_targets()}
+    all_targets = {t.name: t for t in known_targets()}
 
     # Integer m grid
     m_values = frange(args.m_min, args.m_max, args.m_step)
@@ -525,13 +584,15 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
     total_pass = 0
     total_n = 0
+    total_n_sigma = 0
+    total_chi2 = 0.0
 
     for force in forces:
         if force not in anchors or force not in by_force:
             raise SystemExit(f"Unknown force {force!r} for suite {args.suite!r}. Options: {', '.join(sorted(anchors.keys()))}")
 
         anchor = anchors[force]
-        if anchor.key not in target_map:
+        if anchor.key not in all_targets:
             raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
 
         # Determine reference scale Q0
@@ -546,13 +607,19 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             raise SystemExit("oos-predictive-rg currently supports only --force em|strong|all")
 
         # Fit the anchor on the lattice (choose best C and integer m)
-        anchor_target = float(target_map[anchor.key])
+        anchor_target = float(all_targets[anchor.key].value)
         anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
         best_anchor = anchor_hits[0]
         C0 = float(best_anchor.C)
         m0 = int(best_anchor.m)
         inv0 = float(best_anchor.G)
         lab = label_by_C.get(C0, "")
+        if all_targets[anchor.key].sigma is not None and all_targets[anchor.key].sigma > 0:
+            z_anchor = (inv0 - anchor_target) / float(all_targets[anchor.key].sigma)
+            z_anchor_s = f"  z={z_anchor:.3g}"
+        else:
+            z_anchor = None
+            z_anchor_s = ""
 
         # Choose running spec (deterministic; no tuning knobs)
         runner = str(args.runner).strip().lower()
@@ -584,9 +651,13 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 steps_per_unit_log=spec_qcd.steps_per_unit_log,
             )
         else:
-            # EM: only QED threshold running is supported right now
-            if runner not in ("auto", "qed_1loop"):
-                raise SystemExit("For EM, use --runner auto or --runner qed_1loop")
+            # EM runners:
+            #  - qed_1loop: simple 1-loop threshold model
+            #  - qed_pdg_mZ: PDG-style Δα decomposition at mZ (uses external Δα inputs)
+            #  - auto: defaults to qed_pdg_mZ
+            em_runner = "qed_pdg_mZ" if runner == "auto" else runner
+            if em_runner not in ("qed_1loop", "qed_pdg_mZ"):
+                raise SystemExit("For EM, use --runner auto, --runner qed_pdg_mZ, or --runner qed_1loop")
 
         # Pretty header
         print(f"Predictive RG-within-band OOS suite: {args.suite}")
@@ -600,9 +671,13 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             print(f"runner = {args.runner}  -> loops={spec_qcd.loops}, nf_mode={spec_qcd.nf_mode}, n_f={spec_qcd.n_f}, Q0={Q0:g} GeV\n")
             print(f"STRONG  anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
         else:
-            print(f"runner = {args.runner}  -> QED 1-loop (fermion thresholds), Q0={Q0:g} GeV\n")
+            if em_runner == "qed_1loop":
+                runner_desc = "QED 1-loop (fermion thresholds)"
+            else:
+                runner_desc = "PDG-style Δα(mZ^2)=Δα_lept+Δα_had^(5)+Δα_top"
+            print(f"runner = {args.runner}  -> {runner_desc}, Q0={Q0:g} GeV\n")
             print(f"EM      anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV (fixed)")
-        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv0={inv0:.12g}, rel_err={best_anchor.rel_err:.3e}")
+        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv0={inv0:.12g}, rel_err={best_anchor.rel_err:.3e}{z_anchor_s}")
         print(f"         note: {anchor.rationale}")
 
         # Precompute phi/log(phi)
@@ -618,10 +693,15 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
         n_pass = 0
         n = 0
+        n_sigma = 0
+        chi2 = 0.0
+        if z_anchor is not None:
+            n_sigma += 1
+            chi2 += float(z_anchor * z_anchor)
         for key, rationale in targets_to_eval:
-            if key not in target_map:
+            if key not in all_targets:
                 raise SystemExit(f"Unknown target key {key!r}. Run `list-targets`.")
-            tgt = float(target_map[key])
+            tgt = float(all_targets[key].value)
             Q = scale_GeV_from_target_key(key)
 
             if force == "strong":
@@ -630,9 +710,28 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 aQ = alpha_s_from_ref(Q, alpha_s_Q0=alpha0, Q0_GeV=Q0, spec=spec_qcd)
                 inv_pred = (1.0 / aQ) if aQ not in (0.0, float("inf")) else float("inf")
             else:
-                inv_pred = qed_run_alpha_inv_1loop_from_ref(Q, alpha_inv_Q0=inv0, Q0_GeV=Q0)
+                if em_runner == "qed_1loop":
+                    inv_pred = qed_run_alpha_inv_1loop_from_ref(Q, alpha_inv_Q0=inv0, Q0_GeV=Q0)
+                else:
+                    # PDG-style Δα inputs are defined at mZ only (by construction).
+                    mZ = get_measurement("mZ_GeV", default_value=91.1876).value
+                    if abs(float(Q) - float(mZ)) > 1e-3:
+                        raise SystemExit(f"runner qed_pdg_mZ only supports Q≈mZ; got Q={Q:g} GeV from target {key!r}")
+                    da_lept = get_measurement("delta_alpha_lept_mZ2", default_value=0.0314977).value
+                    da_had5 = get_measurement("delta_alpha_had5_mZ2", default_value=0.02764).value
+                    da_top = get_measurement("delta_alpha_top_mZ2", default_value=-0.00007).value
+                    inv_pred = alpha_inv_mZ_from_delta_alpha(
+                        alpha_inv_0=inv0, delta_alpha_lept=da_lept, delta_alpha_had5=da_had5, delta_alpha_top=da_top
+                    )
 
             rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
+            if all_targets[key].sigma is not None and all_targets[key].sigma > 0:
+                z = (inv_pred - tgt) / float(all_targets[key].sigma)
+                z_s = f"  z={z:.3g}"
+                n_sigma += 1
+                chi2 += float(z * z)
+            else:
+                z_s = ""
 
             ok = abs(rel_err) <= float(args.max_rel_err)
             status = "PASS" if ok else "FAIL"
@@ -655,17 +754,28 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             print(
                 f"  [{status}] {key:28s} target={tgt:.12g}  Q={Q:g} GeV  "
                 f"pred={inv_pred:.12g}  rel_err={rel_err:.3e}  "
-                f"dm_real={dm_real:.6f}  dm_int={dm_int:+d}  frac={dm_frac:+.6f}"
+                f"dm_real={dm_real:.6f}  dm_int={dm_int:+d}  frac={dm_frac:+.6f}{z_s}"
             )
             print(f"         rationale: {rationale}")
 
-        print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
+        if n_sigma:
+            print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})\n")
+        else:
+            print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
 
         total_pass += n_pass
         total_n += n
+        total_n_sigma += n_sigma
+        total_chi2 += chi2
 
     if len(forces) > 1:
-        print(f"Overall RG-within-band predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
+        if total_n_sigma:
+            print(
+                f"Overall RG-within-band predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}  "
+                f"(sigma-annotated: n={total_n_sigma}, chi2={total_chi2:.6g})"
+            )
+        else:
+            print(f"Overall RG-within-band predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -1863,7 +1973,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred_rg.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos_pred_rg.add_argument(
         "--runner",
-        choices=["auto", "qed_1loop", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
+        choices=["auto", "qed_1loop", "qed_pdg_mZ", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
         default="auto",
         help="Deterministic running prescription to use (strong: QCD; EM: QED) (default: auto).",
     )

@@ -71,6 +71,15 @@ Strict mode freezes:
 
 This is what keeps the project from devolving into unconstrained numerology: the hypothesis space is deliberately small.
 
+### 3.1 Measurement registry (toward rigor)
+
+To make the framework auditable and uncertainty-aware, key external inputs are stored in:
+
+- `data/targets.json`
+
+Each entry includes (where known): **value**, **1σ uncertainty**, optional **reference scale** \(Q\), a short **scheme/notes** string, and a **citation hint**.
+The code reads this via `physics_test/target_registry.py` and attaches metadata to `TargetConstant` objects (see `physics_test/targets.py`).
+
 ---
 
 ## 4) Target definitions (what we fit \(G\) to)
@@ -202,7 +211,7 @@ When you try to explain scale‑dependence using only integer \(\Delta m\) steps
 Using `oos-predictive-rg`:
 
 - **Strong** running cross‑checks that missed before become **passes at 2%** (typical errors ~1–2% across v2/v3/v4 strong running keys).
-- **EM** OOS cross‑check `1/alpha → 1/alpha(mZ)` becomes a **pass at 2%** (typical error ~1% in the toy QED threshold model).
+- **EM** OOS cross‑check `1/alpha → 1/alpha(mZ)` becomes a **pass at 2%** under deterministic QED running (either a PDG-style Δα(mZ²) relation or a simple 1-loop threshold runner; both are available as `--runner` options).
 
 Interpretation: \(m\) behaves like a **coarse band index**, while **RG flow supplies within‑band motion**.
 
@@ -222,6 +231,17 @@ Then:
 
 - Once you fit an anchor, **RG‑within‑band predicts additional scales** with no further tuning.
 - If those predictions fail broadly as you expand the OOS set (or tighten tolerance), that is a genuine failure mode of the framework.
+
+### 8.1 Uncertainty-aware reporting (z-scores / χ²)
+
+CLI reports now include:
+
+- **z-score** \(z \equiv (G_{\text{pred}}-G_{\text{target}})/\sigma\) when a target has a registry-provided \(\sigma\),
+- and simple **χ² sums** over sigma-annotated targets in a suite.
+
+Important: these \(\sigma\) values are **measurement uncertainties only**. They do **not** include “model discrepancy” (the fact that the lattice is a toy ansatz).
+So for ultra-precise quantities (e.g., \(\alpha\)), z-scores can be enormous even when the model is “close” at the percent level.
+We therefore keep **relative-error thresholds** as the primary “toy-model” pass/fail criterion, while z/χ² is used to keep inputs honest and make residual structure obvious.
 
 Concrete falsification directions:
 

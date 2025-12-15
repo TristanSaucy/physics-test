@@ -109,3 +109,32 @@ def qed_run_alpha_inv_1loop_from_ref(
     return out
 
 
+def alpha_inv_mZ_from_delta_alpha(
+    *,
+    alpha_inv_0: float,
+    delta_alpha_lept: float,
+    delta_alpha_had5: float,
+    delta_alpha_top: float = 0.0,
+) -> float:
+    """
+    PDG-style relation between alpha(0) and an effective alpha at the Z scale:
+
+      alpha(mZ) = alpha(0) / (1 - Δα(mZ^2))
+
+    In terms of inverse couplings:
+
+      alpha^{-1}(mZ) = alpha^{-1}(0) * (1 - Δα)
+
+    where we split:
+      Δα = Δα_lept + Δα_had^(5) + Δα_top
+
+    Notes:
+      - This is a standard electroweak input relation (still scheme-dependent).
+      - Δα_had^(5) is not computed from first principles here; it is an external input.
+    """
+
+    a0_inv = float(alpha_inv_0)
+    da = float(delta_alpha_lept) + float(delta_alpha_had5) + float(delta_alpha_top)
+    return a0_inv * (1.0 - da)
+
+

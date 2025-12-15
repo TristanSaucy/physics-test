@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from physics_test import constants
+from physics_test.target_registry import get_measurement
 from physics_test.forces import (
     alpha_gravity,
     alpha_s_1loop,
@@ -21,6 +22,10 @@ class TargetConstant:
     name: str
     value: float
     note: str = ""
+    sigma: float | None = None
+    Q_GeV: float | None = None
+    scheme: str = ""
+    citation: str = ""
 
 
 def known_targets() -> list[TargetConstant]:
@@ -31,15 +36,64 @@ def known_targets() -> list[TargetConstant]:
       - Fine-structure constant α is dimensionless; so are its inverse and 2π factors.
       - Many other famous constants (G_N, c, h, kB, etc.) have units and are not eligible here.
     """
-    alpha0 = constants.FINE_STRUCTURE
+    # Registry-backed measured inputs (value + 1σ + scheme/citation).
+    m_alpha0 = get_measurement(
+        "alpha0",
+        default_value=constants.FINE_STRUCTURE,
+        default_sigma=1.1e-12,  # CODATA 2018-ish; tiny
+        default_scheme="vacuum (Thomson limit); CODATA 2018",
+        default_citation="NIST CODATA 2018 (alpha)",
+    )
+    alpha0 = float(m_alpha0.value)
+    sigma_alpha0 = m_alpha0.sigma
+
+    m_mZ = get_measurement(
+        "mZ_GeV",
+        default_value=91.1876,
+        default_sigma=0.0021,
+        default_scheme="pole mass (benchmark)",
+        default_citation="PDG RPP (mZ)",
+    )
+    mZ_GeV = float(m_mZ.value)
+    sigma_mZ_GeV = m_mZ.sigma
+
+    m_mW = get_measurement(
+        "mW_GeV",
+        default_value=80.379,
+        default_sigma=0.012,
+        default_scheme="pole mass (benchmark)",
+        default_citation="PDG RPP (mW)",
+    )
+    mW_GeV = float(m_mW.value)
+    sigma_mW_GeV = m_mW.sigma
 
     # Commonly cited effective EM coupling at the Z pole (vacuum polarization effects).
-    # This is approximate and included for "all options" scanning.
-    inv_alpha_mZ = 127.955  # ~ 1/alpha(mZ)
+    # This is scheme-dependent and kept as an explicit target with metadata.
+    m_inv_alpha_mZ = get_measurement(
+        "alpha_inv_mZ",
+        default_value=127.955,
+        default_sigma=0.01,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="effective EM coupling at mZ (scheme-dependent; commonly quoted)",
+        default_citation="PDG RPP (alpha(mZ))",
+    )
+    inv_alpha_mZ = float(m_inv_alpha_mZ.value)
+    sigma_inv_alpha_mZ = m_inv_alpha_mZ.sigma
     alpha_mZ = 1.0 / inv_alpha_mZ
+    sigma_alpha_mZ = (sigma_inv_alpha_mZ / (inv_alpha_mZ**2)) if sigma_inv_alpha_mZ is not None else None
 
-    # Strong coupling benchmark at mZ (commonly quoted); included as an exploratory target.
-    alpha_s_mZ = 0.1179
+    # Strong coupling benchmark at mZ (commonly quoted; includes uncertainty).
+    m_alpha_s_mZ = get_measurement(
+        "alpha_s_mZ",
+        default_value=0.1179,
+        default_sigma=0.0009,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="MSbar world average at mZ (approx)",
+        default_citation="PDG RPP (alpha_s(mZ))",
+    )
+    alpha_s_mZ = float(m_alpha_s_mZ.value)
+    sigma_alpha_s_mZ = m_alpha_s_mZ.sigma
+    sigma_inv_alpha_s_mZ = (sigma_alpha_s_mZ / (alpha_s_mZ**2)) if sigma_alpha_s_mZ is not None else None
 
     # Weak coupling (exploratory): alpha_W = g^2/(4*pi) at ~mZ scale.
     # Using a commonly cited SU(2)_L coupling g ≈ 0.652 at the electroweak scale.
@@ -54,19 +108,52 @@ def known_targets() -> list[TargetConstant]:
     # On-shell weak mixing angle from pole masses:
     #   sin^2(theta_W)_OS = 1 - (mW^2 / mZ^2)
     # This is a different (standard) scheme than the MSbar-ish 0.23122 above.
-    mW_GeV = 80.379
-    mZ_GeV = 91.1876
     sin2_thetaW_on_shell = 1.0 - (mW_GeV * mW_GeV) / (mZ_GeV * mZ_GeV)
+    sigma_sin2_thetaW_on_shell: float | None = None
+    if sigma_mW_GeV is not None and sigma_mZ_GeV is not None and mZ_GeV != 0:
+        # First-order propagation from mW and mZ.
+        # sin2 = 1 - mW^2/mZ^2
+        d_dmW = -2.0 * mW_GeV / (mZ_GeV * mZ_GeV)
+        d_dmZ = +2.0 * (mW_GeV * mW_GeV) / (mZ_GeV**3)
+        sigma_sin2_thetaW_on_shell = (
+            (d_dmW * float(sigma_mW_GeV)) ** 2 + (d_dmZ * float(sigma_mZ_GeV)) ** 2
+        ) ** 0.5
     alpha2_from_alpha_mZ_on_shell = alpha_mZ / sin2_thetaW_on_shell
+    sigma_alpha2_from_alpha_mZ_on_shell: float | None = None
+    sigma_inv_alpha2_from_alpha_mZ_on_shell: float | None = None
+    if sigma_alpha_mZ is not None or sigma_sin2_thetaW_on_shell is not None:
+        rel2 = 0.0
+        if sigma_alpha_mZ is not None and alpha_mZ != 0:
+            rel2 += (float(sigma_alpha_mZ) / float(alpha_mZ)) ** 2
+        if sigma_sin2_thetaW_on_shell is not None and sin2_thetaW_on_shell != 0:
+            rel2 += (float(sigma_sin2_thetaW_on_shell) / float(sin2_thetaW_on_shell)) ** 2
+        sigma_alpha2_from_alpha_mZ_on_shell = abs(float(alpha2_from_alpha_mZ_on_shell)) * (rel2**0.5)
+        if alpha2_from_alpha_mZ_on_shell != 0:
+            sigma_inv_alpha2_from_alpha_mZ_on_shell = float(sigma_alpha2_from_alpha_mZ_on_shell) / (
+                float(alpha2_from_alpha_mZ_on_shell) ** 2
+            )
 
     # Refined strong-coupling targets at other fixed scales via 1-loop running from mZ
     # (no free Lambda parameter).
-    mH_GeV = 125.0
+    m_mH = get_measurement(
+        "mH_GeV",
+        default_value=125.0,
+        default_scheme="benchmark scale",
+        default_citation="project convention (mH benchmark)",
+    )
+    mH_GeV = float(m_mH.value)
     alpha_s_mH_1loop_from_mZ = alpha_s_run_1loop_from_ref(mH_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
     # Out-of-sample strong running cross-checks (same fixed 1-loop prescription from mZ).
     # These are useful as "OOS targets" because they are *not* used to choose the strict targets.
-    mt_GeV = 172.76  # top pole mass (approx)
+    m_mt = get_measurement(
+        "mt_GeV",
+        default_value=172.76,
+        default_sigma=0.3,
+        default_scheme="pole mass (approx benchmark)",
+        default_citation="PDG RPP (mt)",
+    )
+    mt_GeV = float(m_mt.value)
     alpha_s_mt_1loop_from_mZ = alpha_s_run_1loop_from_ref(mt_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
     # Additional fixed-scale strong-running cross-checks (same 1-loop-from-mZ prescription, nf=5, no thresholds).
@@ -160,25 +247,80 @@ def known_targets() -> list[TargetConstant]:
     alpha_s_5 = alpha_s_1loop(5.0)
     alpha_s_1000 = alpha_s_1loop(1000.0)
 
+    inv_alpha0 = 1.0 / alpha0
+    sigma_inv_alpha0 = (sigma_alpha0 / (alpha0 * alpha0)) if sigma_alpha0 is not None else None
+
     return [
         # EM (vacuum, low-energy)
-        TargetConstant("alpha", alpha0, "EM: fine-structure constant alpha (vacuum, low-energy)"),
-        TargetConstant("1/alpha", 1.0 / alpha0, "EM: inverse fine-structure (vacuum, low-energy)"),
-        TargetConstant("2*pi/alpha", (2.0 * constants.PI) / alpha0, "EM: scaled variant"),
-        TargetConstant("alpha/(2*pi)", alpha0 / (2.0 * constants.PI), "EM: scaled variant"),
+        TargetConstant(
+            "alpha",
+            alpha0,
+            "EM: fine-structure constant alpha (vacuum, low-energy)",
+            sigma=sigma_alpha0,
+            scheme=m_alpha0.scheme,
+            citation=m_alpha0.citation,
+        ),
+        TargetConstant(
+            "1/alpha",
+            inv_alpha0,
+            "EM: inverse fine-structure (vacuum, low-energy)",
+            sigma=sigma_inv_alpha0,
+            scheme=m_alpha0.scheme,
+            citation=m_alpha0.citation,
+        ),
+        TargetConstant(
+            "2*pi/alpha",
+            (2.0 * constants.PI) * inv_alpha0,
+            "EM: scaled variant",
+            sigma=(2.0 * constants.PI) * sigma_inv_alpha0 if sigma_inv_alpha0 is not None else None,
+            scheme=m_alpha0.scheme,
+            citation=m_alpha0.citation,
+        ),
+        TargetConstant(
+            "alpha/(2*pi)",
+            alpha0 / (2.0 * constants.PI),
+            "EM: scaled variant",
+            sigma=(sigma_alpha0 / (2.0 * constants.PI)) if sigma_alpha0 is not None else None,
+            scheme=m_alpha0.scheme,
+            citation=m_alpha0.citation,
+        ),
         # EM (effective, higher scale)
-        TargetConstant("alpha(mZ)", alpha_mZ, "EM: effective alpha at Z pole (approx)"),
-        TargetConstant("1/alpha(mZ)", inv_alpha_mZ, "EM: effective inverse alpha at Z pole (approx)"),
+        TargetConstant(
+            "alpha(mZ)",
+            alpha_mZ,
+            "EM: effective alpha at Z pole (scheme-dependent; commonly quoted)",
+            sigma=sigma_alpha_mZ,
+            Q_GeV=m_inv_alpha_mZ.Q_GeV,
+            scheme=m_inv_alpha_mZ.scheme,
+            citation=m_inv_alpha_mZ.citation,
+        ),
+        TargetConstant(
+            "1/alpha(mZ)",
+            inv_alpha_mZ,
+            "EM: effective inverse alpha at Z pole (scheme-dependent; commonly quoted)",
+            sigma=sigma_inv_alpha_mZ,
+            Q_GeV=m_inv_alpha_mZ.Q_GeV,
+            scheme=m_inv_alpha_mZ.scheme,
+            citation=m_inv_alpha_mZ.citation,
+        ),
         # Strong (benchmark)
         TargetConstant(
             "alpha_s(mZ)",
             alpha_s_mZ,
             "Strong: alpha_s at Z pole (benchmark; used as the reference input for alpha_s_1loop_from_mZ(mH))",
+            sigma=sigma_alpha_s_mZ,
+            Q_GeV=m_alpha_s_mZ.Q_GeV,
+            scheme=m_alpha_s_mZ.scheme,
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "1/alpha_s(mZ)",
             1.0 / alpha_s_mZ,
             "Strong: inverse alpha_s at Z pole (legacy strict benchmark; kept for comparison)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=m_alpha_s_mZ.Q_GeV,
+            scheme=m_alpha_s_mZ.scheme,
+            citation=m_alpha_s_mZ.citation,
         ),
         # Weak (multiple alternative dimensionless couplings)
         TargetConstant("alpha_w(mZ)", alpha_w_mZ, "Weak: alpha_2=g^2/(4*pi) using g≈0.652 (legacy proxy; kept for comparison)"),
@@ -188,6 +330,10 @@ def known_targets() -> list[TargetConstant]:
             "sin2thetaW(on-shell)",
             sin2_thetaW_on_shell,
             "Weak/EM: on-shell sin^2(theta_W)=1-mW^2/mZ^2 (pole-mass definition; strict input)",
+            sigma=sigma_sin2_thetaW_on_shell,
+            Q_GeV=mZ_GeV,
+            scheme="on-shell (pole masses): 1 - mW^2/mZ^2",
+            citation=f"{m_mW.citation}; {m_mZ.citation}",
         ),
         TargetConstant("alpha_Y(mZ)", alpha_y_mZ, "Weak/EM: alpha_Y=g'^2/(4*pi) near mZ (approx; normalization depends)"),
         TargetConstant("1/alpha_Y(mZ)", 1.0 / alpha_y_mZ, "Weak/EM: inverse alpha_Y near mZ (approx)"),
@@ -200,6 +346,10 @@ def known_targets() -> list[TargetConstant]:
             "alpha2(alpha(mZ),sin2_on_shell)",
             alpha2_from_alpha_mZ_on_shell,
             "Weak: alpha_2 derived from alpha(mZ)/sin^2(thetaW)_on-shell (pole-mass definition; strict weak definition)",
+            sigma=sigma_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=mZ_GeV,
+            scheme="derived: alpha(mZ)/sin^2(thetaW)_on-shell",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
         ),
         TargetConstant(
             "alpha1(alpha(mZ),sin2)",
@@ -226,6 +376,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha2(alpha(mZ),sin2_on_shell)",
             1.0 / alpha2_from_alpha_mZ_on_shell,
             "Inverse of alpha2(alpha(mZ),sin2_on_shell) (strict weak inverse target)",
+            sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=mZ_GeV,
+            scheme="derived: inverse(alpha(mZ)/sin^2(thetaW)_on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
         ),
         TargetConstant("1/alpha1(alpha(mZ),sin2)", 1.0 / alpha1_from_alpha_mZ, "Inverse of alpha1(alpha(mZ),sin2)"),
         TargetConstant(
@@ -253,6 +407,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(mH)",
             (1.0 / alpha_s_mH_1loop_from_mZ) if alpha_s_mH_1loop_from_mZ != 0 else float("inf"),
             "Strong: inverse of alpha_s_1loop_from_mZ(mH) (strict strong inverse target)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=mH_GeV,
+            scheme="derived: 1-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_from_mZ(mW)",
@@ -263,6 +421,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(mW)",
             (1.0 / alpha_s_mW_1loop_from_mZ) if alpha_s_mW_1loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_from_mZ(mW)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=mW_GeV,
+            scheme="derived: 1-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_from_mZ(mt)",
@@ -273,6 +435,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(mt)",
             (1.0 / alpha_s_mt_1loop_from_mZ) if alpha_s_mt_1loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_from_mZ(mt)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=mt_GeV,
+            scheme="derived: 1-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_from_mZ(1TeV)",
@@ -283,6 +449,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(1TeV)",
             (1.0 / alpha_s_1TeV_1loop_from_mZ) if alpha_s_1TeV_1loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_from_mZ(1TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=1_000.0,
+            scheme="derived: 1-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_from_mZ(10TeV)",
@@ -293,6 +463,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_from_mZ(10TeV)",
             (1.0 / alpha_s_10TeV_1loop_from_mZ) if alpha_s_10TeV_1loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_from_mZ(10TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=10_000.0,
+            scheme="derived: 1-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_nf56_from_mZ(1TeV)",
@@ -303,6 +477,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_nf56_from_mZ(1TeV)",
             (1.0 / alpha_s_1TeV_1loop_nf56_from_mZ) if alpha_s_1TeV_1loop_nf56_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_nf56_from_mZ(1TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=1_000.0,
+            scheme="derived: 1-loop from alpha_s(mZ) with nf=5 below mt and nf=6 above",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_1loop_nf56_from_mZ(10TeV)",
@@ -313,6 +491,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_1loop_nf56_from_mZ(10TeV)",
             (1.0 / alpha_s_10TeV_1loop_nf56_from_mZ) if alpha_s_10TeV_1loop_nf56_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_1loop_nf56_from_mZ(10TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=10_000.0,
+            scheme="derived: 1-loop from alpha_s(mZ) with nf=5 below mt and nf=6 above",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_2loop_from_mZ(mW)",
@@ -323,6 +505,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_2loop_from_mZ(mW)",
             (1.0 / alpha_s_mW_2loop_from_mZ) if alpha_s_mW_2loop_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_2loop_from_mZ(mW)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=mW_GeV,
+            scheme="derived: 2-loop from alpha_s(mZ) (nf=5; no thresholds)",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_2loop_nf56_from_mZ(1TeV)",
@@ -333,6 +519,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_2loop_nf56_from_mZ(1TeV)",
             (1.0 / alpha_s_1TeV_2loop_nf56_from_mZ) if alpha_s_1TeV_2loop_nf56_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_2loop_nf56_from_mZ(1TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=1_000.0,
+            scheme="derived: 2-loop from alpha_s(mZ) with nf=5 below mt and nf=6 above",
+            citation=m_alpha_s_mZ.citation,
         ),
         TargetConstant(
             "alpha_s_2loop_nf56_from_mZ(10TeV)",
@@ -343,6 +533,10 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha_s_2loop_nf56_from_mZ(10TeV)",
             (1.0 / alpha_s_10TeV_2loop_nf56_from_mZ) if alpha_s_10TeV_2loop_nf56_from_mZ != 0 else float("inf"),
             "Strong (OOS): inverse of alpha_s_2loop_nf56_from_mZ(10TeV)",
+            sigma=sigma_inv_alpha_s_mZ,
+            Q_GeV=10_000.0,
+            scheme="derived: 2-loop from alpha_s(mZ) with nf=5 below mt and nf=6 above",
+            citation=m_alpha_s_mZ.citation,
         ),
         # Unification probes (dimensionless ratios; still scale-dependent in reality)
         TargetConstant(
