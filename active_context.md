@@ -66,7 +66,10 @@ We explored three tiers:
   - The strong-only test `oos-predictive-rg` (fit the lattice anchor once, then RG-run to other scales without re-fitting \(m\)) yields **passes at 2%** across the v2/v3/v4 strong-running OOS keys (typical errors \(\sim\)1–2%).
 - **EM running “within-band” (new)**:
   - The EM OOS miss `1/alpha → 1/alpha(mZ)` is naturally explained by vacuum polarization (running of \(\alpha(Q)\)).
-  - `oos-predictive-rg --force em` uses a deterministic 1-loop QED threshold model (sharp fermion thresholds) and yields a **pass at 2%** (typical error \(\sim\)1%).
+  - `oos-predictive-rg --force em` supports both a **PDG-style** Δα(mZ²) runner and a simple **1-loop threshold** runner; both yield a **pass at 2%** (typical error \(\sim\)1%).
+- **Weak running “within-band” (new)**:
+  - Step-only predictive cannot follow smooth EW running to high scales (fails at 1 TeV / 10 TeV in suite `v2`).
+  - `oos-predictive-rg --suite v2 --force weak` uses deterministic **SM 1-loop** running for \(1/\alpha_2(Q)\) from the on-shell-defined \(\alpha_2(m_Z)\) anchor and yields **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV`.
 - **Gravity band constraint (CMB K)**:
   - If gravity uses $K=2.725$ K and you require gravity-wave frequencies in a GW band, the frequency equation implies a narrow integer-$m$ window per band (CMB/PTA/LISA/LIGO).
   - Ordinary-matter inverse targets `1/alpha_G(p)` and `1/alpha_G(e)` fit at much more negative $m$ and therefore do **not** land in GW detector bands under CMB $K$.
@@ -100,6 +103,7 @@ Full pairing under gauge-derived C:
 RG-within-band predictive tests (no re-fitting \(m\) per target):
 
 - `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
+- `python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02`
 
 Strict all-forces per GW band (frozen Option‑2 presets; see `F0_anchors.md`):
 

@@ -268,6 +268,7 @@ Important: until the model makes a prediction that is *not* already “baked in�
 **Next obvious lever (not yet implemented): EW/QED+EW unification layer**
 
 - Add a deterministic within‑band running mode for \(\alpha_1(Q)\), \(\alpha_2(Q)\) under frozen scheme choices, then re‑run the weak OOS suite in the same spirit as strong+EM.
+- **Status**: basic weak within‑band running is now implemented for \(\alpha_2^{-1}(Q)\) using SM 1‑loop running from the on‑shell-defined \(\alpha_2(m_Z)\) anchor (see predictive suite `v2`).
 
 ---
 

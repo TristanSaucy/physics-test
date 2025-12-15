@@ -12,6 +12,7 @@ from physics_test.forces import (
     alpha_s_run_2loop_from_ref,
     alpha_s_run_2loop_from_ref_nf_switch,
 )
+from physics_test.gut import SM_1LOOP, run_alpha_inv
 from physics_test.units import mass_kg_from_GeV
 
 
@@ -142,6 +143,15 @@ def known_targets() -> list[TargetConstant]:
         default_citation="project convention (mH benchmark)",
     )
     mH_GeV = float(m_mH.value)
+
+    # EW (SM 1-loop) running for alpha2^{-1} from the on-shell-defined reference at mZ.
+    # Convention: alpha^{-1}(mu) = alpha^{-1}(mu0) - (b/(2*pi)) ln(mu/mu0)
+    # with SM 1-loop b2 = -19/6 for SU(2)_L (GUT convention).
+    inv_alpha2_mZ_on_shell = (1.0 / alpha2_from_alpha_mZ_on_shell) if alpha2_from_alpha_mZ_on_shell != 0 else float("inf")
+    inv_alpha2_1loop_from_mZ_on_shell_mW = run_alpha_inv(inv_alpha2_mZ_on_shell, mZ_GeV, mW_GeV, SM_1LOOP.b2)
+    inv_alpha2_1loop_from_mZ_on_shell_mH = run_alpha_inv(inv_alpha2_mZ_on_shell, mZ_GeV, mH_GeV, SM_1LOOP.b2)
+    inv_alpha2_1loop_from_mZ_on_shell_1TeV = run_alpha_inv(inv_alpha2_mZ_on_shell, mZ_GeV, 1_000.0, SM_1LOOP.b2)
+    inv_alpha2_1loop_from_mZ_on_shell_10TeV = run_alpha_inv(inv_alpha2_mZ_on_shell, mZ_GeV, 10_000.0, SM_1LOOP.b2)
     alpha_s_mH_1loop_from_mZ = alpha_s_run_1loop_from_ref(mH_GeV, alpha_s_Q0=alpha_s_mZ, Q0_GeV=mZ_GeV, n_f=5)
 
     # Out-of-sample strong running cross-checks (same fixed 1-loop prescription from mZ).
@@ -379,6 +389,42 @@ def known_targets() -> list[TargetConstant]:
             sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
             Q_GeV=mZ_GeV,
             scheme="derived: inverse(alpha(mZ)/sin^2(thetaW)_on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha2_1loop_from_mZ_on_shell(mW)",
+            inv_alpha2_1loop_from_mZ_on_shell_mW,
+            "Weak (OOS): SM 1-loop running of alpha2^{-1} from mZ using on-shell-defined alpha2(mZ), evaluated at mW",
+            sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=mW_GeV,
+            scheme="SM 1-loop: run alpha2^{-1} from mZ (b2=-19/6), init alpha2 from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha2_1loop_from_mZ_on_shell(mH)",
+            inv_alpha2_1loop_from_mZ_on_shell_mH,
+            "Weak (OOS): SM 1-loop running of alpha2^{-1} from mZ using on-shell-defined alpha2(mZ), evaluated at mH",
+            sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=mH_GeV,
+            scheme="SM 1-loop: run alpha2^{-1} from mZ (b2=-19/6), init alpha2 from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha2_1loop_from_mZ_on_shell(1TeV)",
+            inv_alpha2_1loop_from_mZ_on_shell_1TeV,
+            "Weak (OOS): SM 1-loop running of alpha2^{-1} from mZ using on-shell-defined alpha2(mZ), evaluated at 1 TeV",
+            sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=1_000.0,
+            scheme="SM 1-loop: run alpha2^{-1} from mZ (b2=-19/6), init alpha2 from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha2_1loop_from_mZ_on_shell(10TeV)",
+            inv_alpha2_1loop_from_mZ_on_shell_10TeV,
+            "Weak (OOS): SM 1-loop running of alpha2^{-1} from mZ using on-shell-defined alpha2(mZ), evaluated at 10 TeV",
+            sigma=sigma_inv_alpha2_from_alpha_mZ_on_shell,
+            Q_GeV=10_000.0,
+            scheme="SM 1-loop: run alpha2^{-1} from mZ (b2=-19/6), init alpha2 from alpha(mZ) and sin2thetaW(on-shell)",
             citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
         ),
         TargetConstant("1/alpha1(alpha(mZ),sin2)", 1.0 / alpha1_from_alpha_mZ, "Inverse of alpha1(alpha(mZ),sin2)"),

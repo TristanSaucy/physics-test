@@ -523,7 +523,7 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
 
 def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
     """
-    Predictive OOS with deterministic within-band RG running (strong + EM):
+    Predictive OOS with deterministic within-band RG running (strong + EM + weak):
 
       1) Fit a strict anchor on the φ-lattice using the strict gauge-derived C menu.
       2) Freeze (C, m_anchor) -> implies an anchor inverse coupling inv(Q0)=C/φ^m.
@@ -532,6 +532,8 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
     This implements the "m = major transition, running happens within the band" lever:
     integer m labels the anchor band, and RG supplies the continuous within-band motion.
+
+    Note: EW within-band running is currently implemented only for alpha2^{-1}(Q) in suite v2.
     """
 
     suites = predictive_force_suites()
@@ -578,7 +580,9 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
     # Which forces to run
     if args.force == "all":
-        forces = ["em", "strong"]
+        # Preserve the historical meaning of v1 ("strong + EM only") and only include
+        # weak RG targets in suites designed for it (currently v2).
+        forces = ["em", "strong"] if args.suite == "v1" else ["em", "strong", "weak"]
     else:
         forces = [args.force]
 
@@ -588,6 +592,8 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
     total_chi2 = 0.0
 
     for force in forces:
+        if force == "weak" and args.suite == "v1":
+            raise SystemExit("Suite v1 does not define weak RG-within-band targets. Use --suite v2 for --force weak.")
         if force not in anchors or force not in by_force:
             raise SystemExit(f"Unknown force {force!r} for suite {args.suite!r}. Options: {', '.join(sorted(anchors.keys()))}")
 
@@ -603,8 +609,11 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
         elif force == "em":
             # α(0) is quoted at Q→0; we use m_e as a fixed reference scale for the 1-loop threshold model.
             Q0 = float(args.Q0_GeV) if getattr(args, "Q0_GeV", None) is not None else 0.00051099895
+        elif force == "weak":
+            # Weak anchor is defined at the Z scale; use mZ as the reference.
+            Q0 = float(get_measurement("mZ_GeV", default_value=91.1876).value)
         else:
-            raise SystemExit("oos-predictive-rg currently supports only --force em|strong|all")
+            raise SystemExit("oos-predictive-rg currently supports only --force em|strong|weak|all")
 
         # Fit the anchor on the lattice (choose best C and integer m)
         anchor_target = float(all_targets[anchor.key].value)
@@ -637,6 +646,8 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 spec_qcd = QCDRunSpec(loops=2, nf_mode="nf56", steps_per_unit_log=int(args.steps_per_unit_log))
             elif runner == "qed_1loop":
                 raise SystemExit("--runner qed_1loop is for EM only")
+            elif runner == "ew_sm_1loop":
+                raise SystemExit("--runner ew_sm_1loop is for weak only")
             else:
                 raise SystemExit(f"Unknown --runner {args.runner!r}")
 
@@ -650,7 +661,7 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 n_f_above=spec_qcd.n_f_above,
                 steps_per_unit_log=spec_qcd.steps_per_unit_log,
             )
-        else:
+        elif force == "em":
             # EM runners:
             #  - qed_1loop: simple 1-loop threshold model
             #  - qed_pdg_mZ: PDG-style Δα decomposition at mZ (uses external Δα inputs)
@@ -658,6 +669,11 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             em_runner = "qed_pdg_mZ" if runner == "auto" else runner
             if em_runner not in ("qed_1loop", "qed_pdg_mZ"):
                 raise SystemExit("For EM, use --runner auto, --runner qed_pdg_mZ, or --runner qed_1loop")
+        else:
+            # Weak: SM 1-loop running of inverse couplings (fixed beta coefficient).
+            weak_runner = "ew_sm_1loop" if runner == "auto" else runner
+            if weak_runner != "ew_sm_1loop":
+                raise SystemExit("For weak, use --runner auto or --runner ew_sm_1loop")
 
         # Pretty header
         print(f"Predictive RG-within-band OOS suite: {args.suite}")
@@ -670,13 +686,16 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             assert spec_qcd is not None
             print(f"runner = {args.runner}  -> loops={spec_qcd.loops}, nf_mode={spec_qcd.nf_mode}, n_f={spec_qcd.n_f}, Q0={Q0:g} GeV\n")
             print(f"STRONG  anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
-        else:
+        elif force == "em":
             if em_runner == "qed_1loop":
                 runner_desc = "QED 1-loop (fermion thresholds)"
             else:
                 runner_desc = "PDG-style Δα(mZ^2)=Δα_lept+Δα_had^(5)+Δα_top"
             print(f"runner = {args.runner}  -> {runner_desc}, Q0={Q0:g} GeV\n")
             print(f"EM      anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV (fixed)")
+        else:
+            print(f"runner = {args.runner}  -> SM 1-loop EW running (alpha2^{-1}), Q0={Q0:g} GeV\n")
+            print(f"WEAK    anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
         print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv0={inv0:.12g}, rel_err={best_anchor.rel_err:.3e}{z_anchor_s}")
         print(f"         note: {anchor.rationale}")
 
@@ -709,7 +728,7 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 alpha0 = (1.0 / inv0) if inv0 != 0 else float("inf")
                 aQ = alpha_s_from_ref(Q, alpha_s_Q0=alpha0, Q0_GeV=Q0, spec=spec_qcd)
                 inv_pred = (1.0 / aQ) if aQ not in (0.0, float("inf")) else float("inf")
-            else:
+            elif force == "em":
                 if em_runner == "qed_1loop":
                     inv_pred = qed_run_alpha_inv_1loop_from_ref(Q, alpha_inv_Q0=inv0, Q0_GeV=Q0)
                 else:
@@ -723,6 +742,9 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                     inv_pred = alpha_inv_mZ_from_delta_alpha(
                         alpha_inv_0=inv0, delta_alpha_lept=da_lept, delta_alpha_had5=da_had5, delta_alpha_top=da_top
                     )
+            else:
+                # Weak: SM 1-loop running of alpha2^{-1}.
+                inv_pred = run_alpha_inv(inv0, Q0, Q, SM_1LOOP.b2)
 
             rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
             if all_targets[key].sigma is not None and all_targets[key].sigma > 0:
@@ -1931,7 +1953,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
         help="Comma-separated gauge C constructions to include.",
     )
-    p_oos_pred.add_argument("--suite", choices=["v1"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred.add_argument("--suite", choices=["v1", "v2"], default="v1", help="Predictive OOS suite to run (default: v1)")
     p_oos_pred.add_argument(
         "--force",
         choices=["all", "em", "strong", "weak", "gravity"],
@@ -1952,12 +1974,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_oos_pred_rg = sub.add_parser(
         "oos-predictive-rg",
-        help="Predictive OOS with deterministic within-band RG running (strong + EM)",
+        help="Predictive OOS with deterministic within-band RG running (strong + EM + weak)",
     )
-    p_oos_pred_rg.add_argument("--suite", choices=["v1"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred_rg.add_argument("--suite", choices=["v1", "v2"], default="v1", help="Predictive OOS suite to run (default: v1)")
     p_oos_pred_rg.add_argument(
         "--force",
-        choices=["all", "em", "strong"],
+        choices=["all", "em", "strong", "weak"],
         default="all",
         help="Force group(s) to run (default: all)",
     )
@@ -1973,9 +1995,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred_rg.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos_pred_rg.add_argument(
         "--runner",
-        choices=["auto", "qed_1loop", "qed_pdg_mZ", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
+        choices=["auto", "qed_1loop", "qed_pdg_mZ", "ew_sm_1loop", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
         default="auto",
-        help="Deterministic running prescription to use (strong: QCD; EM: QED) (default: auto).",
+        help="Deterministic running prescription to use (strong: QCD; EM: QED; weak: EW) (default: auto).",
     )
     p_oos_pred_rg.add_argument(
         "--Q0-GeV",

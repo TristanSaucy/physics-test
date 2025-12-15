@@ -180,6 +180,7 @@ def predictive_force_suites() -> dict[str, tuple[dict[str, OOSTarget], dict[str,
 
     return {
         "v1": predictive_force_suite_v1(),
+        "v2": predictive_force_suite_v2(),
     }
 
 
@@ -251,6 +252,42 @@ def predictive_force_suite_v1() -> tuple[dict[str, OOSTarget], dict[str, list[OO
             ),
         ],
     }
+
+    return anchors, targets
+
+
+def predictive_force_suite_v2() -> tuple[dict[str, OOSTarget], dict[str, list[OOSTarget]]]:
+    """
+    Predictive OOS suite v2.
+
+    v2 extends v1 by adding **within-band running cross-checks for the weak sector**:
+    evaluate SM 1-loop running predictions for alpha2^{-1}(Q) at additional scales,
+    using the on-shell-defined alpha2(mZ) as the reference input.
+
+    Anchors remain the strict v1 anchors.
+    """
+
+    anchors, targets = predictive_force_suite_v1()
+
+    targets = dict(targets)
+    targets["weak"] = [
+        OOSTarget(
+            "1/alpha2_1loop_from_mZ_on_shell(mW)",
+            "OOS: SM 1-loop running cross-check for alpha2^{-1} at mW, using on-shell-defined alpha2(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha2_1loop_from_mZ_on_shell(mH)",
+            "OOS: SM 1-loop running cross-check for alpha2^{-1} at mH, using on-shell-defined alpha2(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha2_1loop_from_mZ_on_shell(1TeV)",
+            "OOS: SM 1-loop running cross-check for alpha2^{-1} at 1 TeV, using on-shell-defined alpha2(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha2_1loop_from_mZ_on_shell(10TeV)",
+            "OOS: SM 1-loop running cross-check for alpha2^{-1} at 10 TeV, using on-shell-defined alpha2(mZ) as reference.",
+        ),
+    ]
 
     return anchors, targets
 
