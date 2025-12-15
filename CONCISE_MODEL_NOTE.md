@@ -84,6 +84,12 @@ If you want to run local experiments without editing the repo, set:
 
 - `PHYSICS_TEST_TARGET_REGISTRY`
 
+You can also add new dimensionless targets without changing code by adding registry keys of the form:
+
+- `tgt_<target_name>`
+
+Those keys are automatically surfaced by `list-targets`.
+
 ---
 
 ## 4) Target definitions (what we fit \(G\) to)

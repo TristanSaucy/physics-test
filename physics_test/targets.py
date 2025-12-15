@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from physics_test import constants
-from physics_test.target_registry import get_measurement
+from physics_test.target_registry import get_measurement, load_registry
 from physics_test.forces import (
     alpha_gravity,
     alpha_s_1loop,
@@ -402,7 +402,7 @@ def known_targets() -> list[TargetConstant]:
     inv_alpha0 = 1.0 / alpha0
     sigma_inv_alpha0 = (sigma_alpha0 / (alpha0 * alpha0)) if sigma_alpha0 is not None else None
 
-    return [
+    out = [
         # EM (vacuum, low-energy)
         TargetConstant(
             "alpha",
@@ -943,5 +943,34 @@ def known_targets() -> list[TargetConstant]:
         ),
         *extra_gravity_targets,
     ]
+
+    # Generic registry-backed targets: any registry key of the form "tgt_<name>" becomes a TargetConstant named "<name>".
+    # This allows adding new audited targets (e.g. low-Q sin^2thetaW measurements) without changing code.
+    try:
+        reg = load_registry()
+        for k, m in reg.items():
+            if not str(k).startswith("tgt_"):
+                continue
+            name = str(k)[len("tgt_") :]
+            if not name:
+                continue
+            if any(t.name == name for t in out):
+                continue
+            out.append(
+                TargetConstant(
+                    name=name,
+                    value=float(m.value),
+                    note=f"Registry target: {name}",
+                    sigma=m.sigma,
+                    Q_GeV=m.Q_GeV,
+                    scheme=m.scheme,
+                    citation=m.citation,
+                )
+            )
+    except Exception:
+        # Registry targets are optional; ignore failures to keep the core target list robust.
+        pass
+
+    return out
 
 

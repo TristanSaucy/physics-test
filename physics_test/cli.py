@@ -1056,6 +1056,134 @@ def cmd_ew_sin2(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
+    """
+    OOS check for externally provided sin^2θW(Q) targets.
+
+    This command looks for registry-backed targets whose names start with "sin2thetaW("
+    and whose notes start with "Registry target:" (i.e., added via keys like
+    "tgt_sin2thetaW(Qweak)" in the measurement registry).
+
+    For each such target, it predicts sin^2θW at the target's Q using lattice-quantized
+    α2^{-1}(mZ) and α1_GUT^{-1}(mZ) anchors + SM/MSSM 1-loop running, then compares.
+    """
+
+    all_targets = {t.name: t for t in known_targets()}
+
+    # Collect registry-added external sin2 targets
+    ext: list[tuple[str, float, float | None, float]] = []
+    for t in all_targets.values():
+        if not t.name.startswith("sin2thetaW("):
+            continue
+        if not str(t.note).startswith("Registry target:"):
+            continue
+        if t.Q_GeV is None:
+            continue
+        ext.append((t.name, float(t.value), t.sigma, float(t.Q_GeV)))
+
+    if not ext:
+        raise SystemExit(
+            "No external sin2thetaW(Q) targets found. Add registry keys like "
+            "'tgt_sin2thetaW(Qweak)' with fields value/sigma/Q_GeV/scheme/citation "
+            "(you can use PHYSICS_TEST_TARGET_REGISTRY to point to a local registry file)."
+        )
+
+    key_a2 = "1/alpha2(alpha(mZ),sin2_on_shell)"
+    key_a1 = "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"
+    for k in (key_a2, key_a1):
+        if k not in all_targets:
+            raise SystemExit(f"Missing required target {k!r}. Run `list-targets`.")
+
+    inv_a2_target0 = float(all_targets[key_a2].value)
+    inv_a1_target0 = float(all_targets[key_a1].value)
+
+    # Reference scale (mZ)
+    Q0 = float(get_measurement("mZ_GeV", default_value=91.1876).value)
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    # Fit lattice anchors (independent)
+    best_a2 = scan_candidates(Cs=Cs, m_values=m_values, target_G=inv_a2_target0)[0]
+    best_a1 = scan_candidates(Cs=Cs, m_values=m_values, target_G=inv_a1_target0)[0]
+    inv_a2_0 = float(best_a2.G)
+    inv_a1_0 = float(best_a1.G)
+
+    # Choose beta set for running
+    betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
+
+    print("OOS: external sin2thetaW(Q) targets (registry-driven)")
+    print(f"model = {betas.name}")
+    print(f"tol(|rel_err|) = {args.max_rel_err}")
+    print(f"Q0 = {Q0:g} GeV (mZ)")
+    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]\n")
+
+    print("Anchor fits (independent):")
+    print(
+        f"  inv_alpha2(mZ): target={inv_a2_target0:.12g}  "
+        f"best: {label_by_C.get(float(best_a2.C), ''):22s} C={best_a2.C:g}, m={int(best_a2.m):d}, inv0={inv_a2_0:.12g}, rel_err={best_a2.rel_err:.3e}"
+    )
+    print(
+        f"  inv_alpha1_GUT(mZ): target={inv_a1_target0:.12g}  "
+        f"best: {label_by_C.get(float(best_a1.C), ''):22s} C={best_a1.C:g}, m={int(best_a1.m):d}, inv0={inv_a1_0:.12g}, rel_err={best_a1.rel_err:.3e}\n"
+    )
+
+    n_pass = 0
+    n = 0
+    n_sigma = 0
+    chi2 = 0.0
+    for name, v, s, Q in sorted(ext, key=lambda x: x[3]):
+        inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
+        inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
+        invY = (5.0 / 3.0) * float(inv1)
+        pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+
+        rel_err = (pred - v) / v if v != 0 else float("nan")
+        ok = abs(rel_err) <= float(args.max_rel_err)
+        status = "PASS" if ok else "FAIL"
+        if ok:
+            n_pass += 1
+        n += 1
+
+        if s is not None and s > 0:
+            z = (pred - v) / float(s)
+            n_sigma += 1
+            chi2 += float(z * z)
+            z_s = f"  z={z:.3g}"
+        else:
+            z_s = ""
+
+        print(f"[{status}] {name:28s} Q={Q:g} GeV  meas={v:.12g}  pred={pred:.12g}  rel_err={rel_err:.3e}{z_s}")
+
+    if n_sigma:
+        print(f"\nSummary: {n_pass}/{n} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})")
+    else:
+        print(f"\nSummary: {n_pass}/{n} PASS at tol={args.max_rel_err}")
+    return 0
+
+
 def cmd_oos_steps(args: argparse.Namespace) -> int:
     """
     Step-signal OOS report (C-independent):
@@ -2432,6 +2560,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional measurement triple: <label> <sin2> <sigma_or_0>. Label must match one of --scales entries.",
     )
     p_ew_sin2.set_defaults(func=cmd_ew_sin2)
+
+    p_oos_ew_sin2 = sub.add_parser(
+        "oos-ew-sin2",
+        help="OOS: compare predicted sin^2thetaW(Q) (from lattice anchors + 1-loop running) to external registry-provided targets (tgt_sin2thetaW(...))",
+    )
+    p_oos_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
+    p_oos_ew_sin2.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos_ew_sin2.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_oos_ew_sin2.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_oos_ew_sin2.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_oos_ew_sin2.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_oos_ew_sin2.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
+    p_oos_ew_sin2.set_defaults(func=cmd_oos_ew_sin2)
 
     p_oos_steps = sub.add_parser(
         "oos-steps",

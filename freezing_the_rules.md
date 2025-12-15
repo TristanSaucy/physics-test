@@ -169,6 +169,10 @@ Radiative-piece diagnostics (exploratory):
 - OOS suite `v6` adds inverse vacuum-polarization pieces `1/delta_alpha_*` and `1/delta_r(...)` to probe whether “RG/log physics” quantities show additional φ-lattice structure.
 - OOS suite `v7` extends this with `1/delta_rho_top(GF,mt)` (inverse leading top-loop \(\Delta\rho\)) as an additional EW radiative diagnostic.
 
+Registry-driven targets (exploratory workflow):
+
+- Any measurement registry key of the form `tgt_<target_name>` will automatically be exposed as a dimensionless target named `<target_name>` by `list-targets`. This allows adding new OOS targets (e.g. low-Q \(\sin^2\theta_W\) determinations) without changing code.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

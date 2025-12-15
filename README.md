@@ -214,6 +214,9 @@ python -m physics_test.cli oos-ew-mix --max-rel-err 0.02
 # EW sin^2thetaW(Q) predictor (optionally compare to your own measurements)
 python -m physics_test.cli ew-sin2 --model sm --scales mW,1TeV
 
+# OOS: compare against external registry-provided sin^2thetaW(Q) targets (keys like tgt_sin2thetaW(...))
+python -m physics_test.cli oos-ew-sin2 --model sm --max-rel-err 0.02
+
 # GUT convergence diagnostic: baseline vs lattice-quantized initialization
 python -m physics_test.cli gut-run --model sm --n 400
 python -m physics_test.cli gut-run-lattice --model sm --n 400
@@ -249,6 +252,22 @@ The source of truth for these curated inputs is `data/targets.json` (see also `p
 You can override the registry path (for local experiments) by setting the environment variable:
 
 - `PHYSICS_TEST_TARGET_REGISTRY`
+
+You can also add **new dimensionless targets** without changing code by adding registry entries with keys like:
+
+```json
+{
+  "tgt_sin2thetaW(Qweak)": {
+    "value": 0.238,
+    "sigma": 0.001,
+    "Q_GeV": 0.158,
+    "scheme": "example placeholder (fill with real scheme/context)",
+    "citation": "example placeholder"
+  }
+}
+```
+
+Any registry key of the form `tgt_<target_name>` becomes a `list-targets` entry named `<target_name>`.
 
 ### Option 1 (energy → K → F0)
 
