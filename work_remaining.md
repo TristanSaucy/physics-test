@@ -62,6 +62,7 @@ This is a living checklist for continuing the framework work in future sessions.
 - Added predictive OOS (fit one C per force from strict anchors, then hold C fixed): `python -m physics_test.cli oos-predictive --suite v1`
 - Added principled normalization-factor families for predictive OOS: `python -m physics_test.cli list-norm-families` and `python -m physics_test.cli oos-predictive --norm-family ...`
 - Added step-signal OOS (C-independent): `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02|0.05`
+- Added optional discrete C-ratio step-signal diagnostic (exploratory): `python -m physics_test.cli oos-steps --allow-c-ratio`
 
 ## 6) Make analysis easier to inspect
 

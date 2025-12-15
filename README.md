@@ -204,6 +204,9 @@ python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.05
 
+# optional: allow a discrete C_a/C_b factor (exploratory; very flexible, use the null baseline printed)
+python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02 --allow-c-ratio
+
 # optional: apply a principled normalization family (see list-norm-families)
 python -m physics_test.cli list-norm-families
 python -m physics_test.cli oos-predictive --suite v1 --norm-family inv_C2_fund --max-rel-err 0.02

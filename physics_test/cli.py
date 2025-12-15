@@ -31,7 +31,7 @@ from physics_test.gauge_groups import candidate_Cs_from_group, standard_model_ga
 from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
 from physics_test.normalization import normalization_factor_for_force, normalization_families
-from physics_test.steps import step_from_targets
+from physics_test.steps import best_step_with_C_ratio, step_from_targets
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -330,10 +330,36 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
 
     print(f"Step-signal suite: {args.suite}")
     print(f"tol(|ratio_err_if_int|) = {tol}")
-    print("Rule: for each force, test whether (anchor/target) is close to φ^integer.\n")
+    print(f"allow_C_ratio = {bool(args.allow_c_ratio)}")
+    if args.allow_c_ratio:
+        print("Rule: test whether (anchor/target) is close to (C_a/C_b)*φ^integer with C_a,C_b from strict gauge-derived C.\n")
+    else:
+        print("Rule: for each force, test whether (anchor/target) is close to φ^integer.\n")
 
     total_pass = 0
     total_n = 0
+
+    # For null-baseline reporting when allow_c_ratio is enabled, precompute the size
+    # of the discrete C-ratio search space (rough).
+    #
+    # NOTE: This is an "upper bound" baseline because we assume independence across
+    # ratios and allow any C_a/C_b pair.
+    n_ratio_candidates: int | None = None
+    if args.allow_c_ratio:
+        include0 = tuple(s.strip() for s in args.include.split(",") if s.strip())
+        cand0: list[tuple[str, float]] = []
+        for g in standard_model_gauge_groups():
+            cs = candidate_Cs_from_group(g, base=args.base, include=include0)
+            for k, v in cs.items():
+                cand0.append((f"{g.name}:{k}", float(v)))
+        seen0: set[float] = set()
+        Cs0: list[float] = []
+        for _lab, c in cand0:
+            if c in seen0:
+                continue
+            seen0.add(c)
+            Cs0.append(c)
+        n_ratio_candidates = len(Cs0) * len(Cs0)
 
     for force in forces:
         if force not in anchors:
@@ -346,6 +372,29 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
         anchor_val = target_map[anchor.key]
 
+        # If enabled, build strict gauge-derived C candidates for discrete C-ratio testing.
+        Cs: list[float] | None = None
+        label_by_C: dict[float, str] | None = None
+        if args.allow_c_ratio:
+            include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+            cand: list[tuple[str, float]] = []
+            for g in standard_model_gauge_groups():
+                cs = candidate_Cs_from_group(g, base=args.base, include=include)
+                for k, v in cs.items():
+                    cand.append((f"{g.name}:{k}", float(v)))
+
+            seen: set[float] = set()
+            uniq: list[float] = []
+            lab: dict[float, str] = {}
+            for l, c in cand:
+                if c in seen:
+                    continue
+                seen.add(c)
+                uniq.append(c)
+                lab[c] = l
+            Cs = uniq
+            label_by_C = lab
+
         print(f"{force.upper():7s} anchor: {anchor.key:28s} value={anchor_val:.12g}")
         print(f"         note: {anchor.rationale}")
 
@@ -355,17 +404,40 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             if ot.key not in target_map:
                 raise SystemExit(f"Unknown target key {ot.key!r}. Run `list-targets`.")
             tgt_val = target_map[ot.key]
-            sr = step_from_targets(anchor_val, tgt_val)
-            ok = sr.ratio_err_if_int <= tol
-            status = "PASS" if ok else "FAIL"
-            if ok:
-                n_pass += 1
-            n += 1
-            print(
-                f"  [{status}] {ot.key:28s} ratio={sr.ratio:.12g}  "
-                f"dm_real={sr.dm_real:.6f}  dm_int={sr.dm_int:+d}  frac={sr.dm_frac:+.6f}  "
-                f"ratio_err={sr.ratio_err_if_int:.3%}"
-            )
+            if args.allow_c_ratio:
+                assert Cs is not None and label_by_C is not None
+                sr2 = best_step_with_C_ratio(
+                    anchor_val,
+                    tgt_val,
+                    C_candidates=Cs,
+                    dm_min=int(args.dm_min),
+                    dm_max=int(args.dm_max),
+                )
+                ok = sr2.ratio_err <= tol
+                status = "PASS" if ok else "FAIL"
+                if ok:
+                    n_pass += 1
+                n += 1
+                lab_a = label_by_C.get(sr2.C_a, "")
+                lab_b = label_by_C.get(sr2.C_b, "")
+                print(
+                    f"  [{status}] {ot.key:28s} ratio={sr2.ratio:.12g}  "
+                    f"C_a={sr2.C_a:g} ({lab_a})  C_b={sr2.C_b:g} ({lab_b})  "
+                    f"dm_real={sr2.dm_real:.6f}  dm_int={sr2.dm_int:+d}  frac={sr2.dm_frac:+.6f}  "
+                    f"ratio_err={sr2.ratio_err:.3%}"
+                )
+            else:
+                sr = step_from_targets(anchor_val, tgt_val)
+                ok = sr.ratio_err_if_int <= tol
+                status = "PASS" if ok else "FAIL"
+                if ok:
+                    n_pass += 1
+                n += 1
+                print(
+                    f"  [{status}] {ot.key:28s} ratio={sr.ratio:.12g}  "
+                    f"dm_real={sr.dm_real:.6f}  dm_int={sr.dm_int:+d}  frac={sr.dm_frac:+.6f}  "
+                    f"ratio_err={sr.ratio_err_if_int:.3%}"
+                )
             print(f"         rationale: {ot.rationale}")
         print(f"  Force summary: {n_pass}/{n} PASS at tol={tol}\n")
 
@@ -374,13 +446,10 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
 
     print(f"Overall step-signal summary: {total_pass}/{total_n} PASS at tol={tol}")
 
-    # Rough null baseline: if dm_frac is uniformly distributed in [-0.5, 0.5),
-    # what pass-rate would we expect at this tolerance?
-    #
-    # For dm_real = n + δ with |δ|<=0.5, the ratio error when snapping to n is:
-    #   ratio_err = |φ^{-δ} - 1|
-    #
-    # Solve |φ^{-δ} - 1| <= tol for δ.
+    # Rough null baseline:
+    # - If allow_c_ratio is False: assume dm_frac is uniformly distributed in [-0.5,0.5).
+    # - If allow_c_ratio is True: assume you are taking the best of N discrete C-ratio
+    #   tries, so p increases to 1-(1-p_single)^N (independence assumed; very rough).
     try:
         ln_phi = math.log((1.0 + math.sqrt(5.0)) / 2.0)
         if tol >= 1.0:
@@ -390,7 +459,12 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             d_pos = -math.log(max(1e-12, 1.0 - tol)) / ln_phi
             d_neg = math.log(1.0 + tol) / ln_phi
             delta_thr = min(0.5, max(d_pos, d_neg))
-        p_null = min(1.0, 2.0 * delta_thr)
+        p_single = min(1.0, 2.0 * delta_thr)
+        if args.allow_c_ratio and (n_ratio_candidates is not None) and n_ratio_candidates > 1:
+            # Best-of-N effect
+            p_null = 1.0 - ((1.0 - p_single) ** float(n_ratio_candidates))
+        else:
+            p_null = p_single
 
         # Binomial tail probability for >= total_pass successes (independence assumed; rough).
         # We keep this simple to avoid external deps.
@@ -405,8 +479,13 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             return out
 
         p_tail = binom_tail(total_n, total_pass, p_null) if total_n > 0 else float("nan")
-        print("\nNull baseline (rough): assume dm fractional part is uniform in [-0.5,0.5).")
-        print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => expected pass prob ≈ {p_null:.3%} per pair")
+        if args.allow_c_ratio and (n_ratio_candidates is not None) and n_ratio_candidates > 1:
+            print("\nNull baseline (rough): assume dm fractional part is uniform and you take the best of many discrete C-ratios.")
+            print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => p_single ≈ {p_single:.3%} per ratio")
+            print(f"  ratio candidates N ≈ {n_ratio_candidates}  => expected best-of-N pass prob ≈ {p_null:.3%} per pair")
+        else:
+            print("\nNull baseline (rough): assume dm fractional part is uniform in [-0.5,0.5).")
+            print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => expected pass prob ≈ {p_null:.3%} per pair")
         print(f"  binomial P(X >= {total_pass} | n={total_n}, p={p_null:.3%}) ≈ {p_tail:.3g}")
     except Exception:
         # Baseline is optional; never fail the command because of it.
@@ -1469,6 +1548,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.02,
         help="Tolerance on ratio error when snapping dm to nearest integer (default: 0.02)",
     )
+    p_oos_steps.add_argument(
+        "--allow-c-ratio",
+        action="store_true",
+        help="Allow a discrete (C_a/C_b) factor using strict gauge-derived C candidates (diagnostic).",
+    )
+    p_oos_steps.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos_steps.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include (only used if --allow-c-ratio).",
+    )
+    p_oos_steps.add_argument("--dm-min", type=int, default=-512, help="Min allowed dm_int when --allow-c-ratio (default: -512)")
+    p_oos_steps.add_argument("--dm-max", type=int, default=512, help="Max allowed dm_int when --allow-c-ratio (default: 512)")
     p_oos_steps.set_defaults(func=cmd_oos_steps)
 
     p_gbands = sub.add_parser("list-gravity-bands", help="List built-in gravity-wave frequency band presets")
