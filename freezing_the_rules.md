@@ -129,12 +129,6 @@ We also support a C-independent “step-signal” diagnostic: for a force-local 
 
 This is useful because it directly tests the *integer-step* hypothesis (Δm quantization) without involving the C menu.
 
-Optional (exploratory): allow a discrete $C_a/C_b$ factor from the strict gauge-derived C set:
-
-- `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02 --allow-c-ratio`
-
-**Important**: this is *much* more flexible (it effectively searches across many discrete ratios), so a high pass rate is not automatically evidence of signal. Use the null-baseline printed by the command.
-
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

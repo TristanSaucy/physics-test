@@ -31,9 +31,10 @@ from physics_test.gauge_groups import candidate_Cs_from_group, standard_model_ga
 from physics_test.units import mass_kg_from_GeV
 from physics_test.gut import MSSM_1LOOP, SM_1LOOP, converge_score, find_best_convergence, run_alpha_inv
 from physics_test.normalization import normalization_factor_for_force, normalization_families
-from physics_test.steps import best_step_with_C_ratio, step_from_targets
+from physics_test.steps import step_from_targets
 from physics_test.rg_scales import lambda_qcd_from_alpha_s
 from physics_test.oos_rg import rg_suites
+from physics_test.rg_within_band import QCDRunSpec, alpha_s_from_ref, qcd_run_spec_from_key, scale_GeV_from_target_key
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -460,6 +461,171 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
+    """
+    Predictive OOS with deterministic within-band RG running (strong only for now):
+
+      1) Fit a strict strong anchor on the φ-lattice using the strict gauge-derived C menu.
+      2) Freeze (C, m_anchor) -> implies an anchor inverse coupling inv_alpha(Q0)=C/φ^m.
+      3) Predict inv_alpha(Q) at additional scales by RG-running from (Q0, alpha(Q0))
+         with no additional fit (no re-choosing m per target).
+
+    This implements the "m = major transition, running happens within the band" lever:
+    integer m labels the anchor band, and RG supplies the continuous within-band motion.
+    """
+
+    suites = predictive_force_suites()
+    if args.suite not in suites:
+        raise SystemExit(f"Unknown predictive OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
+
+    if args.force != "strong":
+        raise SystemExit("oos-predictive-rg currently supports only --force strong")
+
+    anchors, by_force = suites[args.suite]
+    target_map = {t.name: t.value for t in known_targets()}
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    # Resolve strong anchor and default target list (can be overridden by --targets)
+    force = "strong"
+    anchor = anchors[force]
+    if anchor.key not in target_map:
+        raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
+    Q0 = scale_GeV_from_target_key(anchor.key)
+
+    # Build rationale map so custom target lists still print useful context when possible.
+    rationale_by_key: dict[str, str] = {}
+    try:
+        for _suite_key, lst in oos_suites().items():
+            for ot in lst:
+                rationale_by_key.setdefault(ot.key, ot.rationale)
+    except Exception:
+        pass
+    for ot in by_force.get(force, []):
+        rationale_by_key.setdefault(ot.key, ot.rationale)
+
+    # Choose running spec (deterministic; no tuning knobs)
+    runner = str(args.runner).strip().lower()
+    if runner == "auto":
+        spec = qcd_run_spec_from_key(anchor.key)
+    elif runner == "1loop_nf5":
+        spec = QCDRunSpec(loops=1, nf_mode="const", n_f=5)
+    elif runner == "1loop_nf56":
+        spec = QCDRunSpec(loops=1, nf_mode="nf56")
+    elif runner == "2loop_nf5":
+        spec = QCDRunSpec(loops=2, nf_mode="const", n_f=5, steps_per_unit_log=int(args.steps_per_unit_log))
+    elif runner == "2loop_nf56":
+        spec = QCDRunSpec(loops=2, nf_mode="nf56", steps_per_unit_log=int(args.steps_per_unit_log))
+    else:
+        raise SystemExit(f"Unknown --runner {args.runner!r}")
+
+    # Allow overriding the (still principled) threshold switch scale used by nf56 variants
+    spec = QCDRunSpec(
+        loops=spec.loops,
+        nf_mode=spec.nf_mode,
+        n_f=spec.n_f,
+        Q_switch_GeV=float(args.Q_switch_GeV),
+        n_f_below=spec.n_f_below,
+        n_f_above=spec.n_f_above,
+        steps_per_unit_log=spec.steps_per_unit_log,
+    )
+
+    # Fit the anchor on the lattice (choose best C and integer m)
+    anchor_target = target_map[anchor.key]
+    anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
+    best_anchor = anchor_hits[0]
+    C0 = float(best_anchor.C)
+    m0 = int(best_anchor.m)
+    inv_alpha0 = float(best_anchor.G)
+    alpha0 = (1.0 / inv_alpha0) if inv_alpha0 != 0 else float("inf")
+
+    lab = label_by_C.get(C0, "")
+
+    print(f"Predictive RG-within-band OOS suite: {args.suite}")
+    print(f"force = strong")
+    print(f"tol(|rel_err|) = {args.max_rel_err}")
+    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]")
+    print(f"runner = {args.runner}  -> loops={spec.loops}, nf_mode={spec.nf_mode}, n_f={spec.n_f}, Q0={Q0:g} GeV\n")
+
+    print(f"STRONG  anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
+    print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv_alpha0={inv_alpha0:.12g}, rel_err={best_anchor.rel_err:.3e}")
+    print(f"         note: {anchor.rationale}")
+
+    # Precompute phi/log(phi)
+    p = (1.0 + math.sqrt(5.0)) / 2.0
+    ln_phi = math.log(p)
+
+    # Target list (either default predictive suite, or explicit override)
+    if str(getattr(args, "targets", "")).strip():
+        keys = [s.strip() for s in str(args.targets).split(",") if s.strip()]
+        targets_to_eval: list[tuple[str, str]] = [(k, rationale_by_key.get(k, "(custom target list)")) for k in keys]
+    else:
+        targets_to_eval = [(ot.key, ot.rationale) for ot in by_force[force]]
+
+    n_pass = 0
+    n = 0
+    for key, rationale in targets_to_eval:
+        if key not in target_map:
+            raise SystemExit(f"Unknown target key {key!r}. Run `list-targets`.")
+        tgt = float(target_map[key])
+        Q = scale_GeV_from_target_key(key)
+
+        aQ = alpha_s_from_ref(Q, alpha_s_Q0=alpha0, Q0_GeV=Q0, spec=spec)
+        inv_pred = (1.0 / aQ) if aQ not in (0.0, float("inf")) else float("inf")
+        rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
+
+        ok = abs(rel_err) <= float(args.max_rel_err)
+        status = "PASS" if ok else "FAIL"
+        if ok:
+            n_pass += 1
+        n += 1
+
+        # Interpret the RG-shift as a real-valued Δm inside the same C-band:
+        #   inv_alpha(Q) = C / φ^(m_eff(Q))  => m_eff = log_phi(C/inv_alpha(Q))
+        if inv_pred > 0 and C0 > 0 and ln_phi != 0:
+            m_eff = math.log(C0 / inv_pred) / ln_phi
+            dm_real = m_eff - float(m0)
+            dm_int = int(round(dm_real))
+            dm_frac = dm_real - float(dm_int)
+        else:
+            dm_real = float("nan")
+            dm_int = 0
+            dm_frac = float("nan")
+
+        print(
+            f"  [{status}] {key:28s} target={tgt:.12g}  Q={Q:g} GeV  "
+            f"pred={inv_pred:.12g}  rel_err={rel_err:.3e}  "
+            f"dm_real={dm_real:.6f}  dm_int={dm_int:+d}  frac={dm_frac:+.6f}"
+        )
+        print(f"         rationale: {rationale}")
+
+    print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}")
+    return 0
+
+
 def cmd_oos_steps(args: argparse.Namespace) -> int:
     """
     Step-signal OOS report (C-independent):
@@ -489,36 +655,10 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
 
     print(f"Step-signal suite: {args.suite}")
     print(f"tol(|ratio_err_if_int|) = {tol}")
-    print(f"allow_C_ratio = {bool(args.allow_c_ratio)}")
-    if args.allow_c_ratio:
-        print("Rule: test whether (anchor/target) is close to (C_a/C_b)*φ^integer with C_a,C_b from strict gauge-derived C.\n")
-    else:
-        print("Rule: for each force, test whether (anchor/target) is close to φ^integer.\n")
+    print("Rule: for each force, test whether (anchor/target) is close to φ^integer.\n")
 
     total_pass = 0
     total_n = 0
-
-    # For null-baseline reporting when allow_c_ratio is enabled, precompute the size
-    # of the discrete C-ratio search space (rough).
-    #
-    # NOTE: This is an "upper bound" baseline because we assume independence across
-    # ratios and allow any C_a/C_b pair.
-    n_ratio_candidates: int | None = None
-    if args.allow_c_ratio:
-        include0 = tuple(s.strip() for s in args.include.split(",") if s.strip())
-        cand0: list[tuple[str, float]] = []
-        for g in standard_model_gauge_groups():
-            cs = candidate_Cs_from_group(g, base=args.base, include=include0)
-            for k, v in cs.items():
-                cand0.append((f"{g.name}:{k}", float(v)))
-        seen0: set[float] = set()
-        Cs0: list[float] = []
-        for _lab, c in cand0:
-            if c in seen0:
-                continue
-            seen0.add(c)
-            Cs0.append(c)
-        n_ratio_candidates = len(Cs0) * len(Cs0)
 
     for force in forces:
         if force not in anchors:
@@ -531,29 +671,6 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
         anchor_val = target_map[anchor.key]
 
-        # If enabled, build strict gauge-derived C candidates for discrete C-ratio testing.
-        Cs: list[float] | None = None
-        label_by_C: dict[float, str] | None = None
-        if args.allow_c_ratio:
-            include = tuple(s.strip() for s in args.include.split(",") if s.strip())
-            cand: list[tuple[str, float]] = []
-            for g in standard_model_gauge_groups():
-                cs = candidate_Cs_from_group(g, base=args.base, include=include)
-                for k, v in cs.items():
-                    cand.append((f"{g.name}:{k}", float(v)))
-
-            seen: set[float] = set()
-            uniq: list[float] = []
-            lab: dict[float, str] = {}
-            for l, c in cand:
-                if c in seen:
-                    continue
-                seen.add(c)
-                uniq.append(c)
-                lab[c] = l
-            Cs = uniq
-            label_by_C = lab
-
         print(f"{force.upper():7s} anchor: {anchor.key:28s} value={anchor_val:.12g}")
         print(f"         note: {anchor.rationale}")
 
@@ -563,40 +680,17 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             if ot.key not in target_map:
                 raise SystemExit(f"Unknown target key {ot.key!r}. Run `list-targets`.")
             tgt_val = target_map[ot.key]
-            if args.allow_c_ratio:
-                assert Cs is not None and label_by_C is not None
-                sr2 = best_step_with_C_ratio(
-                    anchor_val,
-                    tgt_val,
-                    C_candidates=Cs,
-                    dm_min=int(args.dm_min),
-                    dm_max=int(args.dm_max),
-                )
-                ok = sr2.ratio_err <= tol
-                status = "PASS" if ok else "FAIL"
-                if ok:
-                    n_pass += 1
-                n += 1
-                lab_a = label_by_C.get(sr2.C_a, "")
-                lab_b = label_by_C.get(sr2.C_b, "")
-                print(
-                    f"  [{status}] {ot.key:28s} ratio={sr2.ratio:.12g}  "
-                    f"C_a={sr2.C_a:g} ({lab_a})  C_b={sr2.C_b:g} ({lab_b})  "
-                    f"dm_real={sr2.dm_real:.6f}  dm_int={sr2.dm_int:+d}  frac={sr2.dm_frac:+.6f}  "
-                    f"ratio_err={sr2.ratio_err:.3%}"
-                )
-            else:
-                sr = step_from_targets(anchor_val, tgt_val)
-                ok = sr.ratio_err_if_int <= tol
-                status = "PASS" if ok else "FAIL"
-                if ok:
-                    n_pass += 1
-                n += 1
-                print(
-                    f"  [{status}] {ot.key:28s} ratio={sr.ratio:.12g}  "
-                    f"dm_real={sr.dm_real:.6f}  dm_int={sr.dm_int:+d}  frac={sr.dm_frac:+.6f}  "
-                    f"ratio_err={sr.ratio_err_if_int:.3%}"
-                )
+            sr = step_from_targets(anchor_val, tgt_val)
+            ok = sr.ratio_err_if_int <= tol
+            status = "PASS" if ok else "FAIL"
+            if ok:
+                n_pass += 1
+            n += 1
+            print(
+                f"  [{status}] {ot.key:28s} ratio={sr.ratio:.12g}  "
+                f"dm_real={sr.dm_real:.6f}  dm_int={sr.dm_int:+d}  frac={sr.dm_frac:+.6f}  "
+                f"ratio_err={sr.ratio_err_if_int:.3%}"
+            )
             print(f"         rationale: {ot.rationale}")
         print(f"  Force summary: {n_pass}/{n} PASS at tol={tol}\n")
 
@@ -605,10 +699,7 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
 
     print(f"Overall step-signal summary: {total_pass}/{total_n} PASS at tol={tol}")
 
-    # Rough null baseline:
-    # - If allow_c_ratio is False: assume dm_frac is uniformly distributed in [-0.5,0.5).
-    # - If allow_c_ratio is True: assume you are taking the best of N discrete C-ratio
-    #   tries, so p increases to 1-(1-p_single)^N (independence assumed; very rough).
+    # Rough null baseline: assume dm_frac is uniformly distributed in [-0.5,0.5).
     try:
         ln_phi = math.log((1.0 + math.sqrt(5.0)) / 2.0)
         if tol >= 1.0:
@@ -618,12 +709,7 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             d_pos = -math.log(max(1e-12, 1.0 - tol)) / ln_phi
             d_neg = math.log(1.0 + tol) / ln_phi
             delta_thr = min(0.5, max(d_pos, d_neg))
-        p_single = min(1.0, 2.0 * delta_thr)
-        if args.allow_c_ratio and (n_ratio_candidates is not None) and n_ratio_candidates > 1:
-            # Best-of-N effect
-            p_null = 1.0 - ((1.0 - p_single) ** float(n_ratio_candidates))
-        else:
-            p_null = p_single
+        p_null = min(1.0, 2.0 * delta_thr)
 
         # Binomial tail probability for >= total_pass successes (independence assumed; rough).
         # We keep this simple to avoid external deps.
@@ -638,13 +724,8 @@ def cmd_oos_steps(args: argparse.Namespace) -> int:
             return out
 
         p_tail = binom_tail(total_n, total_pass, p_null) if total_n > 0 else float("nan")
-        if args.allow_c_ratio and (n_ratio_candidates is not None) and n_ratio_candidates > 1:
-            print("\nNull baseline (rough): assume dm fractional part is uniform and you take the best of many discrete C-ratios.")
-            print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => p_single ≈ {p_single:.3%} per ratio")
-            print(f"  ratio candidates N ≈ {n_ratio_candidates}  => expected best-of-N pass prob ≈ {p_null:.3%} per pair")
-        else:
-            print("\nNull baseline (rough): assume dm fractional part is uniform in [-0.5,0.5).")
-            print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => expected pass prob ≈ {p_null:.3%} per pair")
+        print("\nNull baseline (rough): assume dm fractional part is uniform in [-0.5,0.5).")
+        print(f"  dm_frac threshold ≈ {delta_thr:.6f}  => expected pass prob ≈ {p_null:.3%} per pair")
         print(f"  binomial P(X >= {total_pass} | n={total_n}, p={p_null:.3%}) ≈ {p_tail:.3g}")
     except Exception:
         # Baseline is optional; never fail the command because of it.
@@ -1716,6 +1797,48 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos_pred.set_defaults(func=cmd_oos_predictive)
 
+    p_oos_pred_rg = sub.add_parser(
+        "oos-predictive-rg",
+        help="Predictive OOS with deterministic within-band RG running (currently strong-only)",
+    )
+    p_oos_pred_rg.add_argument("--suite", choices=["v1"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred_rg.add_argument("--force", choices=["strong"], default="strong", help="Force group to run (default: strong)")
+    p_oos_pred_rg.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_oos_pred_rg.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_oos_pred_rg.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_oos_pred_rg.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_oos_pred_rg.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_oos_pred_rg.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
+    p_oos_pred_rg.add_argument(
+        "--runner",
+        choices=["auto", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
+        default="auto",
+        help="Deterministic QCD running prescription to use (default: auto = infer from anchor key).",
+    )
+    p_oos_pred_rg.add_argument(
+        "--Q-switch-GeV",
+        dest="Q_switch_GeV",
+        type=float,
+        default=172.76,
+        help="Flavor-switch scale for nf56 variants (default: mt≈172.76 GeV).",
+    )
+    p_oos_pred_rg.add_argument(
+        "--steps-per-unit-log",
+        type=int,
+        default=500,
+        help="Integrator resolution for 2-loop running (default: 500).",
+    )
+    p_oos_pred_rg.add_argument(
+        "--targets",
+        default="",
+        help="Optional comma-separated override list of strong target keys to evaluate (default: suite v1 strong targets).",
+    )
+    p_oos_pred_rg.set_defaults(func=cmd_oos_predictive_rg)
+
     p_oos_steps = sub.add_parser(
         "oos-steps",
         help="Step-signal OOS (C-independent): test whether anchor/target ratios land on integer Δm steps of φ",
@@ -1733,19 +1856,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.02,
         help="Tolerance on ratio error when snapping dm to nearest integer (default: 0.02)",
     )
-    p_oos_steps.add_argument(
-        "--allow-c-ratio",
-        action="store_true",
-        help="Allow a discrete (C_a/C_b) factor using strict gauge-derived C candidates (diagnostic).",
-    )
-    p_oos_steps.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
-    p_oos_steps.add_argument(
-        "--include",
-        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
-        help="Comma-separated gauge C constructions to include (only used if --allow-c-ratio).",
-    )
-    p_oos_steps.add_argument("--dm-min", type=int, default=-512, help="Min allowed dm_int when --allow-c-ratio (default: -512)")
-    p_oos_steps.add_argument("--dm-max", type=int, default=512, help="Max allowed dm_int when --allow-c-ratio (default: 512)")
     p_oos_steps.set_defaults(func=cmd_oos_steps)
 
     p_gbands = sub.add_parser("list-gravity-bands", help="List built-in gravity-wave frequency band presets")

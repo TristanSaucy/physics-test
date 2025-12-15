@@ -117,12 +117,12 @@ python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 # predictive OOS (fit one C per force from strict anchors, then hold C fixed)
 python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02
 
+# predictive OOS (strong-only): within-band RG running from the lattice anchor (no re-fitting m per target)
+python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02
+
 # step-signal OOS (C-independent): do ratios look like φ^integer?
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.05
-
-# optional: allow a discrete C_a/C_b factor (exploratory; very flexible, use the null baseline printed)
-python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02 --allow-c-ratio
 
 # optional: apply a principled normalization family (see list-norm-families)
 python -m physics_test.cli list-norm-families
