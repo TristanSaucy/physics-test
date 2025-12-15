@@ -242,6 +242,15 @@ In current runs:
 
 This is not “proof of unification,” but it is a nontrivial diagnostic: lattice‑quantized inputs appear to reduce the 1‑loop mismatch in inverse‑coupling convergence.
 
+### 7.6 Radiative-correction pieces show additional lattice structure (exploratory)
+
+Suite `v6` probes inverse vacuum-polarization pieces and an inferred \(\Delta r\):
+
+- `1/delta_alpha_total(mZ2)` best strict hit: \((C,m)=(45,2)\) (≈ +1.53%).
+- `1/delta_r(on-shell;alpha0,GF,mW,mZ)` best strict hit: \((C,m)=(120,3)\) (≈ +0.30%).
+
+At 2% tolerance, 2/4 pass; at 5% tolerance, 4/4 pass. These are **diagnostics** (not strict couplings), but they strengthen the pattern that “RG/log physics” quantities often land near the same small set of strict lattice points.
+
 ---
 
 ## 8) Predictability and falsifiability (what would count as “wrong”)
@@ -326,4 +335,5 @@ python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05
+python -m physics_test.cli oos-report --suite v6 --max-rel-err 0.05
 ```

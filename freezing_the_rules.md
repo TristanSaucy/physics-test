@@ -164,6 +164,10 @@ New external EW diagnostic (exploratory):
 
 - OOS suite `v5` adds `1/alpha2_tree_from_GF(mW)` (tree-level extraction from \(G_F,m_W\) with no Δr). This is intended to probe known electroweak radiative effects and is not expected to pass a strict 2% threshold without adding EW corrections.
 
+Radiative-piece diagnostics (exploratory):
+
+- OOS suite `v6` adds inverse vacuum-polarization pieces `1/delta_alpha_*` and `1/delta_r(...)` to probe whether “RG/log physics” quantities show additional φ-lattice structure.
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

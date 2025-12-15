@@ -93,6 +93,46 @@ def known_targets() -> list[TargetConstant]:
     alpha_mZ = 1.0 / inv_alpha_mZ
     sigma_alpha_mZ = (sigma_inv_alpha_mZ / (inv_alpha_mZ**2)) if sigma_inv_alpha_mZ is not None else None
 
+    # QED vacuum-polarization Δα pieces at mZ^2 (exploratory diagnostics; useful for "missing physics" probes).
+    m_da_lept = get_measurement(
+        "delta_alpha_lept_mZ2",
+        default_value=0.0314977,
+        default_sigma=0.0,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="leptonic vacuum polarization contribution at mZ^2 (approx)",
+        default_citation="PDG RPP (Delta alpha_lept)",
+    )
+    m_da_had5 = get_measurement(
+        "delta_alpha_had5_mZ2",
+        default_value=0.02764,
+        default_sigma=0.00007,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="hadronic vacuum polarization (5 flavors) at mZ^2 (approx)",
+        default_citation="PDG RPP (Delta alpha_had^(5))",
+    )
+    m_da_top = get_measurement(
+        "delta_alpha_top_mZ2",
+        default_value=-0.00007,
+        default_sigma=0.0,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="top vacuum polarization contribution at mZ^2 (approx)",
+        default_citation="PDG RPP (Delta alpha_top)",
+    )
+    da_lept = float(m_da_lept.value)
+    da_had5 = float(m_da_had5.value)
+    da_top = float(m_da_top.value)
+    da_total = da_lept + da_had5 + da_top
+    sigma_da_total: float | None = None
+    if m_da_lept.sigma is not None or m_da_had5.sigma is not None or m_da_top.sigma is not None:
+        s2 = 0.0
+        if m_da_lept.sigma is not None:
+            s2 += float(m_da_lept.sigma) ** 2
+        if m_da_had5.sigma is not None:
+            s2 += float(m_da_had5.sigma) ** 2
+        if m_da_top.sigma is not None:
+            s2 += float(m_da_top.sigma) ** 2
+        sigma_da_total = s2**0.5
+
     # Strong coupling benchmark at mZ (commonly quoted; includes uncertainty).
     m_alpha_s_mZ = get_measurement(
         "alpha_s_mZ",
@@ -369,6 +409,60 @@ def known_targets() -> list[TargetConstant]:
             Q_GeV=m_inv_alpha_mZ.Q_GeV,
             scheme=m_inv_alpha_mZ.scheme,
             citation=m_inv_alpha_mZ.citation,
+        ),
+        TargetConstant(
+            "delta_alpha_lept(mZ2)",
+            da_lept,
+            "QED: Δα_lept(mZ^2) (vacuum polarization; exploratory diagnostic)",
+            sigma=m_da_lept.sigma,
+            Q_GeV=mZ_GeV,
+            scheme=m_da_lept.scheme,
+            citation=m_da_lept.citation,
+        ),
+        TargetConstant(
+            "1/delta_alpha_lept(mZ2)",
+            (1.0 / da_lept) if da_lept != 0 else float("inf"),
+            "QED: inverse Δα_lept(mZ^2) (exploratory diagnostic)",
+            sigma=(float(m_da_lept.sigma) / (da_lept**2)) if (m_da_lept.sigma is not None and da_lept != 0) else None,
+            Q_GeV=mZ_GeV,
+            scheme=m_da_lept.scheme,
+            citation=m_da_lept.citation,
+        ),
+        TargetConstant(
+            "delta_alpha_had5(mZ2)",
+            da_had5,
+            "QED: Δα_had^(5)(mZ^2) (hadronic vacuum polarization; exploratory diagnostic)",
+            sigma=m_da_had5.sigma,
+            Q_GeV=mZ_GeV,
+            scheme=m_da_had5.scheme,
+            citation=m_da_had5.citation,
+        ),
+        TargetConstant(
+            "1/delta_alpha_had5(mZ2)",
+            (1.0 / da_had5) if da_had5 != 0 else float("inf"),
+            "QED: inverse Δα_had^(5)(mZ^2) (exploratory diagnostic)",
+            sigma=(float(m_da_had5.sigma) / (da_had5**2)) if (m_da_had5.sigma is not None and da_had5 != 0) else None,
+            Q_GeV=mZ_GeV,
+            scheme=m_da_had5.scheme,
+            citation=m_da_had5.citation,
+        ),
+        TargetConstant(
+            "delta_alpha_total(mZ2)",
+            da_total,
+            "QED: total Δα(mZ^2)=Δα_lept+Δα_had^(5)+Δα_top (exploratory diagnostic)",
+            sigma=sigma_da_total,
+            Q_GeV=mZ_GeV,
+            scheme="sum of registry Δα pieces at mZ^2",
+            citation=f"{m_da_lept.citation}; {m_da_had5.citation}; {m_da_top.citation}",
+        ),
+        TargetConstant(
+            "1/delta_alpha_total(mZ2)",
+            (1.0 / da_total) if da_total != 0 else float("inf"),
+            "QED: inverse total Δα(mZ^2) (exploratory diagnostic)",
+            sigma=(float(sigma_da_total) / (da_total**2)) if (sigma_da_total is not None and da_total != 0) else None,
+            Q_GeV=mZ_GeV,
+            scheme="inverse of total Δα(mZ^2) from registry pieces",
+            citation=f"{m_da_lept.citation}; {m_da_had5.citation}; {m_da_top.citation}",
         ),
         # Strong (benchmark)
         TargetConstant(

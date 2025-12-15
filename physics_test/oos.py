@@ -170,6 +170,35 @@ def oos_targets_v5() -> list[OOSTarget]:
     ]
 
 
+def oos_targets_v6() -> list[OOSTarget]:
+    """
+    Frozen out-of-sample target menu (v6).
+
+    v6 collects **radiative-correction / vacuum-polarization diagnostics** at the Z scale.
+    These are not couplings themselves, but they are dimensionless quantities closely tied
+    to RG/log structure (where Euler's number naturally appears).
+    """
+
+    return [
+        OOSTarget(
+            "1/delta_alpha_lept(mZ2)",
+            "Exploratory: inverse leptonic Δα(mZ^2) vacuum polarization piece (PDG-style).",
+        ),
+        OOSTarget(
+            "1/delta_alpha_had5(mZ2)",
+            "Exploratory: inverse hadronic Δα_had^(5)(mZ^2) vacuum polarization piece.",
+        ),
+        OOSTarget(
+            "1/delta_alpha_total(mZ2)",
+            "Exploratory: inverse total Δα(mZ^2)=Δα_lept+Δα_had^(5)+Δα_top.",
+        ),
+        OOSTarget(
+            "1/delta_r(on-shell;alpha0,GF,mW,mZ)",
+            "Exploratory: inverse electroweak radiative correction Δr inferred from alpha0,G_F,mW,mZ (on-shell relation).",
+        ),
+    ]
+
+
 def oos_suites() -> dict[str, list[OOSTarget]]:
     return {
         "v1": oos_targets_v1(),
@@ -177,6 +206,7 @@ def oos_suites() -> dict[str, list[OOSTarget]]:
         "v3": oos_targets_v3(),
         "v4": oos_targets_v4(),
         "v5": oos_targets_v5(),
+        "v6": oos_targets_v6(),
     }
 
 

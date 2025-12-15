@@ -83,6 +83,8 @@ We explored three tiers:
   - Under strict gauge-\(C\), the best hit is still \((C,m)=(120,3)\) but it misses by ~3.9% (fails at 2%, passes at 5%), which is consistent with known electroweak radiative corrections.
 - **Δr diagnostic (new; exploratory)**:
   - `1/delta_r(on-shell;alpha0,GF,mW,mZ)` lands very close to \((C,m)=(120,3)\) (≈ +0.3%), a notable coincidence to track as more independent EW inputs are added.
+- **QED Δα diagnostics (new; exploratory)**:
+  - Suite `v6` adds `1/delta_alpha_lept(mZ2)`, `1/delta_alpha_had5(mZ2)`, and `1/delta_alpha_total(mZ2)` and shows additional lattice structure (e.g. `1/delta_alpha_total(mZ2)` hits \((C,m)=(45,2)\) at ~+1.5%).
 - **Gravity band constraint (CMB K)**:
   - If gravity uses $K=2.725$ K and you require gravity-wave frequencies in a GW band, the frequency equation implies a narrow integer-$m$ window per band (CMB/PTA/LISA/LIGO).
   - Ordinary-matter inverse targets `1/alpha_G(p)` and `1/alpha_G(e)` fit at much more negative $m$ and therefore do **not** land in GW detector bands under CMB $K$.
@@ -121,6 +123,7 @@ RG-within-band predictive tests (no re-fitting \(m\) per target):
 - `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02`
 - `python -m physics_test.cli gut-run-lattice --model sm --n 400`
 - `python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05`
+- `python -m physics_test.cli oos-report --suite v6 --max-rel-err 0.05`
 
 Strict all-forces per GW band (frozen Option‑2 presets; see `F0_anchors.md`):
 
