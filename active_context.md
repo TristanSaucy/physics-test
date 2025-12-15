@@ -73,6 +73,8 @@ We explored three tiers:
 - **Hypercharge running “within-band” (new)**:
   - Step-only predictive cannot follow smooth hypercharge running to high scales (fails at 1 TeV / 10 TeV in suite `v3`).
   - `oos-predictive-rg --suite v3 --force hyper` uses deterministic **SM 1-loop** running for \(1/\alpha_{1,\mathrm{GUT}}(Q)\) from the on-shell-derived \(\alpha_{1,\mathrm{GUT}}(m_Z)\) anchor and yields **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV`.
+- **EW mixing derived check (new)**:
+  - `oos-ew-mix` fits the lattice anchors for \(1/\alpha_2(m_Z)\) and \(1/\alpha_{1,\mathrm{GUT}}(m_Z)\), runs both at SM 1-loop, and compares the derived \(\sin^2\theta_W(Q)\) across scales. It passes at 2% on the default `mW,mH,1TeV,10TeV` list (typical offset \(\sim\)1%).
 - **Gravity band constraint (CMB K)**:
   - If gravity uses $K=2.725$ K and you require gravity-wave frequencies in a GW band, the frequency equation implies a narrow integer-$m$ window per band (CMB/PTA/LISA/LIGO).
   - Ordinary-matter inverse targets `1/alpha_G(p)` and `1/alpha_G(e)` fit at much more negative $m$ and therefore do **not** land in GW detector bands under CMB $K$.
@@ -108,6 +110,7 @@ RG-within-band predictive tests (no re-fitting \(m\) per target):
 - `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02`
+- `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02`
 
 Strict all-forces per GW band (frozen Option‑2 presets; see `F0_anchors.md`):
 

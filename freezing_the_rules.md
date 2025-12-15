@@ -143,6 +143,7 @@ CLI commands:
 - `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02`
+- `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02` (derived \(\sin^2\theta_W(Q)\) consistency check from \(\alpha_2\) + \(\alpha_{1,\mathrm{GUT}}\))
 
 This mode uses the lattice-fit anchor value as:
 

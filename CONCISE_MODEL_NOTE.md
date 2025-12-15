@@ -152,7 +152,7 @@ b_0 = 11-\frac{2}{3}n_f.
 
 \[
 \frac{d\alpha_s}{d\ln Q}
-=
+:=
 -\frac{\beta_0}{2\pi}\alpha_s^2
 -\frac{\beta_1}{4\pi^2}\alpha_s^3,
 \quad
@@ -168,7 +168,7 @@ We implemented a deterministic **1‑loop QED threshold model** for the inverse 
 
 \[
 \frac{d(\alpha^{-1})}{d\ln Q}
-=
+:=
 -\frac{2}{3\pi}\sum_f N_c\,Q_f^2,
 \]
 
@@ -265,13 +265,13 @@ This repo is exploratory in two ways:
 
 Important: until the model makes a prediction that is *not* already “baked in” by a known RG formula (and survives strict OOS tests), this remains hypothesis‑generation, not discovery.
 
-**Next obvious lever (not yet implemented): EW/QED+EW unification layer**
+### 9.1 Next lever: EW/QED+EW unification layer
 
 - Add a deterministic within‑band running mode for \(\alpha_1(Q)\), \(\alpha_2(Q)\), and \(\sin^2\theta_W(Q)\) under frozen scheme choices, then re‑run the EW OOS suite in the same spirit as strong+EM.
 - **Status**: EW within‑band running is now implemented at SM 1‑loop for:
   - \(\alpha_2^{-1}(Q)\) (suite `v2`), and
   - \(\alpha_{1,\mathrm{GUT}}^{-1}(Q)\) (suite `v3`).
-  \(\sin^2\theta_W(Q)\) cross-check targets are still pending.
+  A derived \(\sin^2\theta_W(Q)\) consistency check is available via `oos-ew-mix` (measured multi‑\(Q\) \(\sin^2\theta_W\) targets are still pending).
 
 ---
 
@@ -286,10 +286,11 @@ python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02
 python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02
 python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02
 
+# EW mixing derived check (sin^2thetaW(Q) from alpha2 + alpha1_GUT running)
+python -m physics_test.cli oos-ew-mix --max-rel-err 0.02
+
 # Frozen OOS suites (C can vary per target, strict menu)
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v3 --max-rel-err 0.02
 python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 ```
-
-

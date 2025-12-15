@@ -200,8 +200,13 @@ python -m physics_test.cli oos-report --suite v4 --max-rel-err 0.02
 # predictive OOS (fit one C per force from strict anchors, then hold C fixed)
 python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02
 
-# predictive OOS (strong + EM): within-band RG running from the lattice anchor (no re-fitting m per target)
+# predictive OOS: within-band RG running from the lattice anchor (no re-fitting m per target)
 python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02
+python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02
+python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02
+
+# EW mixing derived check: sin^2thetaW(Q) from alpha2 + alpha1_GUT running
+python -m physics_test.cli oos-ew-mix --max-rel-err 0.02
 
 # step-signal OOS (C-independent): do ratios look like φ^integer?
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02
