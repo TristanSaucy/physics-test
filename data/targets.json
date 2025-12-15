@@ -77,6 +77,13 @@
     "scheme": "top vacuum polarization contribution at mZ^2 (approx)",
     "citation": "PDG RPP (Delta alpha_top)"
   },
+  "sin2thetaW_mZ_MSbar": {
+    "value": 0.23122,
+    "sigma": 0.00003,
+    "Q_GeV": 91.1876,
+    "scheme": "MSbar weak mixing angle at mZ (commonly quoted; scheme-dependent)",
+    "citation": "PDG RPP (sin^2theta_W MSbar)"
+  },
   "G_F_GeV_minus2": {
     "value": 1.1663787e-05,
     "sigma": 6e-12,

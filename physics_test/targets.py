@@ -166,9 +166,17 @@ def known_targets() -> list[TargetConstant]:
         rel2 = (float(sigma_G_F_GeV_minus2) / float(G_F_GeV_minus2)) ** 2 + (2.0 * float(sigma_mW_GeV) / float(mW_GeV)) ** 2
         sigma_inv_alpha2_tree_from_GF_mW = abs(float(inv_alpha2_tree_from_GF_mW)) * (rel2**0.5)
 
-    # Electroweak mixing angle (common on-shell-ish reference near mZ; approximate).
-    # sin^2(theta_W) is dimensionless and often quoted; it is scheme/scale dependent.
-    sin2_thetaW_mZ = 0.23122
+    # Electroweak mixing angle near mZ (scheme-dependent; commonly quoted in MSbar-like conventions).
+    m_sin2_mZ = get_measurement(
+        "sin2thetaW_mZ_MSbar",
+        default_value=0.23122,
+        default_sigma=0.00003,
+        default_Q_GeV=mZ_GeV,
+        default_scheme="MSbar weak mixing angle at mZ (commonly quoted; scheme-dependent)",
+        default_citation="PDG RPP (sin^2theta_W MSbar)",
+    )
+    sin2_thetaW_mZ = float(m_sin2_mZ.value)
+    sigma_sin2_thetaW_mZ = m_sin2_mZ.sigma
 
     # On-shell weak mixing angle from pole masses:
     #   sin^2(theta_W)_OS = 1 - (mW^2 / mZ^2)
@@ -206,6 +214,27 @@ def known_targets() -> list[TargetConstant]:
     one_minus_delta_r = (constants.PI * alpha0 / denom) if denom != 0 else float("nan")
     delta_r_on_shell = 1.0 - one_minus_delta_r if one_minus_delta_r == one_minus_delta_r else float("nan")
     inv_delta_r_on_shell = (1.0 / delta_r_on_shell) if (delta_r_on_shell != 0.0 and delta_r_on_shell == delta_r_on_shell) else float("inf")
+    sigma_delta_r_on_shell: float | None = None
+    sigma_inv_delta_r_on_shell: float | None = None
+    if (
+        (sigma_alpha0 is not None and alpha0 != 0)
+        or (sigma_G_F_GeV_minus2 is not None and G_F_GeV_minus2 != 0)
+        or (sigma_mW_GeV is not None and mW_GeV != 0)
+        or (sigma_sin2_thetaW_on_shell is not None and sin2_thetaW_on_shell != 0)
+    ):
+        rel2 = 0.0
+        if sigma_alpha0 is not None and alpha0 != 0:
+            rel2 += (float(sigma_alpha0) / float(alpha0)) ** 2
+        if sigma_G_F_GeV_minus2 is not None and G_F_GeV_minus2 != 0:
+            rel2 += (float(sigma_G_F_GeV_minus2) / float(G_F_GeV_minus2)) ** 2
+        if sigma_mW_GeV is not None and mW_GeV != 0:
+            rel2 += (2.0 * float(sigma_mW_GeV) / float(mW_GeV)) ** 2
+        if sigma_sin2_thetaW_on_shell is not None and sin2_thetaW_on_shell != 0:
+            rel2 += (float(sigma_sin2_thetaW_on_shell) / float(sin2_thetaW_on_shell)) ** 2
+        sigma_one_minus_delta_r = abs(float(one_minus_delta_r)) * (rel2**0.5)
+        sigma_delta_r_on_shell = float(sigma_one_minus_delta_r)
+        if delta_r_on_shell != 0:
+            sigma_inv_delta_r_on_shell = float(sigma_delta_r_on_shell) / (float(delta_r_on_shell) ** 2)
 
     # Refined strong-coupling targets at other fixed scales via 1-loop running from mZ
     # (no free Lambda parameter).
@@ -515,6 +544,7 @@ def known_targets() -> list[TargetConstant]:
             "delta_r(on-shell;alpha0,GF,mW,mZ)",
             delta_r_on_shell,
             "EW: on-shell radiative correction Δr implied by alpha(0), G_F, mW, mZ (exploratory diagnostic)",
+            sigma=sigma_delta_r_on_shell,
             Q_GeV=mZ_GeV,
             scheme="Δr from mW^2(1-mW^2/mZ^2) = (π α0)/(√2 G_F) * 1/(1-Δr)",
             citation=f"{m_alpha0.citation}; {m_GF.citation}; {m_mW.citation}; {m_mZ.citation}",
@@ -523,6 +553,7 @@ def known_targets() -> list[TargetConstant]:
             "1/delta_r(on-shell;alpha0,GF,mW,mZ)",
             inv_delta_r_on_shell,
             "EW: inverse Δr (exploratory diagnostic; often ~O(10^1))",
+            sigma=sigma_inv_delta_r_on_shell,
             Q_GeV=mZ_GeV,
             scheme="inverse of Δr from the on-shell relation",
             citation=f"{m_alpha0.citation}; {m_GF.citation}; {m_mW.citation}; {m_mZ.citation}",
@@ -544,7 +575,15 @@ def known_targets() -> list[TargetConstant]:
             scheme="inverse of leading top-loop Δρ_top (pole mt)",
             citation=f"{m_GF.citation}; {m_mt.citation}",
         ),
-        TargetConstant("sin2thetaW(mZ)", sin2_thetaW_mZ, "Weak/EM: sin^2(theta_W) near mZ (legacy scheme-dependent value; comparison)"),
+        TargetConstant(
+            "sin2thetaW(mZ)",
+            sin2_thetaW_mZ,
+            "Weak/EM: sin^2(theta_W) near mZ (scheme-dependent; commonly quoted; comparison target)",
+            sigma=sigma_sin2_thetaW_mZ,
+            Q_GeV=mZ_GeV,
+            scheme=m_sin2_mZ.scheme,
+            citation=m_sin2_mZ.citation,
+        ),
         TargetConstant(
             "sin2thetaW(on-shell)",
             sin2_thetaW_on_shell,
