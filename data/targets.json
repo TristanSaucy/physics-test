@@ -84,6 +84,20 @@
     "scheme": "MSbar weak mixing angle at mZ (commonly quoted; scheme-dependent)",
     "citation": "PDG RPP (sin^2theta_W MSbar)"
   },
+  "tgt_sin2thetaW(Qweak)": {
+    "value": 0.2383,
+    "sigma": 0.0011,
+    "Q_GeV": 0.1566843962,
+    "scheme": "CANDIDATE (verify): low-Q PV ep extraction; interpreted as MSbar sin^2thetaW at Q^2≈0.0246 GeV^2",
+    "citation": "CANDIDATE (verify): Qweak final / PDG low-Q weak mixing angle summary"
+  },
+  "tgt_sin2thetaW(E158)": {
+    "value": 0.2403,
+    "sigma": 0.0013,
+    "Q_GeV": 0.1612451550,
+    "scheme": "CANDIDATE (verify): low-Q PV Moller (ee) extraction; interpreted as MSbar sin^2thetaW at Q^2≈0.026 GeV^2",
+    "citation": "CANDIDATE (verify): SLAC E158 / PDG low-Q weak mixing angle summary"
+  },
   "G_F_GeV_minus2": {
     "value": 1.1663787e-05,
     "sigma": 6e-12,
