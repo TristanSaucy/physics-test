@@ -246,6 +246,10 @@ python -m physics_test.cli oos-rg --suite qcd-lambda-v2 --max-rel-err 0.05
 `list-targets` prints optional metadata (when available): **sigma (1σ)**, **reference scale Q**, and **scheme notes**.
 The source of truth for these curated inputs is `data/targets.json` (see also `physics_test/target_registry.py`).
 
+You can override the registry path (for local experiments) by setting the environment variable:
+
+- `PHYSICS_TEST_TARGET_REGISTRY`
+
 ### Option 1 (energy → K → F0)
 
 - Exploratory broad search:

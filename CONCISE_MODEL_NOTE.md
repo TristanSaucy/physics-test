@@ -80,6 +80,10 @@ To make the framework auditable and uncertainty-aware, key external inputs are s
 Each entry includes (where known): **value**, **1σ uncertainty**, optional **reference scale** \(Q\), a short **scheme/notes** string, and a **citation hint**.
 The code reads this via `physics_test/target_registry.py` and attaches metadata to `TargetConstant` objects (see `physics_test/targets.py`).
 
+If you want to run local experiments without editing the repo, set:
+
+- `PHYSICS_TEST_TARGET_REGISTRY`
+
 ---
 
 ## 4) Target definitions (what we fit \(G\) to)

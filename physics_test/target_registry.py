@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -27,6 +28,11 @@ class Measurement:
 
 
 def _default_registry_path() -> Path:
+    # Allow overriding the built-in registry for local experiments without editing the repo.
+    # Note: cache is per-process; set env var before running the CLI.
+    env = os.getenv("PHYSICS_TEST_TARGET_REGISTRY", "").strip()
+    if env:
+        return Path(env)
     # repo_root / data / targets.json
     return Path(__file__).resolve().parents[1] / "data" / "targets.json"
 
