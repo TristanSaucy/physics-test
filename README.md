@@ -255,6 +255,7 @@ The source of truth for these curated inputs is `data/targets.json` (see also `p
   - strong running OOS misses into **passes at 2%** across v2/v3/v4 strong cross-check keys (typical errors \(\sim\)1–2%), and
   - the EM OOS miss (`1/alpha → 1/alpha(mZ)`) into a **pass at 2%** under deterministic QED running (either a PDG-style Δα(mZ²) relation or a simple 1-loop threshold runner; both are available as `--runner` options).
   - weak within-band running at new scales (suite `v2`) into **passes at 2%** when using deterministic SM 1-loop running for \(1/\alpha_2(Q)\) from the on-shell-defined \(\alpha_2(m_Z)\) anchor.
+  - hypercharge within-band running at new scales (suite `v3`) into **passes at 2%** when using deterministic SM 1-loop running for \(1/\alpha_{1,\mathrm{GUT}}(Q)\) from the on-shell-derived \(\alpha_{1,\mathrm{GUT}}(m_Z)\) anchor.
 - **What “K” means**: for micro physics, treating $K$ as an “energy-scale temperature” (i.e., $E=k_BK$) is often more coherent than interpreting it as literal thermodynamic temperature.
 - **Avoiding overfitting**: as you allow larger families of C values, matches become easier. The most meaningful tests are the strict ones: discrete, justified C sets + fixed target definitions + fixed band constraints.
 

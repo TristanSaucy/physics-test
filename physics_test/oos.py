@@ -181,6 +181,7 @@ def predictive_force_suites() -> dict[str, tuple[dict[str, OOSTarget], dict[str,
     return {
         "v1": predictive_force_suite_v1(),
         "v2": predictive_force_suite_v2(),
+        "v3": predictive_force_suite_v3(),
     }
 
 
@@ -286,6 +287,46 @@ def predictive_force_suite_v2() -> tuple[dict[str, OOSTarget], dict[str, list[OO
         OOSTarget(
             "1/alpha2_1loop_from_mZ_on_shell(10TeV)",
             "OOS: SM 1-loop running cross-check for alpha2^{-1} at 10 TeV, using on-shell-defined alpha2(mZ) as reference.",
+        ),
+    ]
+
+    return anchors, targets
+
+
+def predictive_force_suite_v3() -> tuple[dict[str, OOSTarget], dict[str, list[OOSTarget]]]:
+    """
+    Predictive OOS suite v3.
+
+    v3 extends v2 with **hypercharge (GUT-normalized) within-band running** checks:
+    evaluate SM 1-loop running predictions for alpha1_GUT^{-1}(Q) at additional scales,
+    using the on-shell-derived alpha1_GUT(mZ) as the reference input.
+    """
+
+    anchors, targets = predictive_force_suite_v2()
+
+    anchors = dict(anchors)
+    anchors["hyper"] = OOSTarget(
+        "1/alpha1_GUT(alpha(mZ),sin2_on_shell)",
+        "Hypercharge (GUT-normalized) anchor derived from alpha(mZ) and on-shell sin^2thetaW.",
+    )
+
+    targets = dict(targets)
+    targets["hyper"] = [
+        OOSTarget(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(mW)",
+            "OOS: SM 1-loop running cross-check for alpha1_GUT^{-1} at mW, using on-shell-derived alpha1_GUT(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(mH)",
+            "OOS: SM 1-loop running cross-check for alpha1_GUT^{-1} at mH, using on-shell-derived alpha1_GUT(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(1TeV)",
+            "OOS: SM 1-loop running cross-check for alpha1_GUT^{-1} at 1 TeV, using on-shell-derived alpha1_GUT(mZ) as reference.",
+        ),
+        OOSTarget(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(10TeV)",
+            "OOS: SM 1-loop running cross-check for alpha1_GUT^{-1} at 10 TeV, using on-shell-derived alpha1_GUT(mZ) as reference.",
         ),
     ]
 

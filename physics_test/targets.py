@@ -207,6 +207,30 @@ def known_targets() -> list[TargetConstant]:
     alpha1_from_alpha_mZ_on_shell = alpha_mZ / cos2_thetaW_on_shell
     alpha1_gut_from_alpha_mZ_on_shell = (5.0 / 3.0) * alpha1_from_alpha_mZ_on_shell
 
+    sigma_inv_alpha1_gut_from_alpha_mZ_on_shell: float | None = None
+    if sigma_alpha_mZ is not None or sigma_sin2_thetaW_on_shell is not None:
+        sigma_cos2_thetaW_on_shell = sigma_sin2_thetaW_on_shell
+        rel2 = 0.0
+        if sigma_alpha_mZ is not None and alpha_mZ != 0:
+            rel2 += (float(sigma_alpha_mZ) / float(alpha_mZ)) ** 2
+        if sigma_cos2_thetaW_on_shell is not None and cos2_thetaW_on_shell != 0:
+            rel2 += (float(sigma_cos2_thetaW_on_shell) / float(cos2_thetaW_on_shell)) ** 2
+        sigma_alpha1_from_alpha_mZ_on_shell = abs(float(alpha1_from_alpha_mZ_on_shell)) * (rel2**0.5)
+        sigma_alpha1_gut_from_alpha_mZ_on_shell = (5.0 / 3.0) * float(sigma_alpha1_from_alpha_mZ_on_shell)
+        if alpha1_gut_from_alpha_mZ_on_shell != 0:
+            sigma_inv_alpha1_gut_from_alpha_mZ_on_shell = float(sigma_alpha1_gut_from_alpha_mZ_on_shell) / (
+                float(alpha1_gut_from_alpha_mZ_on_shell) ** 2
+            )
+
+    # SM 1-loop running for alpha1_GUT^{-1} from the on-shell-derived reference at mZ.
+    inv_alpha1_gut_mZ_on_shell = (
+        (1.0 / alpha1_gut_from_alpha_mZ_on_shell) if alpha1_gut_from_alpha_mZ_on_shell != 0 else float("inf")
+    )
+    inv_alpha1_gut_1loop_from_mZ_on_shell_mW = run_alpha_inv(inv_alpha1_gut_mZ_on_shell, mZ_GeV, mW_GeV, SM_1LOOP.b1)
+    inv_alpha1_gut_1loop_from_mZ_on_shell_mH = run_alpha_inv(inv_alpha1_gut_mZ_on_shell, mZ_GeV, mH_GeV, SM_1LOOP.b1)
+    inv_alpha1_gut_1loop_from_mZ_on_shell_1TeV = run_alpha_inv(inv_alpha1_gut_mZ_on_shell, mZ_GeV, 1_000.0, SM_1LOOP.b1)
+    inv_alpha1_gut_1loop_from_mZ_on_shell_10TeV = run_alpha_inv(inv_alpha1_gut_mZ_on_shell, mZ_GeV, 10_000.0, SM_1LOOP.b1)
+
     # Ratio-style unification probes using the on-shell EW definition
     alpha2_over_alpha1_gut_on_shell = alpha2_from_alpha_mZ_on_shell / alpha1_gut_from_alpha_mZ_on_shell
     alpha3_over_alpha2_on_shell = alpha_s_mZ / alpha2_from_alpha_mZ_on_shell
@@ -442,6 +466,46 @@ def known_targets() -> list[TargetConstant]:
             "1/alpha1_GUT(alpha(mZ),sin2_on_shell)",
             1.0 / alpha1_gut_from_alpha_mZ_on_shell,
             "Inverse of alpha1_GUT(alpha(mZ),sin2_on_shell)",
+            sigma=sigma_inv_alpha1_gut_from_alpha_mZ_on_shell,
+            Q_GeV=mZ_GeV,
+            scheme="derived: inverse((5/3)*alpha(mZ)/cos^2(thetaW)_on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(mW)",
+            inv_alpha1_gut_1loop_from_mZ_on_shell_mW,
+            "Hypercharge (OOS): SM 1-loop running of alpha1_GUT^{-1} from mZ using on-shell-derived alpha1_GUT(mZ), evaluated at mW",
+            sigma=sigma_inv_alpha1_gut_from_alpha_mZ_on_shell,
+            Q_GeV=mW_GeV,
+            scheme="SM 1-loop: run alpha1_GUT^{-1} from mZ (b1=41/10), init alpha1_GUT from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(mH)",
+            inv_alpha1_gut_1loop_from_mZ_on_shell_mH,
+            "Hypercharge (OOS): SM 1-loop running of alpha1_GUT^{-1} from mZ using on-shell-derived alpha1_GUT(mZ), evaluated at mH",
+            sigma=sigma_inv_alpha1_gut_from_alpha_mZ_on_shell,
+            Q_GeV=mH_GeV,
+            scheme="SM 1-loop: run alpha1_GUT^{-1} from mZ (b1=41/10), init alpha1_GUT from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(1TeV)",
+            inv_alpha1_gut_1loop_from_mZ_on_shell_1TeV,
+            "Hypercharge (OOS): SM 1-loop running of alpha1_GUT^{-1} from mZ using on-shell-derived alpha1_GUT(mZ), evaluated at 1 TeV",
+            sigma=sigma_inv_alpha1_gut_from_alpha_mZ_on_shell,
+            Q_GeV=1_000.0,
+            scheme="SM 1-loop: run alpha1_GUT^{-1} from mZ (b1=41/10), init alpha1_GUT from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
+        ),
+        TargetConstant(
+            "1/alpha1_GUT_1loop_from_mZ_on_shell(10TeV)",
+            inv_alpha1_gut_1loop_from_mZ_on_shell_10TeV,
+            "Hypercharge (OOS): SM 1-loop running of alpha1_GUT^{-1} from mZ using on-shell-derived alpha1_GUT(mZ), evaluated at 10 TeV",
+            sigma=sigma_inv_alpha1_gut_from_alpha_mZ_on_shell,
+            Q_GeV=10_000.0,
+            scheme="SM 1-loop: run alpha1_GUT^{-1} from mZ (b1=41/10), init alpha1_GUT from alpha(mZ) and sin2thetaW(on-shell)",
+            citation=f"{m_inv_alpha_mZ.citation}; {m_mW.citation}; {m_mZ.citation}",
         ),
         # Strong (refined: 1-loop running from mZ without free Lambda; fixed scale)
         TargetConstant(

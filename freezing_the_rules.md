@@ -138,19 +138,24 @@ We now support a stricter interpretation consistent with renormalization group p
 - **Integer \(m\)** selects a **coarse band** (the anchor placement on the φ-lattice).
 - **Within-band variation** is supplied by **deterministic RG running** (no refitting \(m\) per target).
 
-CLI command (strong + EM for now):
+CLI commands:
 
 - `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
+- `python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02`
+- `python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02`
 
 This mode uses the lattice-fit anchor value as:
 
 - $\alpha_s(Q_0)$ for the strong sector and predicts $\alpha_s(Q)$ at other scales using 1-loop or 2-loop QCD running (including an optional $n_f=5\rightarrow 6$ switch at $m_t$ when requested).
-- $\alpha(Q_0)$ for the EM sector and predicts $\alpha(Q)$ using a simple 1-loop QED threshold model (sharp fermion thresholds).
+- $\alpha(Q_0)$ for the EM sector and predicts $\alpha(Q)$ using deterministic QED running (PDG-style $\Delta\alpha(m_Z^2)$ or a simple 1-loop threshold model).
+- $\alpha_2^{-1}(Q_0)$ for the weak sector and predicts $\alpha_2^{-1}(Q)$ using SM 1-loop running (suite `v2+`).
+- $\alpha_{1,\mathrm{GUT}}^{-1}(Q_0)$ for hypercharge (GUT-normalized) and predicts $\alpha_{1,\mathrm{GUT}}^{-1}(Q)$ using SM 1-loop running (suite `v3`).
 
 In practice, this collapses:
 
 - the strong OOS running misses and yields **full passes at 2%** across the v2/v3/v4 strong-running target keys, and
 - the EM OOS miss (`1/alpha → 1/alpha(mZ)`) into a **pass at 2%**.
+- the EW running misses (`alpha2` and `alpha1_GUT` at TeV scales) into **passes at 2%** under deterministic SM 1-loop running (suites `v2` and `v3`).
 
 Status: **exploratory**. It is “principled” (deterministic; no free knobs added), but it is not yet part of the frozen strict contract for all forces.
 

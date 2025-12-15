@@ -267,8 +267,11 @@ Important: until the model makes a prediction that is *not* already “baked in�
 
 **Next obvious lever (not yet implemented): EW/QED+EW unification layer**
 
-- Add a deterministic within‑band running mode for \(\alpha_1(Q)\), \(\alpha_2(Q)\) under frozen scheme choices, then re‑run the weak OOS suite in the same spirit as strong+EM.
-- **Status**: basic weak within‑band running is now implemented for \(\alpha_2^{-1}(Q)\) using SM 1‑loop running from the on‑shell-defined \(\alpha_2(m_Z)\) anchor (see predictive suite `v2`).
+- Add a deterministic within‑band running mode for \(\alpha_1(Q)\), \(\alpha_2(Q)\), and \(\sin^2\theta_W(Q)\) under frozen scheme choices, then re‑run the EW OOS suite in the same spirit as strong+EM.
+- **Status**: EW within‑band running is now implemented at SM 1‑loop for:
+  - \(\alpha_2^{-1}(Q)\) (suite `v2`), and
+  - \(\alpha_{1,\mathrm{GUT}}^{-1}(Q)\) (suite `v3`).
+  \(\sin^2\theta_W(Q)\) cross-check targets are still pending.
 
 ---
 
@@ -278,8 +281,10 @@ Important: until the model makes a prediction that is *not* already “baked in�
 # Baseline predictive OOS (step-only)
 python -m physics_test.cli oos-predictive --suite v1 --max-rel-err 0.02
 
-# RG-within-band predictive OOS (strong + EM)
+# RG-within-band predictive OOS (strong + EM + EW running)
 python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02
+python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02
+python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02
 
 # Frozen OOS suites (C can vary per target, strict menu)
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02

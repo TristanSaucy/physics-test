@@ -411,7 +411,11 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
 
     # Which forces to run
     if args.force == "all":
-        forces = ["em", "strong", "weak", "gravity"]
+        forces = ["em", "strong", "weak"]
+        if "hyper" in anchors:
+            forces.append("hyper")
+        if "gravity" in anchors:
+            forces.append("gravity")
     else:
         forces = [args.force]
 
@@ -580,9 +584,15 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
     # Which forces to run
     if args.force == "all":
-        # Preserve the historical meaning of v1 ("strong + EM only") and only include
-        # weak RG targets in suites designed for it (currently v2).
-        forces = ["em", "strong"] if args.suite == "v1" else ["em", "strong", "weak"]
+        # Preserve the historical meaning of v1 ("strong + EM only"), then extend:
+        #  - v2 adds weak (alpha2^{-1}) running targets
+        #  - v3 adds hypercharge (alpha1_GUT^{-1}) running targets
+        if args.suite == "v1":
+            forces = ["em", "strong"]
+        elif args.suite == "v2":
+            forces = ["em", "strong", "weak"]
+        else:
+            forces = ["em", "strong", "weak", "hyper"]
     else:
         forces = [args.force]
 
@@ -593,7 +603,9 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
 
     for force in forces:
         if force == "weak" and args.suite == "v1":
-            raise SystemExit("Suite v1 does not define weak RG-within-band targets. Use --suite v2 for --force weak.")
+            raise SystemExit("Suite v1 does not define weak RG-within-band targets. Use --suite v2 or v3 for --force weak.")
+        if force == "hyper" and args.suite in ("v1", "v2"):
+            raise SystemExit("Suite v3 defines hypercharge RG-within-band targets. Use --suite v3 for --force hyper.")
         if force not in anchors or force not in by_force:
             raise SystemExit(f"Unknown force {force!r} for suite {args.suite!r}. Options: {', '.join(sorted(anchors.keys()))}")
 
@@ -612,8 +624,11 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
         elif force == "weak":
             # Weak anchor is defined at the Z scale; use mZ as the reference.
             Q0 = float(get_measurement("mZ_GeV", default_value=91.1876).value)
+        elif force == "hyper":
+            # Hypercharge (GUT-normalized) anchor is defined at the Z scale; use mZ as the reference.
+            Q0 = float(get_measurement("mZ_GeV", default_value=91.1876).value)
         else:
-            raise SystemExit("oos-predictive-rg currently supports only --force em|strong|weak|all")
+            raise SystemExit("oos-predictive-rg currently supports only --force em|strong|weak|hyper|all")
 
         # Fit the anchor on the lattice (choose best C and integer m)
         anchor_target = float(all_targets[anchor.key].value)
@@ -647,7 +662,7 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             elif runner == "qed_1loop":
                 raise SystemExit("--runner qed_1loop is for EM only")
             elif runner == "ew_sm_1loop":
-                raise SystemExit("--runner ew_sm_1loop is for weak only")
+                raise SystemExit("--runner ew_sm_1loop is for weak/hyper only")
             else:
                 raise SystemExit(f"Unknown --runner {args.runner!r}")
 
@@ -670,10 +685,10 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
             if em_runner not in ("qed_1loop", "qed_pdg_mZ"):
                 raise SystemExit("For EM, use --runner auto, --runner qed_pdg_mZ, or --runner qed_1loop")
         else:
-            # Weak: SM 1-loop running of inverse couplings (fixed beta coefficient).
-            weak_runner = "ew_sm_1loop" if runner == "auto" else runner
-            if weak_runner != "ew_sm_1loop":
-                raise SystemExit("For weak, use --runner auto or --runner ew_sm_1loop")
+            # EW: SM 1-loop running of inverse couplings (fixed beta coefficient).
+            ew_runner = "ew_sm_1loop" if runner == "auto" else runner
+            if ew_runner != "ew_sm_1loop":
+                raise SystemExit("For weak/hyper, use --runner auto or --runner ew_sm_1loop")
 
         # Pretty header
         print(f"Predictive RG-within-band OOS suite: {args.suite}")
@@ -693,9 +708,12 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 runner_desc = "PDG-style Δα(mZ^2)=Δα_lept+Δα_had^(5)+Δα_top"
             print(f"runner = {args.runner}  -> {runner_desc}, Q0={Q0:g} GeV\n")
             print(f"EM      anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV (fixed)")
-        else:
+        elif force == "weak":
             print(f"runner = {args.runner}  -> SM 1-loop EW running (alpha2^{-1}), Q0={Q0:g} GeV\n")
             print(f"WEAK    anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
+        else:
+            print(f"runner = {args.runner}  -> SM 1-loop EW running (alpha1_GUT^{-1}), Q0={Q0:g} GeV\n")
+            print(f"HYPER   anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
         print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv0={inv0:.12g}, rel_err={best_anchor.rel_err:.3e}{z_anchor_s}")
         print(f"         note: {anchor.rationale}")
 
@@ -743,8 +761,8 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                         alpha_inv_0=inv0, delta_alpha_lept=da_lept, delta_alpha_had5=da_had5, delta_alpha_top=da_top
                     )
             else:
-                # Weak: SM 1-loop running of alpha2^{-1}.
-                inv_pred = run_alpha_inv(inv0, Q0, Q, SM_1LOOP.b2)
+                # EW: SM 1-loop running of inverse couplings.
+                inv_pred = run_alpha_inv(inv0, Q0, Q, SM_1LOOP.b2) if force == "weak" else run_alpha_inv(inv0, Q0, Q, SM_1LOOP.b1)
 
             rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
             if all_targets[key].sigma is not None and all_targets[key].sigma > 0:
@@ -1953,10 +1971,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
         help="Comma-separated gauge C constructions to include.",
     )
-    p_oos_pred.add_argument("--suite", choices=["v1", "v2"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred.add_argument("--suite", choices=["v1", "v2", "v3"], default="v1", help="Predictive OOS suite to run (default: v1)")
     p_oos_pred.add_argument(
         "--force",
-        choices=["all", "em", "strong", "weak", "gravity"],
+        choices=["all", "em", "strong", "weak", "hyper", "gravity"],
         default="all",
         help="Which force group(s) to run (default: all)",
     )
@@ -1976,10 +1994,10 @@ def build_parser() -> argparse.ArgumentParser:
         "oos-predictive-rg",
         help="Predictive OOS with deterministic within-band RG running (strong + EM + weak)",
     )
-    p_oos_pred_rg.add_argument("--suite", choices=["v1", "v2"], default="v1", help="Predictive OOS suite to run (default: v1)")
+    p_oos_pred_rg.add_argument("--suite", choices=["v1", "v2", "v3"], default="v1", help="Predictive OOS suite to run (default: v1)")
     p_oos_pred_rg.add_argument(
         "--force",
-        choices=["all", "em", "strong", "weak"],
+        choices=["all", "em", "strong", "weak", "hyper"],
         default="all",
         help="Force group(s) to run (default: all)",
     )
