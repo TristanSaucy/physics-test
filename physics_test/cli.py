@@ -35,6 +35,7 @@ from physics_test.steps import step_from_targets
 from physics_test.rg_scales import lambda_qcd_from_alpha_s
 from physics_test.oos_rg import rg_suites
 from physics_test.rg_within_band import QCDRunSpec, alpha_s_from_ref, qcd_run_spec_from_key, scale_GeV_from_target_key
+from physics_test.qed_running import qed_run_alpha_inv_1loop_from_ref
 
 
 def _try_configure_utf8_stdio() -> None:
@@ -463,11 +464,11 @@ def cmd_oos_predictive(args: argparse.Namespace) -> int:
 
 def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
     """
-    Predictive OOS with deterministic within-band RG running (strong only for now):
+    Predictive OOS with deterministic within-band RG running (strong + EM):
 
-      1) Fit a strict strong anchor on the φ-lattice using the strict gauge-derived C menu.
-      2) Freeze (C, m_anchor) -> implies an anchor inverse coupling inv_alpha(Q0)=C/φ^m.
-      3) Predict inv_alpha(Q) at additional scales by RG-running from (Q0, alpha(Q0))
+      1) Fit a strict anchor on the φ-lattice using the strict gauge-derived C menu.
+      2) Freeze (C, m_anchor) -> implies an anchor inverse coupling inv(Q0)=C/φ^m.
+      3) Predict inv(Q) at additional scales using a deterministic RG prescription,
          with no additional fit (no re-choosing m per target).
 
     This implements the "m = major transition, running happens within the band" lever:
@@ -477,9 +478,6 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
     suites = predictive_force_suites()
     if args.suite not in suites:
         raise SystemExit(f"Unknown predictive OOS suite {args.suite!r}. Options: {', '.join(sorted(suites.keys()))}")
-
-    if args.force != "strong":
-        raise SystemExit("oos-predictive-rg currently supports only --force strong")
 
     anchors, by_force = suites[args.suite]
     target_map = {t.name: t.value for t in known_targets()}
@@ -507,13 +505,6 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
         Cs.append(c)
         label_by_C[c] = lab
 
-    # Resolve strong anchor and default target list (can be overridden by --targets)
-    force = "strong"
-    anchor = anchors[force]
-    if anchor.key not in target_map:
-        raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
-    Q0 = scale_GeV_from_target_key(anchor.key)
-
     # Build rationale map so custom target lists still print useful context when possible.
     rationale_by_key: dict[str, str] = {}
     try:
@@ -522,107 +513,159 @@ def cmd_oos_predictive_rg(args: argparse.Namespace) -> int:
                 rationale_by_key.setdefault(ot.key, ot.rationale)
     except Exception:
         pass
-    for ot in by_force.get(force, []):
-        rationale_by_key.setdefault(ot.key, ot.rationale)
+    for f in sorted(anchors.keys()):
+        for ot in by_force.get(f, []):
+            rationale_by_key.setdefault(ot.key, ot.rationale)
 
-    # Choose running spec (deterministic; no tuning knobs)
-    runner = str(args.runner).strip().lower()
-    if runner == "auto":
-        spec = qcd_run_spec_from_key(anchor.key)
-    elif runner == "1loop_nf5":
-        spec = QCDRunSpec(loops=1, nf_mode="const", n_f=5)
-    elif runner == "1loop_nf56":
-        spec = QCDRunSpec(loops=1, nf_mode="nf56")
-    elif runner == "2loop_nf5":
-        spec = QCDRunSpec(loops=2, nf_mode="const", n_f=5, steps_per_unit_log=int(args.steps_per_unit_log))
-    elif runner == "2loop_nf56":
-        spec = QCDRunSpec(loops=2, nf_mode="nf56", steps_per_unit_log=int(args.steps_per_unit_log))
+    # Which forces to run
+    if args.force == "all":
+        forces = ["em", "strong"]
     else:
-        raise SystemExit(f"Unknown --runner {args.runner!r}")
+        forces = [args.force]
 
-    # Allow overriding the (still principled) threshold switch scale used by nf56 variants
-    spec = QCDRunSpec(
-        loops=spec.loops,
-        nf_mode=spec.nf_mode,
-        n_f=spec.n_f,
-        Q_switch_GeV=float(args.Q_switch_GeV),
-        n_f_below=spec.n_f_below,
-        n_f_above=spec.n_f_above,
-        steps_per_unit_log=spec.steps_per_unit_log,
-    )
+    total_pass = 0
+    total_n = 0
 
-    # Fit the anchor on the lattice (choose best C and integer m)
-    anchor_target = target_map[anchor.key]
-    anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
-    best_anchor = anchor_hits[0]
-    C0 = float(best_anchor.C)
-    m0 = int(best_anchor.m)
-    inv_alpha0 = float(best_anchor.G)
-    alpha0 = (1.0 / inv_alpha0) if inv_alpha0 != 0 else float("inf")
+    for force in forces:
+        if force not in anchors or force not in by_force:
+            raise SystemExit(f"Unknown force {force!r} for suite {args.suite!r}. Options: {', '.join(sorted(anchors.keys()))}")
 
-    lab = label_by_C.get(C0, "")
+        anchor = anchors[force]
+        if anchor.key not in target_map:
+            raise SystemExit(f"Unknown anchor key {anchor.key!r}. Run `list-targets`.")
 
-    print(f"Predictive RG-within-band OOS suite: {args.suite}")
-    print(f"force = strong")
-    print(f"tol(|rel_err|) = {args.max_rel_err}")
-    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
-    print(f"include = {','.join(include)}")
-    print(f"m range = [{min(m_values)}, {max(m_values)}]")
-    print(f"runner = {args.runner}  -> loops={spec.loops}, nf_mode={spec.nf_mode}, n_f={spec.n_f}, Q0={Q0:g} GeV\n")
-
-    print(f"STRONG  anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
-    print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv_alpha0={inv_alpha0:.12g}, rel_err={best_anchor.rel_err:.3e}")
-    print(f"         note: {anchor.rationale}")
-
-    # Precompute phi/log(phi)
-    p = (1.0 + math.sqrt(5.0)) / 2.0
-    ln_phi = math.log(p)
-
-    # Target list (either default predictive suite, or explicit override)
-    if str(getattr(args, "targets", "")).strip():
-        keys = [s.strip() for s in str(args.targets).split(",") if s.strip()]
-        targets_to_eval: list[tuple[str, str]] = [(k, rationale_by_key.get(k, "(custom target list)")) for k in keys]
-    else:
-        targets_to_eval = [(ot.key, ot.rationale) for ot in by_force[force]]
-
-    n_pass = 0
-    n = 0
-    for key, rationale in targets_to_eval:
-        if key not in target_map:
-            raise SystemExit(f"Unknown target key {key!r}. Run `list-targets`.")
-        tgt = float(target_map[key])
-        Q = scale_GeV_from_target_key(key)
-
-        aQ = alpha_s_from_ref(Q, alpha_s_Q0=alpha0, Q0_GeV=Q0, spec=spec)
-        inv_pred = (1.0 / aQ) if aQ not in (0.0, float("inf")) else float("inf")
-        rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
-
-        ok = abs(rel_err) <= float(args.max_rel_err)
-        status = "PASS" if ok else "FAIL"
-        if ok:
-            n_pass += 1
-        n += 1
-
-        # Interpret the RG-shift as a real-valued Δm inside the same C-band:
-        #   inv_alpha(Q) = C / φ^(m_eff(Q))  => m_eff = log_phi(C/inv_alpha(Q))
-        if inv_pred > 0 and C0 > 0 and ln_phi != 0:
-            m_eff = math.log(C0 / inv_pred) / ln_phi
-            dm_real = m_eff - float(m0)
-            dm_int = int(round(dm_real))
-            dm_frac = dm_real - float(dm_int)
+        # Determine reference scale Q0
+        if force == "strong":
+            if getattr(args, "Q0_GeV", None) is not None:
+                raise SystemExit("--Q0-GeV is not supported for strong (Q0 is defined by the anchor key scale).")
+            Q0 = scale_GeV_from_target_key(anchor.key)
+        elif force == "em":
+            # α(0) is quoted at Q→0; we use m_e as a fixed reference scale for the 1-loop threshold model.
+            Q0 = float(args.Q0_GeV) if getattr(args, "Q0_GeV", None) is not None else 0.00051099895
         else:
-            dm_real = float("nan")
-            dm_int = 0
-            dm_frac = float("nan")
+            raise SystemExit("oos-predictive-rg currently supports only --force em|strong|all")
 
-        print(
-            f"  [{status}] {key:28s} target={tgt:.12g}  Q={Q:g} GeV  "
-            f"pred={inv_pred:.12g}  rel_err={rel_err:.3e}  "
-            f"dm_real={dm_real:.6f}  dm_int={dm_int:+d}  frac={dm_frac:+.6f}"
-        )
-        print(f"         rationale: {rationale}")
+        # Fit the anchor on the lattice (choose best C and integer m)
+        anchor_target = float(target_map[anchor.key])
+        anchor_hits = scan_candidates(Cs=Cs, m_values=m_values, target_G=anchor_target)
+        best_anchor = anchor_hits[0]
+        C0 = float(best_anchor.C)
+        m0 = int(best_anchor.m)
+        inv0 = float(best_anchor.G)
+        lab = label_by_C.get(C0, "")
 
-    print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}")
+        # Choose running spec (deterministic; no tuning knobs)
+        runner = str(args.runner).strip().lower()
+        spec_qcd: QCDRunSpec | None = None
+        if force == "strong":
+            if runner == "auto":
+                spec_qcd = qcd_run_spec_from_key(anchor.key)
+            elif runner == "1loop_nf5":
+                spec_qcd = QCDRunSpec(loops=1, nf_mode="const", n_f=5)
+            elif runner == "1loop_nf56":
+                spec_qcd = QCDRunSpec(loops=1, nf_mode="nf56")
+            elif runner == "2loop_nf5":
+                spec_qcd = QCDRunSpec(loops=2, nf_mode="const", n_f=5, steps_per_unit_log=int(args.steps_per_unit_log))
+            elif runner == "2loop_nf56":
+                spec_qcd = QCDRunSpec(loops=2, nf_mode="nf56", steps_per_unit_log=int(args.steps_per_unit_log))
+            elif runner == "qed_1loop":
+                raise SystemExit("--runner qed_1loop is for EM only")
+            else:
+                raise SystemExit(f"Unknown --runner {args.runner!r}")
+
+            # Allow overriding the (still principled) threshold switch scale used by nf56 variants
+            spec_qcd = QCDRunSpec(
+                loops=spec_qcd.loops,
+                nf_mode=spec_qcd.nf_mode,
+                n_f=spec_qcd.n_f,
+                Q_switch_GeV=float(args.Q_switch_GeV),
+                n_f_below=spec_qcd.n_f_below,
+                n_f_above=spec_qcd.n_f_above,
+                steps_per_unit_log=spec_qcd.steps_per_unit_log,
+            )
+        else:
+            # EM: only QED threshold running is supported right now
+            if runner not in ("auto", "qed_1loop"):
+                raise SystemExit("For EM, use --runner auto or --runner qed_1loop")
+
+        # Pretty header
+        print(f"Predictive RG-within-band OOS suite: {args.suite}")
+        print(f"force = {force}")
+        print(f"tol(|rel_err|) = {args.max_rel_err}")
+        print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+        print(f"include = {','.join(include)}")
+        print(f"m range = [{min(m_values)}, {max(m_values)}]")
+        if force == "strong":
+            assert spec_qcd is not None
+            print(f"runner = {args.runner}  -> loops={spec_qcd.loops}, nf_mode={spec_qcd.nf_mode}, n_f={spec_qcd.n_f}, Q0={Q0:g} GeV\n")
+            print(f"STRONG  anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV")
+        else:
+            print(f"runner = {args.runner}  -> QED 1-loop (fermion thresholds), Q0={Q0:g} GeV\n")
+            print(f"EM      anchor: {anchor.key:28s} target={anchor_target:.12g}  Q0={Q0:g} GeV (fixed)")
+        print(f"         best: {lab:22s} C={C0:g}, m={m0:d}, inv0={inv0:.12g}, rel_err={best_anchor.rel_err:.3e}")
+        print(f"         note: {anchor.rationale}")
+
+        # Precompute phi/log(phi)
+        p = (1.0 + math.sqrt(5.0)) / 2.0
+        ln_phi = math.log(p)
+
+        # Target list
+        if force == "strong" and str(getattr(args, "targets", "")).strip():
+            keys = [s.strip() for s in str(args.targets).split(",") if s.strip()]
+            targets_to_eval: list[tuple[str, str]] = [(k, rationale_by_key.get(k, "(custom target list)")) for k in keys]
+        else:
+            targets_to_eval = [(ot.key, ot.rationale) for ot in by_force[force]]
+
+        n_pass = 0
+        n = 0
+        for key, rationale in targets_to_eval:
+            if key not in target_map:
+                raise SystemExit(f"Unknown target key {key!r}. Run `list-targets`.")
+            tgt = float(target_map[key])
+            Q = scale_GeV_from_target_key(key)
+
+            if force == "strong":
+                assert spec_qcd is not None
+                alpha0 = (1.0 / inv0) if inv0 != 0 else float("inf")
+                aQ = alpha_s_from_ref(Q, alpha_s_Q0=alpha0, Q0_GeV=Q0, spec=spec_qcd)
+                inv_pred = (1.0 / aQ) if aQ not in (0.0, float("inf")) else float("inf")
+            else:
+                inv_pred = qed_run_alpha_inv_1loop_from_ref(Q, alpha_inv_Q0=inv0, Q0_GeV=Q0)
+
+            rel_err = (inv_pred - tgt) / tgt if tgt != 0 else float("nan")
+
+            ok = abs(rel_err) <= float(args.max_rel_err)
+            status = "PASS" if ok else "FAIL"
+            if ok:
+                n_pass += 1
+            n += 1
+
+            # Interpret the RG-shift as a real-valued Δm inside the same C-band:
+            #   inv(Q) = C / φ^(m_eff(Q))  => m_eff = log_phi(C/inv(Q))
+            if inv_pred > 0 and C0 > 0 and ln_phi != 0:
+                m_eff = math.log(C0 / inv_pred) / ln_phi
+                dm_real = m_eff - float(m0)
+                dm_int = int(round(dm_real))
+                dm_frac = dm_real - float(dm_int)
+            else:
+                dm_real = float("nan")
+                dm_int = 0
+                dm_frac = float("nan")
+
+            print(
+                f"  [{status}] {key:28s} target={tgt:.12g}  Q={Q:g} GeV  "
+                f"pred={inv_pred:.12g}  rel_err={rel_err:.3e}  "
+                f"dm_real={dm_real:.6f}  dm_int={dm_int:+d}  frac={dm_frac:+.6f}"
+            )
+            print(f"         rationale: {rationale}")
+
+        print(f"\nForce summary: {n_pass}/{n} PASS at tol={args.max_rel_err}\n")
+
+        total_pass += n_pass
+        total_n += n
+
+    if len(forces) > 1:
+        print(f"Overall RG-within-band predictive summary: {total_pass}/{total_n} PASS at tol={args.max_rel_err}")
     return 0
 
 
@@ -1799,10 +1842,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_oos_pred_rg = sub.add_parser(
         "oos-predictive-rg",
-        help="Predictive OOS with deterministic within-band RG running (currently strong-only)",
+        help="Predictive OOS with deterministic within-band RG running (strong + EM)",
     )
     p_oos_pred_rg.add_argument("--suite", choices=["v1"], default="v1", help="Predictive OOS suite to run (default: v1)")
-    p_oos_pred_rg.add_argument("--force", choices=["strong"], default="strong", help="Force group to run (default: strong)")
+    p_oos_pred_rg.add_argument(
+        "--force",
+        choices=["all", "em", "strong"],
+        default="all",
+        help="Force group(s) to run (default: all)",
+    )
     p_oos_pred_rg.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_oos_pred_rg.add_argument(
         "--include",
@@ -1815,9 +1863,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred_rg.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
     p_oos_pred_rg.add_argument(
         "--runner",
-        choices=["auto", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
+        choices=["auto", "qed_1loop", "1loop_nf5", "1loop_nf56", "2loop_nf5", "2loop_nf56"],
         default="auto",
-        help="Deterministic QCD running prescription to use (default: auto = infer from anchor key).",
+        help="Deterministic running prescription to use (strong: QCD; EM: QED) (default: auto).",
+    )
+    p_oos_pred_rg.add_argument(
+        "--Q0-GeV",
+        dest="Q0_GeV",
+        type=float,
+        default=None,
+        help="EM only: reference scale for the QED threshold model (default: m_e). Strong ignores this (Q0 from anchor key).",
     )
     p_oos_pred_rg.add_argument(
         "--Q-switch-GeV",
@@ -1835,7 +1890,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_pred_rg.add_argument(
         "--targets",
         default="",
-        help="Optional comma-separated override list of strong target keys to evaluate (default: suite v1 strong targets).",
+        help="Optional comma-separated override list of STRONG target keys to evaluate (default: suite v1 strong targets).",
     )
     p_oos_pred_rg.set_defaults(func=cmd_oos_predictive_rg)
 

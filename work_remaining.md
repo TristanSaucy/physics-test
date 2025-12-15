@@ -60,7 +60,7 @@ This is a living checklist for continuing the framework work in future sessions.
 - Document what would count as a **failure mode** (no configurations survive under strict constraints).
 - Added frozen out-of-sample test suites (v1/v2/v3/v4): `python -m physics_test.cli oos-report --suite v1|v2|v3|v4`
 - Added predictive OOS (fit one C per force from strict anchors, then hold C fixed): `python -m physics_test.cli oos-predictive --suite v1`
-- Added predictive OOS (strong-only) with within-band RG running from the lattice anchor: `python -m physics_test.cli oos-predictive-rg --suite v1`
+- Added predictive OOS (strong + EM) with within-band RG running from the lattice anchor: `python -m physics_test.cli oos-predictive-rg --suite v1`
 - Added principled normalization-factor families for predictive OOS: `python -m physics_test.cli list-norm-families` and `python -m physics_test.cli oos-predictive --norm-family ...`
 - Added step-signal OOS (C-independent): `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02|0.05`
 - Added RG+phi OOS (Lambda_QCD consistency from lattice-fit inverse couplings): `python -m physics_test.cli oos-rg --suite qcd-lambda-v1|v2`

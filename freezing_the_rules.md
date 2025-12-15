@@ -138,11 +138,19 @@ We now support a stricter interpretation consistent with renormalization group p
 - **Integer \(m\)** selects a **coarse band** (the anchor placement on the φ-lattice).
 - **Within-band variation** is supplied by **deterministic RG running** (no refitting \(m\) per target).
 
-CLI command (strong-only for now):
+CLI command (strong + EM for now):
 
 - `python -m physics_test.cli oos-predictive-rg --suite v1 --max-rel-err 0.02`
 
-This mode uses the lattice-fit anchor value as $\alpha_s(Q_0)$ and predicts $\alpha_s(Q)$ at other scales using 1-loop or 2-loop QCD running (including an optional $n_f=5\rightarrow 6$ switch at $m_t$ when requested). In practice, this collapses the strong OOS running misses and yields **full passes at 2%** across the v2/v3/v4 strong-running target keys.
+This mode uses the lattice-fit anchor value as:
+
+- $\alpha_s(Q_0)$ for the strong sector and predicts $\alpha_s(Q)$ at other scales using 1-loop or 2-loop QCD running (including an optional $n_f=5\rightarrow 6$ switch at $m_t$ when requested).
+- $\alpha(Q_0)$ for the EM sector and predicts $\alpha(Q)$ using a simple 1-loop QED threshold model (sharp fermion thresholds).
+
+In practice, this collapses:
+
+- the strong OOS running misses and yields **full passes at 2%** across the v2/v3/v4 strong-running target keys, and
+- the EM OOS miss (`1/alpha → 1/alpha(mZ)`) into a **pass at 2%**.
 
 Status: **exploratory**. It is “principled” (deterministic; no free knobs added), but it is not yet part of the frozen strict contract for all forces.
 
