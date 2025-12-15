@@ -1287,6 +1287,102 @@ def cmd_gut_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gut_run_lattice(args: argparse.Namespace) -> int:
+    """
+    1-loop GUT-style running test, but with **lattice-quantized inputs**:
+
+      1) Fit φ-lattice anchors for:
+           - α1_GUT^{-1}(mZ)   (hypercharge, GUT-normalized)
+           - α2^{-1}(mZ)       (weak SU(2))
+           - α3^{-1}(mZ)       (QCD), obtained by fitting α3^{-1}(mH) then running to mZ
+      2) Run the resulting inverse couplings from mZ to high scales and find the best
+         convergence point, using either SM or MSSM 1-loop beta coefficients.
+
+    This is an exploratory diagnostic: it asks whether the lattice-quantized couplings
+    imply “more convergent” running than the raw measured inputs.
+    """
+
+    # Reference scale (mZ)
+    mZ = float(get_measurement("mZ_GeV", default_value=91.1876).value)
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    # Targets
+    all_targets = {t.name: t for t in known_targets()}
+    key_a1 = "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"
+    key_a2 = "1/alpha2(alpha(mZ),sin2_on_shell)"
+    key_a3_anchor = "1/alpha_s_1loop_from_mZ(mH)"
+    for k in (key_a1, key_a2, key_a3_anchor):
+        if k not in all_targets:
+            raise SystemExit(f"Missing required target {k!r}. Run `list-targets`.")
+
+    # Fit lattice anchors
+    best_a1 = scan_candidates(Cs=Cs, m_values=m_values, target_G=float(all_targets[key_a1].value))[0]
+    best_a2 = scan_candidates(Cs=Cs, m_values=m_values, target_G=float(all_targets[key_a2].value))[0]
+    best_a3 = scan_candidates(Cs=Cs, m_values=m_values, target_G=float(all_targets[key_a3_anchor].value))[0]
+
+    inv_a1_mZ = float(best_a1.G)
+    inv_a2_mZ = float(best_a2.G)
+
+    # Run strong anchor to mZ (deterministic; no tuning knobs)
+    Q0_strong = float(scale_GeV_from_target_key(key_a3_anchor))
+    spec_qcd = qcd_run_spec_from_key(key_a3_anchor)
+    alpha3_Q0 = (1.0 / float(best_a3.G)) if float(best_a3.G) != 0 else float("inf")
+    alpha3_mZ = alpha_s_from_ref(mZ, alpha_s_Q0=alpha3_Q0, Q0_GeV=Q0_strong, spec=spec_qcd)
+    inv_a3_mZ = (1.0 / float(alpha3_mZ)) if alpha3_mZ not in (0.0, float("inf")) else float("inf")
+
+    betas = SM_1LOOP if args.model == "sm" else MSSM_1LOOP
+    mu_best, score, inv1, inv2, inv3 = find_best_convergence(
+        mu0=mZ,
+        alpha1_inv_mu0=inv_a1_mZ,
+        alpha2_inv_mu0=inv_a2_mZ,
+        alpha3_inv_mu0=inv_a3_mZ,
+        betas=betas,
+        mu_min=args.Q_min_GeV,
+        mu_max=args.Q_max_GeV,
+        n=args.n,
+    )
+
+    print(f"Model={betas.name}")
+    print("Lattice-quantized inputs (at mZ):")
+    print(
+        f"  inv_alpha1_GUT(mZ) = {inv_a1_mZ:.12g}  "
+        f"(fit: {label_by_C.get(float(best_a1.C), ''):22s} C={best_a1.C:g}, m={int(best_a1.m):d}, rel_err={best_a1.rel_err:.3e})"
+    )
+    print(
+        f"  inv_alpha2(mZ)     = {inv_a2_mZ:.12g}  "
+        f"(fit: {label_by_C.get(float(best_a2.C), ''):22s} C={best_a2.C:g}, m={int(best_a2.m):d}, rel_err={best_a2.rel_err:.3e})"
+    )
+    print(
+        f"  inv_alpha3(mZ)     = {inv_a3_mZ:.12g}  "
+        f"(fit anchor @Q0={Q0_strong:g} GeV: {label_by_C.get(float(best_a3.C), ''):22s} C={best_a3.C:g}, m={int(best_a3.m):d}, rel_err={best_a3.rel_err:.3e}; "
+        f"run to mZ with QCD {spec_qcd.loops}L, nf_mode={spec_qcd.nf_mode})\n"
+    )
+    print(f"Best convergence in scan: Q ~ {mu_best:.6g} GeV; score(max delta alpha^-1)={score:.6g}")
+    print(f"  inv_a1={inv1:.6g}, inv_a2={inv2:.6g}, inv_a3={inv3:.6g}")
+    return 0
+
+
 def cmd_pair_forces_gaugeCs(args: argparse.Namespace) -> int:
     """
     Full pairing test using ONLY gauge-derived C candidates (non-arbitrary):
@@ -2281,6 +2377,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_gut.add_argument("--n", type=int, default=200, help="Number of log-spaced Q points (default: 200)")
     p_gut.add_argument("--top", type=int, default=12, help="Rows to print around best (default: 12)")
     p_gut.set_defaults(func=cmd_gut_run)
+
+    p_gut_lat = sub.add_parser(
+        "gut-run-lattice",
+        help="1-loop convergence test like gut-run, but with lattice-quantized inputs for alpha1_GUT^-1, alpha2^-1, alpha3^-1",
+    )
+    p_gut_lat.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set (default: sm)")
+    p_gut_lat.add_argument("--Q-min-GeV", type=float, default=1e2, help="Min Q in GeV (default: 1e2)")
+    p_gut_lat.add_argument("--Q-max-GeV", type=float, default=1e18, help="Max Q in GeV (default: 1e18)")
+    p_gut_lat.add_argument("--n", type=int, default=200, help="Number of log-spaced Q points (default: 200)")
+    p_gut_lat.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_gut_lat.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_gut_lat.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_gut_lat.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_gut_lat.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_gut_lat.set_defaults(func=cmd_gut_run_lattice)
 
     p_pg = sub.add_parser(
         "pair-forces-gaugeCs",

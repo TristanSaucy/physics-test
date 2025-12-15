@@ -201,6 +201,7 @@ Under strict gauge‑derived \(C\) and integer \(m\), the best anchor hits are:
 - **EM**: `1/alpha` at \((C,m)=(360,2)\) (≈ +0.34%)
 - **Strong**: `1/alpha_s_1loop_from_mZ(mH)` at \((C,m)=(60,4)\) (≈ −1.27%)
 - **Weak**: `1/alpha2(alpha(mZ),sin2_on_shell)` at \((C,m)=(120,3)\) (≈ −0.73%)
+- **Hypercharge (GUT‑normalized)**: `1/alpha1_GUT(alpha(mZ),sin2_on_shell)` at \((C,m)=(60,0)\) (≈ +0.58%)
 
 ### 7.2 The “integer‑steps only” failure mode
 
@@ -212,8 +213,23 @@ Using `oos-predictive-rg`:
 
 - **Strong** running cross‑checks that missed before become **passes at 2%** (typical errors ~1–2% across v2/v3/v4 strong running keys).
 - **EM** OOS cross‑check `1/alpha → 1/alpha(mZ)` becomes a **pass at 2%** under deterministic QED running (either a PDG-style Δα(mZ²) relation or a simple 1-loop threshold runner; both are available as `--runner` options).
+- **Weak** within‑band running of `alpha2^{-1}(Q)` becomes **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV` (suite `v2`).
+- **Hypercharge** within‑band running of `alpha1_GUT^{-1}(Q)` becomes **passes at 2%** across `mW`, `mH`, `1TeV`, `10TeV` (suite `v3`).
+- A derived **EW mixing** consistency check `oos-ew-mix` passes at **2%** across `mW`, `mH`, `1TeV`, `10TeV` (typical offset ~1%).
 
 Interpretation: \(m\) behaves like a **coarse band index**, while **RG flow supplies within‑band motion**.
+
+### 7.4 GUT‑style convergence improves with lattice‑quantized inputs (exploratory)
+
+The command `gut-run-lattice` initializes \(\alpha_1^{-1},\alpha_2^{-1},\alpha_3^{-1}\) at \(m_Z\) using the φ‑lattice anchors (and runs the strong anchor from \(m_H\to m_Z\) deterministically), then scans for best 1‑loop convergence at high scales.
+
+In current runs:
+
+- Baseline `gut-run --model sm`: best score \(\approx 3.67\) at \(Q\sim 2.46\times 10^{14}\) GeV.
+- `gut-run-lattice --model sm`: best score \(\approx 2.16\) at \(Q\sim 4.28\times 10^{14}\) GeV.
+- `gut-run-lattice --model mssm`: best score \(\approx 1.55\) at \(Q\sim 4.33\times 10^{16}\) GeV.
+
+This is not “proof of unification,” but it is a nontrivial diagnostic: lattice‑quantized inputs appear to reduce the 1‑loop mismatch in inverse‑coupling convergence.
 
 ---
 
@@ -288,6 +304,11 @@ python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02
 
 # EW mixing derived check (sin^2thetaW(Q) from alpha2 + alpha1_GUT running)
 python -m physics_test.cli oos-ew-mix --max-rel-err 0.02
+
+# GUT convergence diagnostic (baseline vs lattice-quantized initialization)
+python -m physics_test.cli gut-run --model sm --n 400
+python -m physics_test.cli gut-run-lattice --model sm --n 400
+python -m physics_test.cli gut-run-lattice --model mssm --n 400
 
 # Frozen OOS suites (C can vary per target, strict menu)
 python -m physics_test.cli oos-report --suite v2 --max-rel-err 0.02

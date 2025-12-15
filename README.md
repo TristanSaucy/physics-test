@@ -208,6 +208,11 @@ python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02
 # EW mixing derived check: sin^2thetaW(Q) from alpha2 + alpha1_GUT running
 python -m physics_test.cli oos-ew-mix --max-rel-err 0.02
 
+# GUT convergence diagnostic: baseline vs lattice-quantized initialization
+python -m physics_test.cli gut-run --model sm --n 400
+python -m physics_test.cli gut-run-lattice --model sm --n 400
+python -m physics_test.cli gut-run-lattice --model mssm --n 400
+
 # step-signal OOS (C-independent): do ratios look like φ^integer?
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02
 python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.05
