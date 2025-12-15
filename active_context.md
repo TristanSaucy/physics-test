@@ -123,6 +123,7 @@ RG-within-band predictive tests (no re-fitting \(m\) per target):
 - `python -m physics_test.cli oos-predictive-rg --suite v2 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-predictive-rg --suite v3 --max-rel-err 0.02`
 - `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02`
+- `python -m physics_test.cli ew-sin2 --model sm --scales mW,1TeV`
 - `python -m physics_test.cli gut-run-lattice --model sm --n 400`
 - `python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05`
 - `python -m physics_test.cli oos-report --suite v6 --max-rel-err 0.05`

@@ -941,6 +941,121 @@ def cmd_oos_ew_mix(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ew_sin2(args: argparse.Namespace) -> int:
+    """
+    Predict sin^2θW(Q) from lattice-quantized EW anchors + SM/MSSM 1-loop running.
+
+    This is a convenience wrapper around the same logic used in `oos-ew-mix`, but:
+      - it prints predictions at user-chosen scales, and
+      - it can optionally compare against user-supplied measurements.
+    """
+
+    all_targets = {t.name: t for t in known_targets()}
+
+    key_a2 = "1/alpha2(alpha(mZ),sin2_on_shell)"
+    key_a1 = "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"
+
+    for k in (key_a2, key_a1):
+        if k not in all_targets:
+            raise SystemExit(f"Missing required target {k!r}. Run `list-targets`.")
+
+    inv_a2_target0 = float(all_targets[key_a2].value)
+    inv_a1_target0 = float(all_targets[key_a1].value)
+
+    # Reference scale (mZ)
+    Q0 = float(get_measurement("mZ_GeV", default_value=91.1876).value)
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    # Gauge-derived C candidates
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    cand: list[tuple[str, float]] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            cand.append((f"{g.name}:{k}", float(v)))
+
+    # De-duplicate Cs (keep first label)
+    seen: set[float] = set()
+    Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for lab, c in cand:
+        if c in seen:
+            continue
+        seen.add(c)
+        Cs.append(c)
+        label_by_C[c] = lab
+
+    # Fit lattice anchors (independent)
+    best_a2 = scan_candidates(Cs=Cs, m_values=m_values, target_G=inv_a2_target0)[0]
+    best_a1 = scan_candidates(Cs=Cs, m_values=m_values, target_G=inv_a1_target0)[0]
+    inv_a2_0 = float(best_a2.G)
+    inv_a1_0 = float(best_a1.G)
+
+    # Choose beta set for running
+    betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
+
+    # Parse measurement overrides: label -> (value, sigma|None)
+    meas: dict[str, tuple[float, float | None]] = {}
+    for trip in args.measurement or []:
+        if len(trip) != 3:
+            raise SystemExit("--measurement expects: <label> <sin2> <sigma_or_0>")
+        lab, v_s, s_s = trip
+        v = float(v_s)
+        s = float(s_s)
+        meas[str(lab)] = (v, None if s <= 0 else s)
+
+    # Scales to evaluate
+    from physics_test.scales import scale_GeV  # local import to keep CLI imports stable
+
+    scale_labels = [s.strip() for s in str(args.scales).split(",") if s.strip()]
+    if not scale_labels:
+        raise SystemExit("--scales must contain at least one label (e.g. mW,mH,1TeV,10TeV)")
+
+    print("EW sin^2thetaW(Q) prediction (lattice anchors + 1-loop running)")
+    print(f"model = {betas.name}")
+    print(f"Q0 = {Q0:g} GeV (mZ)")
+    print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}]\n")
+
+    print("Anchor fits (independent):")
+    print(
+        f"  inv_alpha2(mZ): target={inv_a2_target0:.12g}  "
+        f"best: {label_by_C.get(float(best_a2.C), ''):22s} C={best_a2.C:g}, m={int(best_a2.m):d}, inv0={inv_a2_0:.12g}, rel_err={best_a2.rel_err:.3e}"
+    )
+    print(
+        f"  inv_alpha1_GUT(mZ): target={inv_a1_target0:.12g}  "
+        f"best: {label_by_C.get(float(best_a1.C), ''):22s} C={best_a1.C:g}, m={int(best_a1.m):d}, inv0={inv_a1_0:.12g}, rel_err={best_a1.rel_err:.3e}\n"
+    )
+
+    # Predict at scales
+    for lab in scale_labels:
+        Q = float(scale_GeV(lab))
+        inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
+        inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
+        invY = (5.0 / 3.0) * float(inv1)
+        sin2_pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+
+        if lab in meas:
+            v, s = meas[lab]
+            rel_err = (sin2_pred - v) / v if v != 0 else float("nan")
+            if s is not None and s > 0:
+                z = (sin2_pred - v) / s
+                z_s = f"  z={z:.3g}"
+            else:
+                z_s = ""
+            ok = abs(rel_err) <= float(args.max_rel_err)
+            status = "PASS" if ok else "FAIL"
+            print(f"[{status}] Q={Q:g} GeV ({lab})  meas={v:.12g}  pred={sin2_pred:.12g}  rel_err={rel_err:.3e}{z_s}")
+        else:
+            print(f"[PRED] Q={Q:g} GeV ({lab})  sin2_pred={sin2_pred:.12g}")
+
+    return 0
+
+
 def cmd_oos_steps(args: argparse.Namespace) -> int:
     """
     Step-signal OOS report (C-independent):
@@ -2287,6 +2402,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated scale labels to evaluate (default: mW,mH,1TeV,10TeV).",
     )
     p_oos_ew.set_defaults(func=cmd_oos_ew_mix)
+
+    p_ew_sin2 = sub.add_parser(
+        "ew-sin2",
+        help="Predict sin^2thetaW(Q) from lattice-quantized alpha2^-1/alpha1_GUT^-1 anchors + SM/MSSM 1-loop running; optionally compare to supplied measurements",
+    )
+    p_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
+    p_ew_sin2.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
+    p_ew_sin2.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include.",
+    )
+    p_ew_sin2.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_ew_sin2.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_ew_sin2.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_ew_sin2.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| when comparing to measurements (default: 0.02)")
+    p_ew_sin2.add_argument(
+        "--scales",
+        default="mW,mH,1TeV,10TeV",
+        help="Comma-separated scale labels to evaluate (default: mW,mH,1TeV,10TeV).",
+    )
+    p_ew_sin2.add_argument(
+        "--measurement",
+        action="append",
+        nargs=3,
+        metavar=("LABEL", "SIN2", "SIGMA"),
+        default=[],
+        help="Optional measurement triple: <label> <sin2> <sigma_or_0>. Label must match one of --scales entries.",
+    )
+    p_ew_sin2.set_defaults(func=cmd_ew_sin2)
 
     p_oos_steps = sub.add_parser(
         "oos-steps",
