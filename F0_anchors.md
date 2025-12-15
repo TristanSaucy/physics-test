@@ -102,6 +102,20 @@ $$
 
 and then we interpret the implied $K$ as a scale parameter and check plausibility.
 
+### Optional (exploratory): blackbody peak factors
+
+If you want to explicitly test where Euler’s number enters through the Planck distribution
+(via $\exp(h\nu/k_BT)$), the “typical” thermal frequency is not uniquely $k_BT/h$.
+
+Two principled alternatives are:
+
+- Peak in frequency-domain Planck spectrum $u(\nu)$:
+  - $\nu_{\text{peak}} = x\,k_BT/h$ with $x\approx 2.821439$
+- Peak in wavelength-domain Planck spectrum $u(\lambda)$, converted to a frequency:
+  - $c/\lambda_{\text{peak}} = y\,k_BT/h$ with $y\approx 4.965114$
+
+These are available as additional CLI presets in `physics_test/presets.py` (listed by `list-frequency-presets`).
+
 ## 5) Reproduce with the CLI (Option‑2)
 
 List presets:

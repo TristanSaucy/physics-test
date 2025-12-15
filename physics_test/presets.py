@@ -84,6 +84,19 @@ def thermal_presets() -> list[FrequencyPreset]:
     def _kbt_over_h(T_K: float) -> float:
         return (constants.BOLTZMANN * float(T_K)) / constants.PLANCK
 
+    # Blackbody (Planck spectrum) peak factors:
+    #
+    # For spectral energy density per frequency u(ν), the peak occurs at:
+    #   x = hν/(kB T) ≈ 2.821439372...
+    #
+    # For spectral radiance per wavelength u(λ), the peak occurs at:
+    #   y = hc/(λ kB T) ≈ 4.965114232...
+    #
+    # Mapping λ_peak -> an equivalent frequency c/λ_peak gives ν = (kB T / h) * y,
+    # which is a different (also principled) “typical” frequency scale.
+    PLANCK_PEAK_X_NU = 2.8214393721220787
+    PLANCK_PEAK_Y_LAMBDA = 4.965114231744276
+
     return [
         FrequencyPreset(
             "thermal-CMB-2.725K-kBT_over_h",
@@ -99,6 +112,36 @@ def thermal_presets() -> list[FrequencyPreset]:
             "thermal-body-310K-kBT_over_h",
             _kbt_over_h(310.0),
             "Thermal baseline: kB*T/h at ~human body temperature (m=0 baseline)",
+        ),
+        FrequencyPreset(
+            "thermal-CMB-2.725K-planck_peak_nu",
+            PLANCK_PEAK_X_NU * _kbt_over_h(2.725),
+            "Blackbody peak (frequency domain): nu_peak = x*kB*T/h with x≈2.82144 (Planck spectrum u(nu))",
+        ),
+        FrequencyPreset(
+            "thermal-room-300K-planck_peak_nu",
+            PLANCK_PEAK_X_NU * _kbt_over_h(300.0),
+            "Blackbody peak (frequency domain): nu_peak = x*kB*T/h with x≈2.82144 (Planck spectrum u(nu))",
+        ),
+        FrequencyPreset(
+            "thermal-body-310K-planck_peak_nu",
+            PLANCK_PEAK_X_NU * _kbt_over_h(310.0),
+            "Blackbody peak (frequency domain): nu_peak = x*kB*T/h with x≈2.82144 (Planck spectrum u(nu))",
+        ),
+        FrequencyPreset(
+            "thermal-CMB-2.725K-planck_lambda_peak_as_frequency",
+            PLANCK_PEAK_Y_LAMBDA * _kbt_over_h(2.725),
+            "Blackbody peak (wavelength domain, converted): c/lambda_peak = y*kB*T/h with y≈4.96511",
+        ),
+        FrequencyPreset(
+            "thermal-room-300K-planck_lambda_peak_as_frequency",
+            PLANCK_PEAK_Y_LAMBDA * _kbt_over_h(300.0),
+            "Blackbody peak (wavelength domain, converted): c/lambda_peak = y*kB*T/h with y≈4.96511",
+        ),
+        FrequencyPreset(
+            "thermal-body-310K-planck_lambda_peak_as_frequency",
+            PLANCK_PEAK_Y_LAMBDA * _kbt_over_h(310.0),
+            "Blackbody peak (wavelength domain, converted): c/lambda_peak = y*kB*T/h with y≈4.96511",
         ),
     ]
 
