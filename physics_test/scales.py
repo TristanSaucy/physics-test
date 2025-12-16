@@ -38,6 +38,13 @@ def scale_GeV(label: str) -> float:
     if x == "mt":
         return float(M_T_GEV)
 
+    # Low-Q weak mixing angle measurement labels (PV experiments)
+    # These are defined as Q = sqrt(Q^2) with Q^2 in GeV^2.
+    if x.lower() == "qweak":
+        return float(0.15668439615992397)  # sqrt(0.02455)
+    if x.lower() == "e158":
+        return float(0.161245154965971)  # sqrt(0.026)
+
     # Simple TeV parsing: "<number>TeV"
     if x.endswith("TeV"):
         num = x[: -len("TeV")]

@@ -36,6 +36,7 @@ from physics_test.rg_scales import lambda_qcd_from_alpha_s
 from physics_test.oos_rg import rg_suites
 from physics_test.rg_within_band import QCDRunSpec, alpha_s_from_ref, qcd_run_spec_from_key, scale_GeV_from_target_key
 from physics_test.qed_running import alpha_inv_mZ_from_delta_alpha, qed_run_alpha_inv_1loop_from_ref
+from physics_test.ew_mixing import sin2_eff_gammaZ_1loop_from_ref
 from physics_test.target_registry import get_measurement
 
 
@@ -996,6 +997,7 @@ def cmd_ew_sin2(args: argparse.Namespace) -> int:
 
     # Choose beta set for running
     betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
+    method = str(getattr(args, "method", "gammaZ_1loop")).strip()
 
     # Parse measurement overrides: label -> (value, sigma|None)
     meas: dict[str, tuple[float, float | None]] = {}
@@ -1016,6 +1018,7 @@ def cmd_ew_sin2(args: argparse.Namespace) -> int:
 
     print("EW sin^2thetaW(Q) prediction (lattice anchors + 1-loop running)")
     print(f"model = {betas.name}")
+    print(f"method = {method}")
     print(f"Q0 = {Q0:g} GeV (mZ)")
     print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
     print(f"include = {','.join(include)}")
@@ -1034,10 +1037,19 @@ def cmd_ew_sin2(args: argparse.Namespace) -> int:
     # Predict at scales
     for lab in scale_labels:
         Q = float(scale_GeV(lab))
-        inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
-        inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
-        invY = (5.0 / 3.0) * float(inv1)
-        sin2_pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+        if method == "gauge_1loop":
+            inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
+            inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
+            invY = (5.0 / 3.0) * float(inv1)
+            sin2_pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+        elif method == "gammaZ_1loop":
+            invY0 = (5.0 / 3.0) * float(inv_a1_0)
+            sin2_ref = float(inv_a2_0) / (float(inv_a2_0) + float(invY0)) if (float(inv_a2_0) + float(invY0)) != 0 else float("nan")
+            inv_alpha_mZ = float(all_targets["1/alpha(mZ)"].value) if "1/alpha(mZ)" in all_targets else 127.955
+            alpha_ref = (1.0 / inv_alpha_mZ) if inv_alpha_mZ != 0 else float("nan")
+            sin2_pred = sin2_eff_gammaZ_1loop_from_ref(Q, sin2_ref=sin2_ref, alpha_ref=alpha_ref, Q0_GeV=Q0)
+        else:
+            raise SystemExit("Unknown --method. Use --method gauge_1loop or --method gammaZ_1loop")
 
         if lab in meas:
             v, s = meas[lab]
@@ -1132,8 +1144,11 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
     # Choose beta set for running
     betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
 
+    method = str(getattr(args, "method", "gauge_1loop")).strip()
+
     print("OOS: external sin2thetaW(Q) targets (registry-driven)")
     print(f"model = {betas.name}")
+    print(f"method = {method}")
     print(f"tol(|rel_err|) = {args.max_rel_err}")
     print(f"Q0 = {Q0:g} GeV (mZ)")
     print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
@@ -1155,10 +1170,22 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
     n_sigma = 0
     chi2 = 0.0
     for name, v, s, Q in sorted(ext, key=lambda x: x[3]):
-        inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
-        inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
-        invY = (5.0 / 3.0) * float(inv1)
-        pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+        if method == "gauge_1loop":
+            inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
+            inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
+            invY = (5.0 / 3.0) * float(inv1)
+            pred = float(inv2) / (float(inv2) + invY) if (float(inv2) + invY) != 0 else float("nan")
+        elif method == "gammaZ_1loop":
+            # Build a lattice-defined reference angle at mZ from the fitted inverse couplings,
+            # then apply a toy low-Q κ(Q) model for γ–Z mixing.
+            invY0 = (5.0 / 3.0) * float(inv_a1_0)
+            sin2_ref = float(inv_a2_0) / (float(inv_a2_0) + float(invY0)) if (float(inv_a2_0) + float(invY0)) != 0 else float("nan")
+            # Use alpha(mZ) as a fixed coefficient (deterministic; registry-backed).
+            inv_alpha_mZ = float(all_targets["1/alpha(mZ)"].value) if "1/alpha(mZ)" in all_targets else 127.955
+            alpha_ref = (1.0 / inv_alpha_mZ) if inv_alpha_mZ != 0 else float("nan")
+            pred = sin2_eff_gammaZ_1loop_from_ref(Q, sin2_ref=sin2_ref, alpha_ref=alpha_ref, Q0_GeV=Q0)
+        else:
+            raise SystemExit("Unknown --method. Use --method gauge_1loop or --method gammaZ_1loop")
 
         rel_err = (pred - v) / v if v != 0 else float("nan")
         ok = abs(rel_err) <= float(args.max_rel_err)
@@ -2536,6 +2563,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Predict sin^2thetaW(Q) from lattice-quantized alpha2^-1/alpha1_GUT^-1 anchors + SM/MSSM 1-loop running; optionally compare to supplied measurements",
     )
     p_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
+    p_ew_sin2.add_argument(
+        "--method",
+        choices=["gauge_1loop", "gammaZ_1loop"],
+        default="gammaZ_1loop",
+        help="Prediction method (default: gammaZ_1loop).",
+    )
     p_ew_sin2.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_ew_sin2.add_argument(
         "--include",
@@ -2566,6 +2599,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="OOS: compare predicted sin^2thetaW(Q) (from lattice anchors + 1-loop running) to external registry-provided targets (tgt_sin2thetaW(...))",
     )
     p_oos_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
+    p_oos_ew_sin2.add_argument(
+        "--method",
+        choices=["gauge_1loop", "gammaZ_1loop"],
+        default="gammaZ_1loop",
+        help="Prediction method (default: gammaZ_1loop).",
+    )
     p_oos_ew_sin2.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_oos_ew_sin2.add_argument(
         "--include",
