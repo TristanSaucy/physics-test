@@ -41,6 +41,46 @@ Generate/inspect:
 
 - `python -m physics_test.cli list-gauge-Cs`
 
+### 2.1 Base selection rule (frozen)
+
+Strict mode freezes **base = 360**.
+
+This is not treated as a mystical claim; it is treated as a **testable selection rule** that we can state up front:
+
+- **Rule**: choose the **smallest highly-composite integer base** such that the strict, gauge-derived candidate set
+  (U(1), SU(2), SU(3) with the current invariant menu) stays **short after de-duplication** and contains values that can
+  hit the strict EM/strong/weak (and hypercharge, when enabled) **anchor targets** within the project’s strict tolerance
+  using integer \(m\), with the **micro-force anchor fits constrained to nonnegative \(m\)** (macro/micro intuition).
+
+Motivations (not proofs):
+
+- **Geometry / phase**: \(360^\circ\) is the conventional integer representation of a full \(2\pi\) cycle. If \(m\) is an integer harmonic/band index and \(F_0\) is a frequency scale, “full-cycle” integers are a plausible bridge between counting/harmonics and continuous phase.
+- **Divisor richness**: 360’s factorization makes it highly divisible, which naturally yields a small menu of rationally-related candidates (e.g., 360, 180, 120, 60, 45, 15) under simple invariant divisions.
+
+### 2.2 Base-vs-alt-bases is a separate pre-registered experiment (exploratory)
+
+Because base is foundational, we do **not** allow “try a different base” as an ad hoc rescue when a strict result fails.
+Instead, alternative bases (e.g., 420, 840, …) belong to a separate, explicitly labeled experiment:
+
+- **Experiment**: “base-vs-alt-bases”
+- **Protocol**: fix the invariant menu and strict target set; scan a pre-declared list of candidate bases (e.g., highly composite integers) and evaluate:
+  - size of the deduplicated gauge-derived \(C\) set,
+  - strict-anchor hit rates at the frozen tolerance,
+  - and (optionally) survival on frozen OOS suites.
+- **Decision rule**: the strict base is the *smallest* base meeting the criteria; changing it requires updating the frozen contract and re-running the pre-registered evaluation.
+
+Reproduce (CLI scaffold):
+
+- `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
+  - uses the default frozen list of highly-composite bases and includes the hypercharge anchor by default.
+  - default anchor sign constraints: `--em-m-sign nonnegative --strong-m-sign nonnegative --weak-m-sign nonnegative --hyper-m-sign nonnegative`
+- To disable hyper in the scan (explicitly):
+  - `python -m physics_test.cli base-vs-alt-bases --no-hyper --tol 0.05 --max-nCs 10`
+- To relax the micro-anchor \(m\) sign constraints (exploratory, explicitly looser):
+  - `python -m physics_test.cli base-vs-alt-bases --em-m-sign any --strong-m-sign any --weak-m-sign any --hyper-m-sign any --tol 0.05 --max-nCs 10`
+- If you override `--bases` you are changing the candidate list and should treat that as a new pre-registered run:
+  - `python -m physics_test.cli base-vs-alt-bases --bases 360,420,840 --tol 0.05 --max-nCs 10`
+
 ## 3) Target couplings (strong/weak candidates we consider “likely”)
 
 We want a small menu of dimensionless targets that are common in physics literature.
@@ -173,6 +213,39 @@ Registry-driven targets (exploratory workflow):
 
 - Any measurement registry key of the form `tgt_<target_name>` will automatically be exposed as a dimensionless target named `<target_name>` by `list-targets`. This allows adding new OOS targets (e.g. low-Q \(\sin^2\theta_W\) determinations) without changing code.
 
+### Frozen low-Q EW suites: `ew-independent-v1` / `ew-independent-v2` / `ew-independent-v3` (new; frozen)
+
+Low-energy determinations of \(\sin^2\theta_W\) are **scheme and process dependent** (they are typically quoted as an *effective* weak mixing angle at space-like \(Q^2\)). To keep comparisons meaningful and falsifiable, we freeze:
+
+- **Suite membership**: small, explicit lists of targets (do not change as the registry grows):
+  - `sin2thetaW(Qweak)`
+  - `sin2thetaW(E158)`
+  - `sin2thetaW(nue_lowE)`
+- `ew-independent-v2` extends v1 with an additional independent low-Q extraction:
+  - `sin2thetaW(CsAPV)`
+- `ew-independent-v3` extends v2 with an additional independent channel at higher Q:
+  - `sin2thetaW(eDIS)`
+- **Scheme requirement**: each target in the suite must declare an effective-angle scheme string starting with:
+  - `sin2thetaW_eff:`
+- **Prediction method**: the suite is frozen to:
+  - `--method gammaZ_1loop`
+  - (We do **not** use `gauge_1loop` for low-Q effective angles.)
+- **Scoring**: sigma-based pass/fail:
+  - v1 default rule: \(|z|\le 3\)
+  - v2 default rule: \(|z|\le 2\)
+  - v3 default rule: \(|z|\le 2\)
+  - optional model sigma via \(\sigma_{\rm eff}=\sqrt{\sigma_{\rm exp}^2+\sigma_{\rm theory}^2}\) (for ew-independent suites the default is now \(\sigma_{\rm theory}=0\) after the κ(Q) upgrade)
+
+Reproduce:
+
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v1`
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v2`
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v3`
+
+CI note:
+
+- `ew-independent-v*` suites are **gates**: they exit non-zero if any target fails (so CI can block regressions).
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**
@@ -190,8 +263,8 @@ These were found within 5% (examples; run scans to reproduce):
     - C=60, m=4 (≈ -1.27%)
   - `1/alpha2(alpha(mZ),sin2_on_shell)`:
     - C=120, m=3 (≈ -0.73%)
-  - `1/alpha1_GUT(alpha(mZ),sin2)`:
-    - C=60, m=0 (≈ +1.66%)
+  - `1/alpha1_GUT(alpha(mZ),sin2_on_shell)`:
+    - C=60, m=0 (≈ +0.58%)
 
 Legacy/exploratory comparison targets (not strict):
 

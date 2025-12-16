@@ -45,6 +45,11 @@ DEFAULT_EW_FERMIONS: list[EWChargedFermion] = [
     EWChargedFermion("b", 4.18, -1.0 / 3.0, -0.5, 3),
 ]
 
+# In low-Q electroweak observables, "current quark masses" are not meaningful as sharp
+# thresholds (non-perturbative QCD dominates). A standard deterministic proxy is to
+# use a hadronic scale (≈ ρ mass) as an effective threshold for light-quark loops.
+DEFAULT_HADRONIC_CUTOFF_GEV = 0.77526  # m_rho (GeV), order-of-magnitude hadronic scale
+
 
 def kappa_gammaZ_1loop_from_ref(
     Q_GeV: float,
@@ -61,8 +66,15 @@ def kappa_gammaZ_1loop_from_ref(
     This intentionally avoids trying to run unbroken SU(2) down to low Q (which is not
     the same object as the experimentally extracted effective weak angle).
 
-    Model:
-      κ(Q) = 1 + (α_ref/π) * Σ_f (N_c Q_f T3_f) * ln(Q0 / max(Q, m_f))
+    Model (upgraded toy, still deterministic):
+      κ(Q) = 1 + (α_ref/π) * (1/cos^2θW_ref) * Σ_f (N_c Q_f T3_f) * ln(Q0 / max(Q, m_f))
+
+    Rationale for the cos^2θW factor:
+      - In a full SM treatment, the γ–Z mixing self-energy Π_{γZ} involves both e and Z couplings,
+        and Z-coupling normalization introduces factors of (sW, cW).
+      - The previous toy captured the dominant threshold/log structure but ignored this normalization
+        entirely (it did not use sin2_ref at all). Including 1/cW^2 is a minimal, deterministic way
+        to make κ(Q) sensitive to the reference EW mixing.
 
     Notes:
       - sin2_ref is included in the signature because more accurate weights depend on it;
@@ -71,9 +83,14 @@ def kappa_gammaZ_1loop_from_ref(
       - For Q > Q0, this returns κ < 1 via negative logs (not the intended regime).
     """
 
-    _ = float(sin2_ref)  # reserved for future refinements
-    if Q0_GeV <= 0 or Q_GeV <= 0:
-        raise ValueError("Q0_GeV and Q_GeV must be positive")
+    s2 = float(sin2_ref)
+    if not (0.0 < s2 < 1.0):
+        raise ValueError("sin2_ref must be in (0,1)")
+    c2 = 1.0 - s2
+    if c2 <= 0:
+        raise ValueError("sin2_ref must be in (0,1)")
+    if Q0_GeV <= 0 or Q_GeV < 0:
+        raise ValueError("Q0_GeV must be positive and Q_GeV must be non-negative")
     if alpha_ref <= 0:
         raise ValueError("alpha_ref must be positive")
 
@@ -86,6 +103,10 @@ def kappa_gammaZ_1loop_from_ref(
         m = float(f.mass_GeV)
         if m <= 0:
             continue
+        # Hadronic proxy: clamp light-quark thresholds to a hadronic scale to avoid
+        # unphysical log blowups from current-quark masses at Q → 0.
+        if int(f.color) == 3 and m < DEFAULT_HADRONIC_CUTOFF_GEV:
+            m = DEFAULT_HADRONIC_CUTOFF_GEV
         # If a fermion threshold is above the reference scale, ignore it (e.g., top if Q0=mZ).
         if m >= Q0:
             continue
@@ -94,7 +115,7 @@ def kappa_gammaZ_1loop_from_ref(
             continue
         s += float(f.weight_QT3) * math.log(Q0 / end)
 
-    return 1.0 + (float(alpha_ref) / math.pi) * s
+    return 1.0 + (float(alpha_ref) / math.pi) * (1.0 / c2) * s
 
 
 def sin2_eff_gammaZ_1loop_from_ref(
@@ -117,5 +138,8 @@ def sin2_eff_gammaZ_1loop_from_ref(
         fermions=fermions,
     )
     return float(kappa) * float(sin2_ref)
+
+
+
 
 

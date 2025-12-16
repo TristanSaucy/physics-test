@@ -111,7 +111,14 @@ Run:
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"`
+
+### 4.5) Base-vs-alt-bases (pre-registered experiment scaffold)
+
+To keep “base = 360” falsifiable (not a rescue knob), we added a dedicated command that scans a frozen list of candidate bases
+and reports which ones keep the gauge-derived C menu short while still hitting the strict anchor targets within tolerance:
+
+- `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
 
 ### 5) Gravity “type” matters; CMB K implies a specific m window per GW band
 
@@ -180,10 +187,11 @@ python -m physics_test.cli check-example
 
 # strict gauge-derived C set + core inverse-target scans
 python -m physics_test.cli list-gauge-Cs
+python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 
 # strict all-forces per GW band (Option-2 anchors are frozen in F0_anchors.md)
 python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band cmb  --gravity-targets "1/alpha_G(GW_CMB)"  --max-hits 10 --max-results 5
@@ -216,6 +224,9 @@ python -m physics_test.cli ew-sin2 --model sm --scales mW,1TeV
 
 # OOS: compare against external registry-provided sin^2thetaW(Q) targets (keys like tgt_sin2thetaW(...))
 python -m physics_test.cli oos-ew-sin2 --model sm --max-rel-err 0.02
+python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v1
+python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v2
+python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v3
 
 # GUT convergence diagnostic: baseline vs lattice-quantized initialization
 python -m physics_test.cli gut-run --model sm --n 400

@@ -409,3 +409,50 @@ def predictive_force_suite_v3() -> tuple[dict[str, OOSTarget], dict[str, list[OO
     return anchors, targets
 
 
+def ew_sin2_suites() -> dict[str, list[OOSTarget]]:
+    """
+    Frozen suites for external low-Q sin^2(theta_W) targets.
+
+    Rationale:
+      - `oos-ew-sin2` can auto-discover *all* registry-provided sin2 targets, which is useful for exploration.
+      - For falsifiability, we also want small suites whose membership is frozen and will not change
+        when new registry targets are added.
+    """
+
+    v1: list[OOSTarget] = [
+        OOSTarget(
+            "sin2thetaW(Qweak)",
+            "PV ep (Qweak) low-Q extraction of the effective weak mixing angle.",
+        ),
+        OOSTarget(
+            "sin2thetaW(E158)",
+            "PV Møller (E158) low-Q extraction of the effective weak mixing angle.",
+        ),
+        OOSTarget(
+            "sin2thetaW(nue_lowE)",
+            "Low-energy neutrino–electron scattering global fit (reactor + accelerator).",
+        ),
+    ]
+
+    v2: list[OOSTarget] = [
+        # v2 extends v1 with an additional *independent* low-Q extraction:
+        # atomic parity violation in 133Cs.
+        *v1,
+        OOSTarget(
+            "sin2thetaW(CsAPV)",
+            "Cs-133 atomic parity violation (APV) extraction of sin^2(thetaW)_eff in the E→0 limit.",
+        ),
+    ]
+
+    v3: list[OOSTarget] = [
+        # v3 extends v2 with an additional independent channel at higher Q:
+        # polarized electron–deuteron DIS (eDIS).
+        *v2,
+        OOSTarget(
+            "sin2thetaW(eDIS)",
+            "Polarized e–D DIS (eDIS) weak mixing angle extraction (PDG-quoted).",
+        ),
+    ]
+
+    return {"ew-independent-v1": v1, "ew-independent-v2": v2, "ew-independent-v3": v3}
+

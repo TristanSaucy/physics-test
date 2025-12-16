@@ -16,6 +16,16 @@ In this repo, strict mode currently freezes:
 - groups = U(1), SU(2), SU(3)
 - constructions = a small menu of “divide base by an invariant (or a simple product of invariants)”
 
+Base note (frozen contract):
+
+- We treat base \(=360\) as the **smallest highly-composite integer** that yields a short deduplicated candidate set under the current invariant menu
+  and contains values that hit the strict anchor targets within tolerance, with micro-force anchor fits constrained to nonnegative \(m\).
+- Alternative bases belong to a separate, explicitly labeled “base-vs-alt-bases” experiment (see `freezing_the_rules.md`).
+
+Reproduce (pre-registered scaffold):
+
+- `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
+
 The implementation lives in `physics_test/gauge_groups.py`.
 
 ## 2) “Simple” Lie-group invariants used today
@@ -137,7 +147,7 @@ Results at **3%**:
 - **EM inverse** still fits:
   - `1/alpha`: $(C,m)=(360,2)$ with rel_err ≈ +0.344%
 - **Hypercharge (GUT norm.) inverse** still fits:
-  - `1/alpha1_GUT(alpha(mZ),sin2)`: $(C,m)=(60,0)$ with rel_err ≈ +1.66%
+  - `1/alpha1_GUT(alpha(mZ),sin2_on_shell)`: $(C,m)=(60,0)$ with rel_err ≈ +0.58%
 - **Strong/weak inverse** do **not** fit at 3% under this candidate set:
   - `1/alpha_s(mZ)`: **no hits**; best remains $(60,4)$ with rel_err ≈ +3.21%
   - `1/alpha_w(mZ)`: **no hits**; best remains $(120,3)$ with rel_err ≈ −4.17%
@@ -154,7 +164,7 @@ Reproduce:
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s(mZ)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_w(mZ)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)" --include "base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter),base/roots,base/positive_roots,base/weyl_order,base/center_order,base/C2_fund,base/T_fund,base/rank" --max-rel-err 0.03
 ```
 
 ## 4) “More complex” invariants we can consider next (and what they buy us)

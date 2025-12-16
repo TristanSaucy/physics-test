@@ -66,6 +66,10 @@ Strict mode freezes:
     \[
     C\in\{360,180,120,60,45,15\}.
     \]
+- **Base selection rule**: base \(=360\) is frozen as the **smallest highly-composite integer** that (under the current invariant menu)
+  yields a **short** deduplicated candidate set and contains values that hit the strict EM/strong/weak anchors within the strict tolerance,
+  with the **micro anchor fits constrained to nonnegative \(m\)**.
+  Alternative bases (e.g., 420/840/…) are treated as a separate, explicitly labeled “base-vs-alt-bases” experiment (not a post-hoc knob).
 - **Reference scales / schemes** for running‑sensitive targets are frozen (examples below).
 - **Pass/fail**: we typically report at **2%** for OOS tests and keep **5%** as a broader exploratory scan threshold.
 

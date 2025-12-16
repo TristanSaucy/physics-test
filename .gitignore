@@ -16,3 +16,10 @@ dist/
 build/
 *.egg-info/
 
+# downloaded reference artifacts (keep the repo clean)
+arxiv_*.pdf
+pdg_rpp*.pdf
+qweak_pos_*.pdf
+41586_*.xlsx
+pos_*.html
+

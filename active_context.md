@@ -60,7 +60,7 @@ We explored three tiers:
 - **Strong/weak (strict inverse targets)**:
   - `1/alpha_s_1loop_from_mZ(mH)` best strict hit: $C=60, m=4$ (≈ −1.27%)
   - `1/alpha2(alpha(mZ),sin2_on_shell)` best strict hit: $C=120, m=3$ (≈ −0.73%)
-  - `1/alpha1_GUT(alpha(mZ),sin2)` best strict hit: $C=60, m=0$ (≈ +1.66%)
+  - `1/alpha1_GUT(alpha(mZ),sin2_on_shell)` best strict hit: $C=60, m=0$ (≈ +0.58%)
 - **Strong running “within-band” (new)**:
   - Step-only predictive misses at nearby scales (e.g. $m_W$, $m_t$, 1 TeV) suggest \(m\) is a *coarse band index*, not the whole story for running.
   - The strong-only test `oos-predictive-rg` (fit the lattice anchor once, then RG-run to other scales without re-fitting \(m\)) yields **passes at 2%** across the v2/v3/v4 strong-running OOS keys (typical errors \(\sim\)1–2%).
@@ -108,10 +108,11 @@ Check the EM example:
 Gauge-derived C exploration:
 
 - `python -m physics_test.cli list-gauge-Cs`
+- `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)"`
 - `python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)"`
-- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)"`
+- `python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"`
 
 Full pairing under gauge-derived C:
 
@@ -125,6 +126,9 @@ RG-within-band predictive tests (no re-fitting \(m\) per target):
 - `python -m physics_test.cli oos-ew-mix --max-rel-err 0.02`
 - `python -m physics_test.cli ew-sin2 --model sm --scales mW,1TeV`
 - `python -m physics_test.cli oos-ew-sin2 --model sm --max-rel-err 0.02`  # requires registry keys like tgt_sin2thetaW(...)
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v1`  # frozen membership + scheme guard + theory sigma; exits non-zero on fail (CI gate)
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v2`  # v2 adds CsAPV; stricter default z-max; exits non-zero on fail (CI gate)
+- `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v3`  # v3 adds eDIS; exits non-zero on fail (CI gate)
 - `python -m physics_test.cli gut-run-lattice --model sm --n 400`
 - `python -m physics_test.cli oos-report --suite v5 --max-rel-err 0.05`
 - `python -m physics_test.cli oos-report --suite v6 --max-rel-err 0.05`

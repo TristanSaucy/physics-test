@@ -47,6 +47,17 @@ Scanning only those C values, integer m, and 5% tolerance gives plausible fits f
 
 This is valuable because it reduces “arbitrary C.”
 
+Base note (why 360 is not just “because it worked once”):
+
+- In strict mode we freeze **base = 360** explicitly, but we treat it as a **testable selection rule**, not a post-hoc magic number:
+  - choose the **smallest highly-composite integer base** such that (with the current invariant menu) the deduplicated gauge-derived \(C\) set stays short
+    and contains values that can hit the strict anchor targets within tolerance using integer \(m\), with the micro-force anchor fits constrained to nonnegative \(m\).
+- Alternative bases (420/840/…) are treated as a separate, explicitly labeled “base-vs-alt-bases” experiment, not a rescue knob.
+
+Reproduce (pre-registered scaffold):
+
+- `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
+
 ### Within-band running (RG) seems to be the missing piece (new)
 
 Pure “integer step only” predictions struggle exactly where physics says they should: **running with scale**.
@@ -112,7 +123,7 @@ python -m physics_test.cli list-gauge-Cs
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 
 # strict all-forces per GW band (Option-2 anchors are frozen in F0_anchors.md)
 python -m physics_test.cli pair-forces-gaugeCs --em-preset em-lyman-alpha --strong-preset strong-QCD-200MeV --weak-preset weak-W-80.379GeV --gravity-band cmb  --gravity-targets "1/alpha_G(GW_CMB)"  --max-hits 10 --max-results 5

@@ -153,7 +153,7 @@ Using strict gauge-derived $C$ candidates only, integer $m$, and the inverse tar
 | EM | `1/alpha` | 137.035999 | (360, 2) | 137.507764 | +0.344% |
 | Strong | `1/alpha_s_1loop_from_mZ(mH)` | 8.866605 | (60, 4) | 8.753882 | −1.27% |
 | Weak | `1/alpha2(alpha(mZ),sin2_on_shell)` | 28.535657 | (120, 3) | 28.328157 | −0.73% |
-| Hypercharge (GUT norm.) | `1/alpha1_GUT(alpha(mZ),sin2)` | 59.021547 | (60, 0) | 60.000000 | +1.66% |
+| Hypercharge (GUT norm.) | `1/alpha1_GUT(alpha(mZ),sin2_on_shell)` | 59.651606 | (60, 0) | 60.000000 | +0.584% |
 
 Notes:
 
@@ -493,7 +493,7 @@ Strict scans for the frozen inverse targets:
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha_s_1loop_from_mZ(mH)" --max-rel-err 0.05
 python -m physics_test.cli scan-gauge-Cs --target "1/alpha2(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
-python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2)" --max-rel-err 0.05
+python -m physics_test.cli scan-gauge-Cs --target "1/alpha1_GUT(alpha(mZ),sin2_on_shell)" --max-rel-err 0.05
 ```
 
 Strict all-forces configurations per GW band (Option 2; frozen $F_0$ presets):

@@ -17,7 +17,7 @@ from physics_test.model import (
 from physics_test.scan import filter_hits_by_rel_err, frange, scan_candidates
 from physics_test.toponumbers import candidate_sets, get_candidate_set
 from physics_test.targets import known_targets
-from physics_test.oos import oos_suites, predictive_force_suites, resolve_oos_targets
+from physics_test.oos import ew_sin2_suites, oos_suites, predictive_force_suites, resolve_oos_targets
 from physics_test.gravity_bands import bands as gravity_band_list
 from physics_test.units import (
     energy_J_from_GeV,
@@ -1082,23 +1082,68 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
 
     all_targets = {t.name: t for t in known_targets()}
 
-    # Collect registry-added external sin2 targets
-    ext: list[tuple[str, float, float | None, float]] = []
-    for t in all_targets.values():
-        if not t.name.startswith("sin2thetaW("):
-            continue
-        if not str(t.note).startswith("Registry target:"):
-            continue
-        if t.Q_GeV is None:
-            continue
-        ext.append((t.name, float(t.value), t.sigma, float(t.Q_GeV)))
+    suite = str(getattr(args, "suite", "registry-all")).strip()
+    scheme_prefix = str(getattr(args, "scheme_prefix", "") or "").strip()
+    if suite.startswith("ew-independent-v") and not scheme_prefix:
+        scheme_prefix = "sin2thetaW_eff:"
 
-    if not ext:
-        raise SystemExit(
-            "No external sin2thetaW(Q) targets found. Add registry keys like "
-            "'tgt_sin2thetaW(Qweak)' with fields value/sigma/Q_GeV/scheme/citation "
-            "(you can use PHYSICS_TEST_TARGET_REGISTRY to point to a local registry file)."
-        )
+    # Collect external sin2 targets:
+    #  - suite="registry-all": auto-discover all registry-backed sin2thetaW(Q) targets
+    #  - suite=<frozen>: evaluate an explicit, frozen list (does not change as registry grows)
+    ext: list[tuple[str, float, float | None, float, str, str, str]] = []  # (name, v, sigma, Q, scheme, citation, rationale)
+    if suite == "registry-all":
+        for t in all_targets.values():
+            if not t.name.startswith("sin2thetaW("):
+                continue
+            if not str(t.note).startswith("Registry target:"):
+                continue
+            if t.Q_GeV is None:
+                continue
+            ext.append(
+                (
+                    t.name,
+                    float(t.value),
+                    t.sigma,
+                    float(t.Q_GeV),
+                    str(getattr(t, "scheme", "") or ""),
+                    str(getattr(t, "citation", "") or ""),
+                    "Registry target (auto-discovered)",
+                )
+            )
+        if not ext:
+            raise SystemExit(
+                "No external sin2thetaW(Q) targets found. Add registry keys like "
+                "'tgt_sin2thetaW(Qweak)' with fields value/sigma/Q_GeV/scheme/citation "
+                "(you can use PHYSICS_TEST_TARGET_REGISTRY to point to a local registry file)."
+            )
+    else:
+        suites = ew_sin2_suites()
+        if suite not in suites:
+            raise SystemExit(f"Unknown --suite {suite!r}. Options: registry-all, {', '.join(sorted(suites.keys()))}")
+        if suite.startswith("ew-independent-v") and str(getattr(args, "method", "")).strip() != "gammaZ_1loop":
+            raise SystemExit("Suites ew-independent-v* are frozen to --method gammaZ_1loop (effective weak angle at low Q).")
+        for ot in suites[suite]:
+            if ot.key not in all_targets:
+                raise SystemExit(f"Missing target {ot.key!r} for suite {suite!r}. Run `list-targets`.")
+            t = all_targets[ot.key]
+            if t.Q_GeV is None:
+                raise SystemExit(f"Target {ot.key!r} is missing Q_GeV metadata (required for oos-ew-sin2).")
+            scheme = str(getattr(t, "scheme", "") or "")
+            if scheme_prefix and not scheme.startswith(scheme_prefix):
+                raise SystemExit(
+                    f"Suite {suite!r} requires scheme prefix {scheme_prefix!r} for target {ot.key!r}; got scheme={scheme!r}"
+                )
+            ext.append(
+                (
+                    t.name,
+                    float(t.value),
+                    t.sigma,
+                    float(t.Q_GeV),
+                    scheme,
+                    str(getattr(t, "citation", "") or ""),
+                    ot.rationale,
+                )
+            )
 
     key_a2 = "1/alpha2(alpha(mZ),sin2_on_shell)"
     key_a1 = "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"
@@ -1145,11 +1190,32 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
     betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
 
     method = str(getattr(args, "method", "gauge_1loop")).strip()
+    z_max = getattr(args, "z_max", None)
+    if suite == "ew-independent-v1" and (z_max is None or float(z_max) <= 0):
+        z_max = 3.0
+    if suite == "ew-independent-v2" and (z_max is None or float(z_max) <= 0):
+        z_max = 2.0
+    if suite == "ew-independent-v3" and (z_max is None or float(z_max) <= 0):
+        z_max = 2.0
+    sigma_theory = getattr(args, "sigma_theory", None)
+    if suite.startswith("ew-independent-v") and (sigma_theory is None or float(sigma_theory) < 0):
+        # Upgraded κ(Q) model: default to zero additional theory sigma for ew-independent suites.
+        sigma_theory = 0.0
+    sigma_theory_f = float(sigma_theory) if sigma_theory is not None else 0.0
+    report_thresh = bool(getattr(args, "report_theory_threshold", False))
 
     print("OOS: external sin2thetaW(Q) targets (registry-driven)")
     print(f"model = {betas.name}")
     print(f"method = {method}")
-    print(f"tol(|rel_err|) = {args.max_rel_err}")
+    if z_max is not None:
+        print(f"PASS rule = |z| <= {float(z_max):g} (fallback: |rel_err| <= {float(args.max_rel_err):g} if sigma missing)")
+    else:
+        print(f"tol(|rel_err|) = {args.max_rel_err}")
+    print(f"suite = {suite}")
+    if scheme_prefix:
+        print(f"scheme requirement: scheme startswith {scheme_prefix!r}")
+    if sigma_theory_f > 0:
+        print(f"theory sigma: {sigma_theory_f:g} (combined in quadrature with experimental sigma)")
     print(f"Q0 = {Q0:g} GeV (mZ)")
     print(f"Gauge-derived Cs (unique) = {len(Cs)} from base={args.base}")
     print(f"include = {','.join(include)}")
@@ -1169,7 +1235,10 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
     n = 0
     n_sigma = 0
     chi2 = 0.0
-    for name, v, s, Q in sorted(ext, key=lambda x: x[3]):
+    # For threshold reporting: per-target minimum sigma_theory needed to satisfy |z|<=z_max,
+    # assuming sigma_eff = sqrt(sigma_exp^2 + sigma_theory^2).
+    thresh_rows: list[tuple[str, float, float, float, float, float | None]] = []  # (name, delta, sigma_exp, z0, req_sigma_theory, Q)
+    for name, v, s, Q, scheme, citation, rationale in sorted(ext, key=lambda x: x[3]):
         if method == "gauge_1loop":
             inv2 = run_alpha_inv(inv_a2_0, Q0, Q, betas.b2)
             inv1 = run_alpha_inv(inv_a1_0, Q0, Q, betas.b1)
@@ -1188,26 +1257,83 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
             raise SystemExit("Unknown --method. Use --method gauge_1loop or --method gammaZ_1loop")
 
         rel_err = (pred - v) / v if v != 0 else float("nan")
-        ok = abs(rel_err) <= float(args.max_rel_err)
+        delta = float(pred - v)
+        z = None
+        sigma_eff = None
+        if s is not None and s > 0:
+            sigma_exp = float(s)
+            sigma_eff = sigma_exp
+            if sigma_theory_f > 0:
+                sigma_eff = math.sqrt((sigma_eff * sigma_eff) + (sigma_theory_f * sigma_theory_f))
+            z = (pred - v) / float(sigma_eff)
+            if report_thresh:
+                if z_max is None or float(z_max) <= 0:
+                    raise SystemExit("--report-theory-threshold requires --z-max (or a suite with a default z-max)")
+                z0 = delta / sigma_exp if sigma_exp != 0 else float("inf")
+                # Need sigma_eff >= |delta|/z_max
+                need = (abs(delta) / float(z_max)) if float(z_max) != 0 else float("inf")
+                req2 = (need * need) - (sigma_exp * sigma_exp)
+                req = math.sqrt(req2) if req2 > 0 else 0.0
+                thresh_rows.append((name, delta, sigma_exp, z0, req, Q))
+
+        if z_max is not None and z is not None:
+            ok = abs(float(z)) <= float(z_max)
+        else:
+            ok = abs(rel_err) <= float(args.max_rel_err)
         status = "PASS" if ok else "FAIL"
         if ok:
             n_pass += 1
         n += 1
 
-        if s is not None and s > 0:
-            z = (pred - v) / float(s)
+        if z is not None:
             n_sigma += 1
-            chi2 += float(z * z)
-            z_s = f"  z={z:.3g}"
+            chi2 += float(float(z) * float(z))
+            if sigma_eff is not None and sigma_eff != float(s):
+                z_s = f"  z={float(z):.3g}  sigma_eff={sigma_eff:.3g}"
+            else:
+                z_s = f"  z={float(z):.3g}"
         else:
             z_s = ""
 
         print(f"[{status}] {name:28s} Q={Q:g} GeV  meas={v:.12g}  pred={pred:.12g}  rel_err={rel_err:.3e}{z_s}")
+        if rationale:
+            print(f"         rationale: {rationale}")
+        if scheme:
+            print(f"         scheme: {scheme}")
+        if citation:
+            print(f"         citation: {citation}")
 
     if n_sigma:
-        print(f"\nSummary: {n_pass}/{n} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})")
+        if z_max is not None:
+            print(
+                f"\nSummary: {n_pass}/{n} PASS  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g}, chi2/ndf={chi2/float(n_sigma):.6g})"
+            )
+        else:
+            print(
+                f"\nSummary: {n_pass}/{n} PASS at tol={args.max_rel_err}  (sigma-annotated: n={n_sigma}, chi2={chi2:.6g})"
+            )
     else:
         print(f"\nSummary: {n_pass}/{n} PASS at tol={args.max_rel_err}")
+
+    if report_thresh and thresh_rows:
+        # The minimal sigma_theory that makes all targets satisfy |z|<=z_max is the max required across targets.
+        limiting = max(thresh_rows, key=lambda row: row[4])
+        req_global = float(limiting[4])
+        lim_name = limiting[0]
+        print("\nTheory-sigma threshold report:")
+        print(f"  z_max = {float(z_max):g}")
+        print("  Per-target required sigma_theory (absolute on sin^2thetaW):")
+        for name, delta, sigma_exp, z0, req, Q in sorted(thresh_rows, key=lambda row: row[4], reverse=True):
+            print(
+                f"   - {name:24s} Q={Q:g}  delta={delta:+.6g}  sigma_exp={sigma_exp:.6g}  z0={z0:+.3g}  req_sigma_theory={req:.6g}"
+            )
+        print(f"  => Minimal sigma_theory to pass all (at |z|<={float(z_max):g}) is {req_global:.6g}  (limiting target: {lim_name})")
+
+    # CI gate behavior:
+    #  - ew-independent-v1 is treated as a "one-command gate" by default: non-zero exit if any target FAILs.
+    #  - other suites can opt into this behavior via --ci.
+    if (suite.startswith("ew-independent-v") or bool(getattr(args, "ci", False))) and n_pass != n:
+        return 2
     return 0
 
 
@@ -2349,6 +2475,206 @@ def cmd_pair_forces_all(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_int_list_csv(csv: str) -> list[int]:
+    if not str(csv).strip():
+        return []
+    out: list[int] = []
+    for raw in str(csv).split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        out.append(int(raw))
+    return out
+
+
+def _num_divisors(n: int) -> int:
+    """
+    Simple divisor-count function for small/medium integers (used for base-scan diagnostics).
+    """
+    if n <= 0:
+        return 0
+    x = n
+    p = 2
+    total = 1
+    while p * p <= x:
+        if x % p == 0:
+            e = 0
+            while x % p == 0:
+                x //= p
+                e += 1
+            total *= e + 1
+        p += 1 if p == 2 else 2  # 2, then odd primes
+    if x > 1:
+        total *= 2
+    return total
+
+
+def cmd_base_vs_alt_bases(args: argparse.Namespace) -> int:
+    """
+    Pre-registered style scan over candidate "base" values.
+
+    For each base, we:
+      - generate the gauge-derived C menu under the frozen invariant constructions,
+      - measure how short it stays after de-duplication,
+      - and check whether the strict anchor targets can be hit within a tolerance with integer m.
+
+    This is meant to support the *selection rule* framing in `freezing_the_rules.md`,
+    without turning base into an ad hoc tuning knob.
+    """
+
+    all_targets = {t.name: t for t in known_targets()}
+
+    # Anchor targets (frozen choices; hyper is optional)
+    anchors: list[tuple[str, str]] = [
+        ("em", "1/alpha"),
+        ("strong", "1/alpha_s_1loop_from_mZ(mH)"),
+        ("weak", "1/alpha2(alpha(mZ),sin2_on_shell)"),
+    ]
+    if bool(getattr(args, "include_hyper", True)):
+        anchors.append(("hyper", "1/alpha1_GUT(alpha(mZ),sin2_on_shell)"))
+
+    missing = [k for _lab, k in anchors if k not in all_targets]
+    if missing:
+        raise SystemExit(f"Missing required anchor targets: {missing}. Run `list-targets`.")
+
+    # Candidate bases: default frozen menu of highly-composite integers (overrideable explicitly).
+    bases = _parse_int_list_csv(str(getattr(args, "bases", "")).strip())
+    if not bases:
+        bases = [
+            12,
+            24,
+            36,
+            48,
+            60,
+            120,
+            180,
+            240,
+            360,
+            420,
+            480,
+            600,
+            720,
+            840,
+            1260,
+            1680,
+            2520,
+        ]
+
+    bases = sorted(set(int(b) for b in bases if int(b) > 0))
+    if not bases:
+        raise SystemExit("--bases must contain at least one positive integer base")
+
+    tol = abs(float(getattr(args, "tol", 0.05)))
+    max_nCs = int(getattr(args, "max_nCs", 10))
+
+    # Integer m grid
+    m_values = frange(args.m_min, args.m_max, args.m_step)
+    m_values = sorted(set(int(round(x)) for x in m_values))
+
+    include = tuple(s.strip() for s in str(args.include).split(",") if s.strip())
+
+    def _sign_ok(m: int, want: str) -> bool:
+        if want == "any":
+            return True
+        if want == "positive":
+            return m > 0
+        if want == "negative":
+            return m < 0
+        if want == "nonnegative":
+            return m >= 0
+        if want == "nonpositive":
+            return m <= 0
+        raise ValueError(f"Unknown sign constraint: {want}")
+
+    m_sign_by_force: dict[str, str] = {
+        "em": str(getattr(args, "em_m_sign", "nonnegative")),
+        "strong": str(getattr(args, "strong_m_sign", "nonnegative")),
+        "weak": str(getattr(args, "weak_m_sign", "nonnegative")),
+        "hyper": str(getattr(args, "hyper_m_sign", "nonnegative")),
+    }
+
+    print("Base-vs-alt-bases scan (pre-registered experiment scaffolding)")
+    print(f"bases = {bases}" if str(getattr(args, 'bases', '')).strip() else "bases = (default frozen highly-composite list)")
+    print(f"tol(|rel_err|) = {tol:g}")
+    print(f"max_nCs = {max_nCs}")
+    print(f"include = {','.join(include)}")
+    print(f"m range = [{min(m_values)}, {max(m_values)}] (integer grid)\n")
+    print(
+        "m sign constraints (micro anchors): "
+        f"EM {m_sign_by_force['em']}, Strong {m_sign_by_force['strong']}, Weak {m_sign_by_force['weak']}"
+        + (f", Hyper {m_sign_by_force['hyper']}" if any(f == 'hyper' for f, _k in anchors) else "")
+        + "\n"
+    )
+
+    # Evaluate each base
+    rows: list[tuple[int, int, int, bool, dict[str, tuple[float, float, int, float]]]] = []
+    # (base, n_divisors, nCs, meets_shortness, best_by_force -> (rel_err, C, m, G))
+
+    for base in bases:
+        cand: list[tuple[str, float]] = []
+        for g in standard_model_gauge_groups():
+            cs = candidate_Cs_from_group(g, base=float(base), include=include)
+            for k, v in cs.items():
+                cand.append((f"{g.name}:{k}", float(v)))
+
+        seen: set[float] = set()
+        Cs: list[float] = []
+        for _lab, c in cand:
+            if c in seen:
+                continue
+            seen.add(c)
+            Cs.append(c)
+
+        Cs = sorted(Cs)
+        nCs = len(Cs)
+        meets_shortness = nCs <= max_nCs
+
+        best_by_force: dict[str, tuple[float, float, int, float]] = {}
+        for force, key in anchors:
+            tgt = float(all_targets[key].value)
+            want = m_sign_by_force.get(force, "any")
+            m_allowed = [m for m in m_values if _sign_ok(int(m), want)]
+            if not m_allowed:
+                raise SystemExit(f"No m values allowed under sign constraint {want!r} for force {force!r}")
+            best = scan_candidates(Cs=Cs, m_values=m_allowed, target_G=tgt)[0]
+            best_by_force[force] = (float(best.rel_err), float(best.C), int(best.m), float(best.G))
+
+        rows.append((base, _num_divisors(int(base)), nCs, meets_shortness, best_by_force))
+
+    # Print summary table
+    print("Summary (best anchor fits per base):")
+    header_forces = [f for f, _k in anchors]
+    print(f"{'base':>6s}  {'d(n)':>4s}  {'nCs':>3s}  {'short':>5s}  " + "  ".join(f"{f:>6s}" for f in header_forces))
+    print(f"{'':>6s}  {'':>4s}  {'':>3s}  {'':>5s}  " + "  ".join(f"{'rel_err':>6s}" for _f in header_forces))
+
+    best_candidate_base: int | None = None
+    for base, dcnt, nCs, short_ok, best_by_force in rows:
+        rels = [abs(best_by_force[f][0]) for f in header_forces]
+        pass_all = all(r <= tol for r in rels) and short_ok
+        if pass_all and best_candidate_base is None:
+            best_candidate_base = base
+        print(
+            f"{base:6d}  {dcnt:4d}  {nCs:3d}  {('yes' if short_ok else 'no'):>5s}  "
+            + "  ".join(f"{best_by_force[f][0]:+6.3g}" for f in header_forces)
+        )
+
+    print("\nDetails (per base):")
+    for base, dcnt, nCs, short_ok, best_by_force in rows:
+        print(f"- base={base}  d(n)={dcnt}  nCs={nCs}  short_ok={short_ok}")
+        for force, key in anchors:
+            rel, C, m, G = best_by_force[force]
+            ok = abs(rel) <= tol
+            status = "PASS" if ok else "FAIL"
+            print(f"    {force:6s}  {status}  {key:36s}  rel_err={rel:+.6g}  best(C={C:g}, m={m}, G={G:.12g})")
+        print("")
+
+    if best_candidate_base is not None:
+        print(f"First base meeting criteria (short + all anchors within tol): base={best_candidate_base}")
+    else:
+        print("No base met criteria (short + all anchors within tol) under current settings.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="topogauge")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -2598,6 +2924,12 @@ def build_parser() -> argparse.ArgumentParser:
         "oos-ew-sin2",
         help="OOS: compare predicted sin^2thetaW(Q) (from lattice anchors + 1-loop running) to external registry-provided targets (tgt_sin2thetaW(...))",
     )
+    p_oos_ew_sin2.add_argument(
+        "--suite",
+        choices=["registry-all", *sorted(ew_sin2_suites().keys())],
+        default="registry-all",
+        help="Which external sin2 target suite to run (default: registry-all). Use ew-independent-v1 for a frozen membership suite.",
+    )
     p_oos_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
     p_oos_ew_sin2.add_argument(
         "--method",
@@ -2615,6 +2947,38 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_ew_sin2.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
     p_oos_ew_sin2.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
     p_oos_ew_sin2.add_argument("--max-rel-err", type=float, default=0.02, help="Tolerance on |rel_err| (default: 0.02)")
+    p_oos_ew_sin2.add_argument(
+        "--z-max",
+        type=float,
+        default=None,
+        help="Optional sigma-based pass rule: require |z| <= z-max when sigma is available. "
+        "Defaults: ew-independent-v1 -> 3; ew-independent-v2/v3 -> 2 (if not provided).",
+    )
+    p_oos_ew_sin2.add_argument(
+        "--sigma-theory",
+        type=float,
+        default=None,
+        help="Optional absolute theory/model uncertainty (added in quadrature to experimental sigma when computing z). "
+        "Defaults: ew-independent-v* -> 0 (after the κ(Q) model upgrade).",
+    )
+    p_oos_ew_sin2.add_argument(
+        "--scheme-prefix",
+        type=str,
+        default="",
+        help="Optional scheme guardrail: require that each target's scheme string starts with this prefix. "
+        "For --suite ew-independent-v*, defaults to 'sin2thetaW_eff:'.",
+    )
+    p_oos_ew_sin2.add_argument(
+        "--report-theory-threshold",
+        action="store_true",
+        help="Report the minimum sigma_theory required (per target and overall) to satisfy the |z|<=z-max gate. "
+        "Works when sigma is available (e.g. ew-independent-v1).",
+    )
+    p_oos_ew_sin2.add_argument(
+        "--ci",
+        action="store_true",
+        help="Exit non-zero if any target FAILs (useful for CI). Note: ew-independent-v* suites are gates by default.",
+    )
     p_oos_ew_sin2.set_defaults(func=cmd_oos_ew_sin2)
 
     p_oos_steps = sub.add_parser(
@@ -2665,6 +3029,63 @@ def build_parser() -> argparse.ArgumentParser:
     p_sgc.add_argument("--max-rel-err", type=float, default=0.05, help="Tolerance on |rel_err| (default: 0.05)")
     p_sgc.add_argument("--top", type=int, default=20, help="Show top N hits (default: 20)")
     p_sgc.set_defaults(func=cmd_scan_gauge_Cs)
+
+    p_bases = sub.add_parser(
+        "base-vs-alt-bases",
+        help="Pre-registered-style scan: compare candidate base values by gauge-derived C menu size + strict-anchor hit quality",
+    )
+    p_bases.add_argument(
+        "--bases",
+        default="",
+        help="Optional comma-separated list of integer bases to test (overrides the default frozen highly-composite list).",
+    )
+    p_bases.add_argument(
+        "--no-hyper",
+        dest="include_hyper",
+        action="store_false",
+        help="Disable the hypercharge anchor 1/alpha1_GUT(...) in the base-scan (default: include hyper).",
+    )
+    p_bases.add_argument(
+        "--em-m-sign",
+        choices=["any", "positive", "negative", "nonnegative", "nonpositive"],
+        default="nonnegative",
+        help="Constraint on the EM anchor's fitted m (default: nonnegative).",
+    )
+    p_bases.add_argument(
+        "--strong-m-sign",
+        choices=["any", "positive", "negative", "nonnegative", "nonpositive"],
+        default="nonnegative",
+        help="Constraint on the strong anchor's fitted m (default: nonnegative).",
+    )
+    p_bases.add_argument(
+        "--weak-m-sign",
+        choices=["any", "positive", "negative", "nonnegative", "nonpositive"],
+        default="nonnegative",
+        help="Constraint on the weak anchor's fitted m (default: nonnegative).",
+    )
+    p_bases.add_argument(
+        "--hyper-m-sign",
+        choices=["any", "positive", "negative", "nonnegative", "nonpositive"],
+        default="nonnegative",
+        help="Constraint on the hypercharge anchor's fitted m (default: nonnegative).",
+    )
+    p_bases.add_argument("--tol", type=float, default=0.05, help="Anchor fit tolerance on |rel_err| (default: 0.05)")
+    p_bases.add_argument(
+        "--max-nCs",
+        dest="max_nCs",
+        type=int,
+        default=10,
+        help="Shortness criterion: require deduplicated gauge-derived C menu size <= max-nCs (default: 10).",
+    )
+    p_bases.add_argument(
+        "--include",
+        default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)",
+        help="Comma-separated gauge C constructions to include (kept fixed for comparability).",
+    )
+    p_bases.add_argument("--m-min", type=float, default=-256.0, help="Min m (default: -256)")
+    p_bases.add_argument("--m-max", type=float, default=256.0, help="Max m (default: 256)")
+    p_bases.add_argument("--m-step", type=float, default=1.0, help="Step for m (default: 1)")
+    p_bases.set_defaults(func=cmd_base_vs_alt_bases)
 
     p_qg = sub.add_parser(
         "sweep-quantum-gravity",

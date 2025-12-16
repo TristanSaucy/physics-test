@@ -84,19 +84,54 @@
     "scheme": "MSbar weak mixing angle at mZ (commonly quoted; scheme-dependent)",
     "citation": "PDG RPP (sin^2theta_W MSbar)"
   },
+  "sin2thetaW_on_shell": {
+    "value": 0.22305,
+    "sigma": 0.00023,
+    "Q_GeV": null,
+    "scheme": "on-shell weak mixing angle (pole-mass definition); sin^2(thetaW)=1-mW^2/mZ^2",
+    "citation": "CODATA 2022 (sin^2theta_W on-shell)"
+  },
   "tgt_sin2thetaW(Qweak)": {
     "value": 0.2383,
     "sigma": 0.0011,
-    "Q_GeV": 0.1566843962,
-    "scheme": "CANDIDATE (verify): low-Q PV ep extraction; interpreted as MSbar sin^2thetaW at Q^2≈0.0246 GeV^2",
-    "citation": "CANDIDATE (verify): Qweak final / PDG low-Q weak mixing angle summary"
+    "Q_GeV": 0.1574801575,
+    "scheme": "sin2thetaW_eff: PV ep (Qweak final); inferred from Q_W^p at Q^2=0.0248 GeV^2 (space-like), using SM radiative corrections",
+    "citation": "Qweak Collaboration (Androic et al.), Nature 557, 207 (2018) (proton weak charge Q_W^p=0.0719±0.0045; DOI:10.1038/s41586-018-0096-0)"
   },
   "tgt_sin2thetaW(E158)": {
-    "value": 0.2403,
-    "sigma": 0.0013,
+    "value": 0.2397,
+    "sigma": 0.0012806248,
     "Q_GeV": 0.1612451550,
-    "scheme": "CANDIDATE (verify): low-Q PV Moller (ee) extraction; interpreted as MSbar sin^2thetaW at Q^2≈0.026 GeV^2",
-    "citation": "CANDIDATE (verify): SLAC E158 / PDG low-Q weak mixing angle summary"
+    "scheme": "sin2thetaW_eff: PV Møller (E158); quoted at Q^2=0.026 GeV^2 (space-like)",
+    "citation": "SLAC E158 (Phys. Rev. Lett. 95, 081601 (2005); arXiv:hep-ex/0504049)"
+  },
+  "tgt_sin2thetaW(nue_lowE)": {
+    "value": 0.254,
+    "sigma": 0.024,
+    "Q_GeV": 0.001,
+    "scheme": "sin2thetaW_eff: low-energy nu-e scattering global fit (reactor+accelerator); MeV-scale; single-Q approximation",
+    "citation": "arXiv:1608.02671 (\"The weak mixing angle from low energy neutrino measurements: a global update\")"
+  },
+  "tgt_sin2thetaW(CsAPV)": {
+    "value": 0.2381,
+    "sigma": 0.0011,
+    "Q_GeV": 0.0,
+    "scheme": "sin2thetaW_eff: Cs-133 atomic parity violation (APV); E→0 effective limit; scheme of Ref. [31] in Porsev et al.",
+    "citation": "Porsev, Beloy, Derevianko (arXiv:0902.0335): sin^2θW^eff(E→0)=0.2381(11)"
+  },
+  "tgt_sin2thetaW(CsAPV_PDG)": {
+    "value": 0.2349,
+    "sigma": 0.0018,
+    "Q_GeV": 0.0024,
+    "scheme": "sin2thetaW_eff: Cs atomic parity violation (APV) interpreted as a low-energy weak mixing angle point; PDG quote at 2.4 MeV",
+    "citation": "PDG RPP 2025 (Standard Model review, rpp2025-rev-standard-model.pdf): s_hat^2(2.4 MeV)=0.2349+/-0.0018 (Cs APV)"
+  },
+  "tgt_sin2thetaW(eDIS)": {
+    "value": 0.2299,
+    "sigma": 0.0043,
+    "Q_GeV": 1.0416333328,
+    "scheme": "sin2thetaW_eff: polarized electron-deuteron DIS (eDIS; SLAC E122 + JLab Hall A); PDG quote; representative DIS#1 scale Q^2≈1.085 GeV^2",
+    "citation": "PDG RPP 2025 (Standard Model review, rpp2025-rev-standard-model.pdf): s_hat_Z^2=0.2299+/-0.0043 (eDIS)"
   },
   "G_F_GeV_minus2": {
     "value": 1.1663787e-05,

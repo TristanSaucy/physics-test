@@ -64,6 +64,12 @@ This is a living checklist for continuing the framework work in future sessions.
 - Added principled normalization-factor families for predictive OOS: `python -m physics_test.cli list-norm-families` and `python -m physics_test.cli oos-predictive --norm-family ...`
 - Added step-signal OOS (C-independent): `python -m physics_test.cli oos-steps --suite v1 --max-ratio-err 0.02|0.05`
 - Added RG+phi OOS (Lambda_QCD consistency from lattice-fit inverse couplings): `python -m physics_test.cli oos-rg --suite qcd-lambda-v1|v2`
+- Added frozen low-Q EW independent suites:
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v1`
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v2` (adds Cs APV; stricter default z-max; see `freezing_the_rules.md`)
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v3` (adds eDIS; see `freezing_the_rules.md`)
+- Added base-vs-alt-bases scan scaffold (pre-registered experiment lane, not a rescue knob):
+  - `python -m physics_test.cli base-vs-alt-bases --tol 0.05 --max-nCs 10`
 
 ## 6) Make analysis easier to inspect
 
