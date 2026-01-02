@@ -227,6 +227,9 @@ python -m physics_test.cli oos-ew-sin2 --model sm --max-rel-err 0.02
 python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v1
 python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v2
 python -m physics_test.cli oos-ew-sin2 --suite ew-independent-v3
+python -m physics_test.cli oos-ew-sin2 --suite ew-exploratory-v1
+python -m physics_test.cli oos-ew-sin2 --suite ew-dis-exploratory-v1
+python -m physics_test.cli oos-ew-sin2 --suite ew-zpole-exploratory-v1
 
 # GUT convergence diagnostic: baseline vs lattice-quantized initialization
 python -m physics_test.cli gut-run --model sm --n 400

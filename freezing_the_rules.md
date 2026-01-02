@@ -246,6 +246,27 @@ CI note:
 
 - `ew-independent-v*` suites are **gates**: they exit non-zero if any target fails (so CI can block regressions).
 
+Exploratory note (non-gating):
+
+- `ew-exploratory-v1` is a **frozen but non-CI** suite that extends `ew-independent-v3` with additional points that are
+  known to be interpretation/definition sensitive (or potentially in tension), e.g. the PDG-quoted Cs APV point and
+  CHARM II νμ–e scattering:
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-exploratory-v1`
+  - By default it does **not** exit non-zero on FAIL (unless you pass `--ci`).
+
+- `ew-dis-exploratory-v1` is a **frozen but non-CI** DIS-focused suite for NuTeV-style extractions that are known to be
+  interpretation-sensitive (PDF/nuclear/charm-threshold systematics). It is kept separate to enforce scheme isolation:
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-dis-exploratory-v1`
+  - This suite is guarded by an on-shell scheme prefix (`sin2thetaW_on_shell:`) and is exploratory-only (non-gating by default).
+
+- `ew-zpole-exploratory-v1` is a **frozen but non-CI** Z-pole suite for *effective leptonic* weak mixing angle determinations
+  (LEP/SLC pseudo-observable and Tevatron Drell–Yan extraction). It is kept separate to enforce scheme isolation:
+  - `python -m physics_test.cli oos-ew-sin2 --suite ew-zpole-exploratory-v1`
+  - This suite is guarded by a Z-pole effective-angle prefix (`sin2thetaW_eff_lept:`) and is exploratory-only (non-gating by default).
+  - This suite is frozen to a dedicated **Z-pole mapping method**: `--method zpole_kappa_approx`, which applies an auditable
+    κ-factor at the Z pole (dominated by Δα with a leading top-loop correction) so the prediction is commensurate with the
+    Z-pole pseudo-observable definition (without inflating σ by default).
+
 ## 4) Pass/fail criterion (frozen)
 
 - Coupling fit threshold: **|relative error| ≤ 5%**

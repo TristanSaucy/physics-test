@@ -454,5 +454,57 @@ def ew_sin2_suites() -> dict[str, list[OOSTarget]]:
         ),
     ]
 
-    return {"ew-independent-v1": v1, "ew-independent-v2": v2, "ew-independent-v3": v3}
+    ew_exploratory_v1: list[OOSTarget] = [
+        # Exploratory-only extensions:
+        #  - include additional points that are known to be definition/interpretation sensitive
+        #    (or otherwise potentially in tension), without weakening the CI-grade ew-independent gates.
+        *v3,
+        OOSTarget(
+            "sin2thetaW(CsAPV_PDG)",
+            "Cs APV PDG-quoted weak mixing angle point (exploratory only; interpretation-sensitive; not part of ew-independent gates).",
+        ),
+        OOSTarget(
+            "sin2thetaW(CHARMII)",
+            "nu_mu-e scattering (CHARM II) extraction of the electroweak mixing angle (exploratory suite extension).",
+        ),
+    ]
+
+    ew_dis_exploratory_v1: list[OOSTarget] = [
+        # Exploratory-only DIS extraction(s) that are known to be interpretation-dependent
+        # (PDF/nuclear corrections, charm threshold treatment, etc.). Keep separate from
+        # low-Q PV "effective angle" suites to avoid scheme/observable mixing.
+        OOSTarget(
+            "sin2thetaW(NuTeV)",
+            "NuTeV nu_mu-N DIS extraction of s_W^2 (Paschos–Wolfenstein style); on-shell-reported; interpretation-sensitive (exploratory only).",
+        ),
+        OOSTarget(
+            "sin2thetaW(NuTeV_eq10)",
+            "NuTeV alternative extraction (from g_L^2,g_R^2); on-shell-reported; interpretation-sensitive (exploratory only).",
+        ),
+    ]
+
+    ew_zpole_exploratory_v1: list[OOSTarget] = [
+        # Z-pole effective weak mixing angle determinations.
+        #
+        # These are *not* the same object as sin^2(thetaW)_on-shell, and they fold in
+        # electroweak radiative corrections in a scheme-/observable-dependent way.
+        # Keep them isolated under their own scheme prefix.
+        OOSTarget(
+            "sin2thetaW(LEP_SLC_Zpole)",
+            "LEP+SLC Z-pole effective leptonic weak mixing angle sin^2θ_eff^lept (precision pseudo-observable).",
+        ),
+        OOSTarget(
+            "sin2thetaW(Tevatron_Zpole)",
+            "Tevatron Run II (CDF+D0) Z-pole effective leptonic weak mixing angle sin^2θ_eff^lept from Drell–Yan A_FB.",
+        ),
+    ]
+
+    return {
+        "ew-independent-v1": v1,
+        "ew-independent-v2": v2,
+        "ew-independent-v3": v3,
+        "ew-exploratory-v1": ew_exploratory_v1,
+        "ew-dis-exploratory-v1": ew_dis_exploratory_v1,
+        "ew-zpole-exploratory-v1": ew_zpole_exploratory_v1,
+    }
 

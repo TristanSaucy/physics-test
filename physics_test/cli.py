@@ -1049,7 +1049,9 @@ def cmd_ew_sin2(args: argparse.Namespace) -> int:
             alpha_ref = (1.0 / inv_alpha_mZ) if inv_alpha_mZ != 0 else float("nan")
             sin2_pred = sin2_eff_gammaZ_1loop_from_ref(Q, sin2_ref=sin2_ref, alpha_ref=alpha_ref, Q0_GeV=Q0)
         else:
-            raise SystemExit("Unknown --method. Use --method gauge_1loop or --method gammaZ_1loop")
+            raise SystemExit(
+                "Unknown --method. Use --method gauge_1loop, --method gammaZ_1loop, or --method zpole_kappa_approx"
+            )
 
         if lab in meas:
             v, s = meas[lab]
@@ -1084,8 +1086,16 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
 
     suite = str(getattr(args, "suite", "registry-all")).strip()
     scheme_prefix = str(getattr(args, "scheme_prefix", "") or "").strip()
-    if suite.startswith("ew-independent-v") and not scheme_prefix:
+    method = str(getattr(args, "method", "gammaZ_1loop")).strip()
+    if (suite.startswith("ew-independent-v") or suite == "ew-exploratory-v1") and not scheme_prefix:
         scheme_prefix = "sin2thetaW_eff:"
+    if suite == "ew-dis-exploratory-v1" and not scheme_prefix:
+        scheme_prefix = "sin2thetaW_on_shell:"
+    if suite == "ew-zpole-exploratory-v1" and not scheme_prefix:
+        scheme_prefix = "sin2thetaW_eff_lept:"
+    if suite == "ew-zpole-exploratory-v1" and method == "gammaZ_1loop":
+        # Default the Z-pole suite to its dedicated mapping method.
+        method = "zpole_kappa_approx"
 
     # Collect external sin2 targets:
     #  - suite="registry-all": auto-discover all registry-backed sin2thetaW(Q) targets
@@ -1099,18 +1109,28 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
                 continue
             if t.Q_GeV is None:
                 continue
+            scheme = str(getattr(t, "scheme", "") or "")
+            # Scheme isolation: when evaluating the auto-discovered registry menu, treat
+            # --scheme-prefix as a *filter* (skip non-matching targets) rather than an error.
+            if scheme_prefix and not scheme.startswith(scheme_prefix):
+                continue
             ext.append(
                 (
                     t.name,
                     float(t.value),
                     t.sigma,
                     float(t.Q_GeV),
-                    str(getattr(t, "scheme", "") or ""),
+                    scheme,
                     str(getattr(t, "citation", "") or ""),
                     "Registry target (auto-discovered)",
                 )
             )
         if not ext:
+            if scheme_prefix:
+                raise SystemExit(
+                    f"No external sin2thetaW(Q) targets matched --scheme-prefix {scheme_prefix!r}. "
+                    "Either widen the prefix, or omit --scheme-prefix to list all registry targets."
+                )
             raise SystemExit(
                 "No external sin2thetaW(Q) targets found. Add registry keys like "
                 "'tgt_sin2thetaW(Qweak)' with fields value/sigma/Q_GeV/scheme/citation "
@@ -1120,8 +1140,19 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
         suites = ew_sin2_suites()
         if suite not in suites:
             raise SystemExit(f"Unknown --suite {suite!r}. Options: registry-all, {', '.join(sorted(suites.keys()))}")
-        if suite.startswith("ew-independent-v") and str(getattr(args, "method", "")).strip() != "gammaZ_1loop":
-            raise SystemExit("Suites ew-independent-v* are frozen to --method gammaZ_1loop (effective weak angle at low Q).")
+        if (
+            (suite.startswith("ew-independent-v") or suite == "ew-exploratory-v1" or suite == "ew-dis-exploratory-v1")
+            and method != "gammaZ_1loop"
+        ):
+            raise SystemExit(
+                "Suites ew-independent-v*, ew-exploratory-v1, and ew-dis-exploratory-v1 are frozen to "
+                "--method gammaZ_1loop (low-Q weak-angle toy model)."
+            )
+        if suite == "ew-zpole-exploratory-v1" and method != "zpole_kappa_approx":
+            raise SystemExit(
+                "Suite ew-zpole-exploratory-v1 is frozen to --method zpole_kappa_approx "
+                "(Z-pole effective leptonic weak mixing angle mapping)."
+            )
         for ot in suites[suite]:
             if ot.key not in all_targets:
                 raise SystemExit(f"Missing target {ot.key!r} for suite {suite!r}. Run `list-targets`.")
@@ -1189,7 +1220,6 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
     # Choose beta set for running
     betas = SM_1LOOP if str(args.model).strip().lower() == "sm" else MSSM_1LOOP
 
-    method = str(getattr(args, "method", "gauge_1loop")).strip()
     z_max = getattr(args, "z_max", None)
     if suite == "ew-independent-v1" and (z_max is None or float(z_max) <= 0):
         z_max = 3.0
@@ -1197,9 +1227,16 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
         z_max = 2.0
     if suite == "ew-independent-v3" and (z_max is None or float(z_max) <= 0):
         z_max = 2.0
+    if suite == "ew-exploratory-v1" and (z_max is None or float(z_max) <= 0):
+        z_max = 2.0
+    if suite == "ew-zpole-exploratory-v1" and (z_max is None or float(z_max) <= 0):
+        z_max = 2.0
     sigma_theory = getattr(args, "sigma_theory", None)
-    if suite.startswith("ew-independent-v") and (sigma_theory is None or float(sigma_theory) < 0):
-        # Upgraded κ(Q) model: default to zero additional theory sigma for ew-independent suites.
+    if (
+        (suite.startswith("ew-independent-v") or suite == "ew-exploratory-v1")
+        and (sigma_theory is None or float(sigma_theory) < 0)
+    ):
+        # Upgraded κ(Q) model: default to zero additional theory sigma for effective-angle suites.
         sigma_theory = 0.0
     sigma_theory_f = float(sigma_theory) if sigma_theory is not None else 0.0
     report_thresh = bool(getattr(args, "report_theory_threshold", False))
@@ -1253,6 +1290,41 @@ def cmd_oos_ew_sin2(args: argparse.Namespace) -> int:
             inv_alpha_mZ = float(all_targets["1/alpha(mZ)"].value) if "1/alpha(mZ)" in all_targets else 127.955
             alpha_ref = (1.0 / inv_alpha_mZ) if inv_alpha_mZ != 0 else float("nan")
             pred = sin2_eff_gammaZ_1loop_from_ref(Q, sin2_ref=sin2_ref, alpha_ref=alpha_ref, Q0_GeV=Q0)
+        elif method == "zpole_kappa_approx":
+            # Z-pole effective leptonic weak mixing angle mapping (toy but deterministic):
+            #
+            #   sin^2θ_eff^lept(mZ) ≈ κ_Z * sin^2θ_ref(mZ),
+            #
+            # where:
+            #   - sin^2θ_ref is the lattice-derived angle from the independently fitted α2^{-1}(mZ) and α1_GUT^{-1}(mZ),
+            #   - κ_Z is an approximate net electroweak correction factor dominated by vacuum polarization (Δα)
+            #     with a compensating leading top-loop term (Δρ_top).
+            #
+            # We model:
+            #   κ_Z ≈ 1 + Δα_total(mZ^2) − Δρ_top
+            #
+            # This is not a substitute for a full EW precision calculation; it is a principled, auditable
+            # mapping layer for Z-pole pseudo-observables.
+            if suite == "registry-all" and not scheme_prefix:
+                raise SystemExit("--method zpole_kappa_approx requires --scheme-prefix (e.g. sin2thetaW_eff_lept:).")
+            if abs(float(Q) - float(Q0)) > 1e-3:
+                raise SystemExit(
+                    f"--method zpole_kappa_approx is only defined at the Z pole (Q≈mZ). Got Q={Q:g} GeV for {name}."
+                )
+            invY0 = (5.0 / 3.0) * float(inv_a1_0)
+            sin2_ref = (
+                float(inv_a2_0) / (float(inv_a2_0) + float(invY0)) if (float(inv_a2_0) + float(invY0)) != 0 else float("nan")
+            )
+            key_da = "delta_alpha_total(mZ2)"
+            key_drho = "delta_rho_top(GF,mt)"
+            if key_da not in all_targets or key_drho not in all_targets:
+                raise SystemExit(
+                    f"--method zpole_kappa_approx requires targets {key_da!r} and {key_drho!r}. Run `list-targets`."
+                )
+            da = float(all_targets[key_da].value)
+            drho = float(all_targets[key_drho].value)
+            kappa_Z = 1.0 + da - drho
+            pred = float(kappa_Z) * float(sin2_ref)
         else:
             raise SystemExit("Unknown --method. Use --method gauge_1loop or --method gammaZ_1loop")
 
@@ -2933,9 +3005,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_oos_ew_sin2.add_argument("--model", choices=["sm", "mssm"], default="sm", help="1-loop beta set for running (default: sm)")
     p_oos_ew_sin2.add_argument(
         "--method",
-        choices=["gauge_1loop", "gammaZ_1loop"],
+        choices=["gauge_1loop", "gammaZ_1loop", "zpole_kappa_approx"],
         default="gammaZ_1loop",
-        help="Prediction method (default: gammaZ_1loop).",
+        help="Prediction method (default: gammaZ_1loop). Use zpole_kappa_approx for Z-pole sin^2θ_eff^lept targets.",
     )
     p_oos_ew_sin2.add_argument("--base", type=float, default=360.0, help="Base constant to derive from (default: 360)")
     p_oos_ew_sin2.add_argument(

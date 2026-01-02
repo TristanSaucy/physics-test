@@ -112,6 +112,44 @@
     "scheme": "sin2thetaW_eff: low-energy nu-e scattering global fit (reactor+accelerator); MeV-scale; single-Q approximation",
     "citation": "arXiv:1608.02671 (\"The weak mixing angle from low energy neutrino measurements: a global update\")"
   },
+  "tgt_sin2thetaW(CHARMII)": {
+    "value": 0.2324,
+    "sigma": 0.0083,
+    "Q_GeV": 0.1,
+    "scheme": "sin2thetaW_eff: nu_mu-e scattering (CHARM II); sin^2Theta_{nu e} from differential cross-section ratio; representative Q^2~0.01 GeV^2 (Q~0.1 GeV)",
+    "citation": "CHARM II Collaboration (P. Vilain et al.), Phys. Lett. B335 (1994) 246-252: sin^2Theta_{nu e}=0.2324+-0.0083"
+  },
+  "tgt_sin2thetaW(NuTeV)": {
+    "value": 0.22773860593642055,
+    "sigma": 0.0015524175,
+    "Q_GeV": 4.472135955,
+    "scheme": "sin2thetaW_on_shell: NuTeV nu_mu-N DIS extraction of s_W^2 (Paschos-Wolfenstein style); Davidson et al. Eq.(9) quotes: s_W^2=0.2276±0.0013(stat)±0.0006(syst)±0.0006(th) -0.00003(Mt/GeV-175)+0.00032 ln(mh/100 GeV). Here base value 0.2276 corresponds to Mt=175 GeV,mh=100 GeV (mass terms vanish). Stored value applies the quoted mass correction using registry benchmarks mt=172.76 GeV, mH=125.0 GeV: delta=+1.386059364e-4. sigma stored is quadrature-combined from the three ± terms (0.0015524…≈0.0016). Representative DIS scale Q^2~20 GeV^2 (Q~4.47 GeV)",
+    "mass_correction": {
+      "mt_GeV": 172.76,
+      "mH_GeV": 125.0,
+      "delta": 0.00013860593642054712
+    },
+    "sigma_components": {
+      "stat": 0.0013,
+      "syst": 0.0006,
+      "th": 0.0006,
+      "combined_quadrature": 0.0015524175
+    },
+    "citation": "Davidson, Forte, Gambino, Rius, Strumia (CERN-TH/2001-366), hep-ph/0112302 (NuTeV discussion; Eq.(9) quote)"
+  },
+  "tgt_sin2thetaW(NuTeV_eq10)": {
+    "value": 0.2272,
+    "sigma": 0.0017146428,
+    "Q_GeV": 4.472135955,
+    "scheme": "sin2thetaW_on_shell: NuTeV alternative extraction from g_L^2,g_R^2 (Davidson et al. Eq.(10)) on the same page as Eq.(9): s_W^2(NuTeV)=0.2272±0.0017±0.0001(top)±0.0002(Higgs). sigma stored is quadrature-combined (0.0017146…≈0.0017). Representative DIS scale Q^2~20 GeV^2 (Q~4.47 GeV)",
+    "sigma_components": {
+      "main": 0.0017,
+      "top": 0.0001,
+      "higgs": 0.0002,
+      "combined_quadrature": 0.0017146428
+    },
+    "citation": "Davidson, Forte, Gambino, Rius, Strumia (CERN-TH/2001-366), hep-ph/0112302 (NuTeV discussion; Eq.(10) quote)"
+  },
   "tgt_sin2thetaW(CsAPV)": {
     "value": 0.2381,
     "sigma": 0.0011,
@@ -132,6 +170,20 @@
     "Q_GeV": 1.0416333328,
     "scheme": "sin2thetaW_eff: polarized electron-deuteron DIS (eDIS; SLAC E122 + JLab Hall A); PDG quote; representative DIS#1 scale Q^2≈1.085 GeV^2",
     "citation": "PDG RPP 2025 (Standard Model review, rpp2025-rev-standard-model.pdf): s_hat_Z^2=0.2299+/-0.0043 (eDIS)"
+  },
+  "tgt_sin2thetaW(LEP_SLC_Zpole)": {
+    "value": 0.23153,
+    "sigma": 0.00016,
+    "Q_GeV": 91.1876,
+    "scheme": "sin2thetaW_eff_lept: Z-pole effective leptonic weak mixing angle sin^2θ_eff^lept = 1/4 (1 - v_l/a_l), from LEP+SLC Z-resonance observables; incorporates full EW radiative corrections; Q≈mZ",
+    "citation": "ALEPH+DELPHI+L3+OPAL+SLD + LEP EWWG + SLD EWWG, hep-ex/0509008 (updated 2006), Phys. Rept. 427 (2006) 257-454, doi:10.1016/j.physrep.2005.12.006: sin^2θ_eff^lept=0.23153±0.00016"
+  },
+  "tgt_sin2thetaW(Tevatron_Zpole)": {
+    "value": 0.23148,
+    "sigma": 0.00033,
+    "Q_GeV": 91.1876,
+    "scheme": "sin2thetaW_eff_lept: Tevatron Run II (CDF+D0) Drell–Yan forward-backward asymmetry extraction of sin^2θ_eff^lept at the Z pole; incorporates SM radiative corrections; Q≈mZ",
+    "citation": "Tevatron Run II combination of sin^2θ_eff^lept from CDF+D0 Drell–Yan A_FB, sin^2θ_eff^lept=0.23148±0.00033 (combined 9–10 fb^-1 per experiment; 2001–2011)"
   },
   "G_F_GeV_minus2": {
     "value": 1.1663787e-05,
