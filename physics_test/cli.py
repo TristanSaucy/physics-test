@@ -2090,6 +2090,195 @@ def cmd_scan_all(args: argparse.Namespace) -> int:
     return 0
 
 
+def _classify_sector(name: str) -> str:
+    n = name.lower()
+    if "alpha_g" in n or "gravity" in n:
+        return "GRAVITY"
+    if "alpha_s" in n or "strong" in n:
+        return "STRONG"
+    if "alpha2" in n or "alpha_w" in n or "weak" in n or "sin2theta" in n or "delta_r" in n or "delta_rho" in n:
+        return "WEAK/EW"
+    if "alpha1" in n or "alpha_y" in n or "hypercharge" in n:
+        return "HYPERCHARGE"
+    if "alpha" in n or "delta_alpha" in n:
+        return "EM"
+    if "over" in n or "mp_over" in n or "mmu_over" in n or "mtau_over" in n or "mt_over" in n or "mb_over" in n or "mw_over" in n:
+        return "MASS RATIO"
+    if "unification" in n:
+        return "UNIFICATION"
+    return "OTHER"
+
+
+def cmd_spectrum(args: argparse.Namespace) -> int:
+    """
+    Phi-lattice spectrum: find the best (C, m) for each target and display
+    organized by m-value, revealing the lattice topology.
+    """
+    all_targets = known_targets()
+
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    Cs: list[float] = []
+    labels: list[str] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=args.base, include=include)
+        for k, v in cs.items():
+            Cs.append(float(v))
+            labels.append(f"{g.name}:{k}")
+    seen: set[float] = set()
+    uniq_Cs: list[float] = []
+    label_by_C: dict[float, str] = {}
+    for c, lab in zip(Cs, labels):
+        if c in seen:
+            continue
+        seen.add(c)
+        uniq_Cs.append(c)
+        label_by_C[c] = lab
+
+    m_values = list(range(args.m_min, args.m_max + 1))
+    max_err = args.max_rel_err
+
+    filter_str = args.filter.lower() if args.filter else ""
+    results: list[tuple[int, float, str, float, str, str]] = []
+
+    for t in all_targets:
+        if filter_str and filter_str not in t.name.lower():
+            continue
+        hits = scan_candidates(Cs=uniq_Cs, m_values=m_values, target_G=t.value)
+        best = hits[0]
+        if abs(best.rel_err) > max_err:
+            continue
+        m_int = int(best.m)
+        lab = label_by_C.get(best.C, f"C={best.C:g}")
+        sector = _classify_sector(t.name)
+        results.append((m_int, best.C, t.name, best.rel_err, lab, sector))
+
+    results.sort(key=lambda r: (r[0], abs(r[3])))
+
+    print(f"PHI-LATTICE SPECTRUM: G = C / phi^m")
+    print(f"Gauge-derived C menu: {sorted(set(uniq_Cs))}")
+    print(f"m range: [{args.m_min}, {args.m_max}], max |rel_err| = {max_err}")
+    if filter_str:
+        print(f"Filter: '{args.filter}'")
+    print(f"Hits: {len(results)}\n")
+
+    header = f"{'m':>5s}  {'C':>6s}  {'target':40s}  {'rel_err':>10s}  {'sector':12s}  {'gauge label'}"
+    print(header)
+    print("-" * len(header) + "----------")
+
+    prev_m = None
+    for m_int, C, name, rel_err, lab, sector in results:
+        if prev_m is not None and m_int != prev_m:
+            print()
+        prev_m = m_int
+        err_pct = f"{rel_err*100:+.2f}%"
+        print(f"{m_int:5d}  {C:6g}  {name:40s}  {err_pct:>10s}  {sector:12s}  {lab}")
+
+    if not args.no_summary:
+        print(f"\n{'='*80}")
+        print("SECTOR SUMMARY BY m:")
+        sector_ms: dict[str, list[int]] = {}
+        for m_int, _, _, _, _, sector in results:
+            sector_ms.setdefault(sector, []).append(m_int)
+        for sector in ["EM", "STRONG", "WEAK/EW", "HYPERCHARGE", "GRAVITY", "MASS RATIO", "UNIFICATION", "OTHER"]:
+            if sector not in sector_ms:
+                continue
+            ms = sorted(set(sector_ms[sector]))
+            rng = f"[{min(ms)}, {max(ms)}]"
+            print(f"  {sector:14s}  m in {rng:16s}  n_hits={len(sector_ms[sector]):3d}  m-values: {ms}")
+
+    return 0
+
+
+def cmd_gut_run_mssm(args: argparse.Namespace) -> int:
+    """
+    Compare SM vs MSSM 1-loop GUT convergence, with optional lattice-quantized inputs.
+    """
+    from physics_test.target_registry import get_measurement
+
+    m_mZ = get_measurement("mZ_GeV", default_value=91.1880)
+    mZ = float(m_mZ.value)
+
+    m_inv_alpha_mZ = get_measurement("alpha_inv_mZ", default_value=127.930)
+    inv_alpha_mZ = float(m_inv_alpha_mZ.value)
+    alpha_mZ = 1.0 / inv_alpha_mZ
+
+    m_sin2 = get_measurement("sin2thetaW_mZ_MSbar", default_value=0.23129)
+    sin2_mZ = float(m_sin2.value)
+
+    m_alpha_s = get_measurement("alpha_s_mZ", default_value=0.1180)
+    alpha_s_mZ = float(m_alpha_s.value)
+
+    sin2_on_shell = 1.0 - (float(get_measurement("mW_GeV", default_value=80.3692).value) ** 2) / (mZ ** 2)
+    cos2_on_shell = 1.0 - sin2_on_shell
+    alpha2_on_shell = alpha_mZ / sin2_on_shell
+    alpha1_gut_on_shell = (5.0 / 3.0) * alpha_mZ / cos2_on_shell
+
+    inv_a1_mZ = 1.0 / alpha1_gut_on_shell
+    inv_a2_mZ = 1.0 / alpha2_on_shell
+    inv_a3_mZ = 1.0 / alpha_s_mZ
+
+    models = [
+        ("SM", SM_1LOOP),
+        ("MSSM", MSSM_1LOOP),
+    ]
+
+    print(f"GUT convergence comparison: SM vs MSSM (1-loop)")
+    print(f"Inputs at mZ = {mZ} GeV (on-shell EW definition):")
+    print(f"  alpha1_GUT^-1(mZ) = {inv_a1_mZ:.4f}")
+    print(f"  alpha2^-1(mZ)     = {inv_a2_mZ:.4f}")
+    print(f"  alpha3^-1(mZ)     = {inv_a3_mZ:.4f}")
+    print()
+
+    for name, betas in models:
+        mu_best, score, a1, a2, a3 = find_best_convergence(
+            mu0=mZ,
+            alpha1_inv_mu0=inv_a1_mZ,
+            alpha2_inv_mu0=inv_a2_mZ,
+            alpha3_inv_mu0=inv_a3_mZ,
+            betas=betas,
+            mu_min=1e3,
+            mu_max=1e19,
+            n=5000,
+        )
+        print(f"  {name:6s}  Q_GUT = {mu_best:.3e} GeV  score(max delta) = {score:.3f}")
+        print(f"         a1^-1 = {a1:.3f}   a2^-1 = {a2:.3f}   a3^-1 = {a3:.3f}")
+
+        # Lattice-quantized version
+        include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+        all_Cs: list[float] = []
+        for g in standard_model_gauge_groups():
+            cs = candidate_Cs_from_group(g, base=args.base, include=include)
+            for _, v in cs.items():
+                all_Cs.append(float(v))
+        all_Cs = sorted(set(all_Cs))
+        m_range = list(range(-10, 20))
+
+        hits_a2 = scan_candidates(Cs=all_Cs, m_values=m_range, target_G=inv_a2_mZ)
+        hits_a1 = scan_candidates(Cs=all_Cs, m_values=m_range, target_G=inv_a1_mZ)
+        hits_a3 = scan_candidates(Cs=all_Cs, m_values=m_range, target_G=inv_a3_mZ)
+        best_a2, best_a1, best_a3 = hits_a2[0], hits_a1[0], hits_a3[0]
+
+        mu_best_lat, score_lat, a1_lat, a2_lat, a3_lat = find_best_convergence(
+            mu0=mZ,
+            alpha1_inv_mu0=best_a1.G,
+            alpha2_inv_mu0=best_a2.G,
+            alpha3_inv_mu0=best_a3.G,
+            betas=betas,
+            mu_min=1e3,
+            mu_max=1e19,
+            n=5000,
+        )
+        print(f"  {name:6s}  LATTICE-QUANTIZED:")
+        print(f"         anchors: a1^-1={best_a1.G:.3f}(C={best_a1.C:g},m={int(best_a1.m)})  "
+              f"a2^-1={best_a2.G:.3f}(C={best_a2.C:g},m={int(best_a2.m)})  "
+              f"a3^-1={best_a3.G:.3f}(C={best_a3.C:g},m={int(best_a3.m)})")
+        print(f"         Q_GUT = {mu_best_lat:.3e} GeV  score = {score_lat:.3f}")
+        print(f"         a1^-1 = {a1_lat:.3f}   a2^-1 = {a2_lat:.3f}   a3^-1 = {a3_lat:.3f}")
+        print()
+
+    return 0
+
+
 def cmd_solve_K(args: argparse.Namespace) -> int:
     K = temperature_K_from_frequency(args.m, args.F0)
     print(f"m = {args.m}")
@@ -3429,6 +3618,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Shortcut preset for gravity-wave frequency band (sets gravity F0 bounds if none are provided).",
     )
     p_pair_all.set_defaults(func=cmd_pair_forces_all)
+
+    p_spec = sub.add_parser("spectrum", help="Phi-lattice spectrum: all targets organized by m-value, revealing lattice topology")
+    p_spec.add_argument("--base", type=float, default=360.0, help="Gauge base (default: 360)")
+    p_spec.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_spec.add_argument("--m-min", type=int, default=-60, help="Min m (default: -60)")
+    p_spec.add_argument("--m-max", type=int, default=60, help="Max m (default: 60)")
+    p_spec.add_argument("--max-rel-err", type=float, default=0.05, help="Max |rel_err| to include (default: 0.05)")
+    p_spec.add_argument("--filter", default="", help="Filter target names (case-insensitive substring)")
+    p_spec.add_argument("--no-summary", action="store_true", help="Skip sector summary at end")
+    p_spec.set_defaults(func=cmd_spectrum)
+
+    p_gut_mssm = sub.add_parser("gut-compare", help="Compare SM vs MSSM 1-loop GUT convergence (with lattice-quantized inputs)")
+    p_gut_mssm.add_argument("--base", type=float, default=360.0, help="Gauge base (default: 360)")
+    p_gut_mssm.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_mssm.set_defaults(func=cmd_gut_run_mssm)
 
     p_opt2 = sub.add_parser("pair-forces-option2", help="Option-2 pairing: use F0 inputs for EM/strong/weak and solve K")
     p_opt2.add_argument("--set", dest="set_name", default="octave-union", help="Candidate C set name (default: octave-union).")
