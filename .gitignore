@@ -23,3 +23,8 @@ qweak_pos_*.pdf
 41586_*.xlsx
 pos_*.html
 
+# prototype design (not committed -- contains device IP)
+PROTOTYPE_DESIGN.md
+
+# Substack article drafts
+SUBSTACK_*.md

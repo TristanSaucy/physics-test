@@ -1004,126 +1004,16 @@ The spectrum (Section 10.10) has conspicuous gaps at the 1.5% tolerance level. T
 
 Filling these slots requires finding measured dimensionless numbers in nature that match. Each filled slot strengthens the structural claim; persistent vacancies weaken it.
 
-### 13.8 Resonant EM-to-gravity mode conversion (speculative)
+### 13.8 Prototype design
 
-The Gertsenshtein effect (1962) establishes that photons can convert to gravitons in a background magnetic field, and vice versa. This is accepted physics -- the same class of calculation as axion-photon conversion. The conversion probability is:
+The resonant cavity prototype design, GEM analogy, NMR analogy, ring magnet specifications, driving electronics, frequency strategy, and measurement plan have been moved to a separate document:
 
-$$
-P_{\gamma \to g} \sim \left(\frac{B \cdot L}{c^2}\right)^2 G_N
-$$
-
-For any realistic laboratory parameters, this is suppressed by $G_N / c^4 \sim 10^{-44}$. In lattice terms, this suppression **is** the gap: it corresponds to $\phi^{\Delta m}$ for the full EM-to-macroscopic-gravity hop.
-
-**Resonant enhancement as the key mechanism.** A laser does not create photons that couldn't exist before -- stimulated emission was always possible, but it took a resonant cavity to make it macroscopic. The cavity provides coherent enhancement by a factor of $N^2$ (where $N$ is the number of coherent round-trips). The essential ingredients are:
-
-1. The right **geometry** (cavity dimensions matching integer half-wavelengths).
-2. The right **frequency** (matching the cavity's resonant mode).
-3. A **pump** mechanism (supplying energy to the mode).
-
-The analogous setup for EM-to-gravity mode conversion would be:
-
-- **Pump**: multiple EM sources supplying energy in a coherent, rotating pattern. A three-phase configuration (three sources offset by $120°$) produces a smoothly rotating field with definite angular momentum and no dead spots -- the same principle that drives every AC induction motor.
-- **Cavity**: a central resonant region where the EM field accumulates coherently. The cavity geometry determines which modes are supported and at what frequencies.
-- **Mode conversion**: at specific resonance conditions, the accumulated EM energy couples to the gravitational mode via the Gertsenshtein mechanism, enhanced by the cavity's quality factor.
-
-**Why the three-phase geometry matters.** A single-phase EM source produces a pulsating field. Three phases offset by $2\pi/3$ produce a continuously rotating field vector -- physically equivalent to smooth angular momentum transfer. This is important because:
-
-- Gravitomagnetic effects (frame-dragging, Lense-Thirring) are produced by **rotating** mass-energy, not static mass-energy. The rotating EM field has definite angular momentum $L$, giving it a qualitatively different gravitational signature than a static field.
-- The $2\pi/3$ offset provides a discrete $\mathbb{Z}_3$ rotational symmetry, which is a natural subgroup of the continuous $U(1)$ rotation.
-- The beat frequency between the pump and the core's natural resonance can be tuned independently of the carrier frequency.
-
-**Phi-proportioned resonance conditions.** If the lattice is physical, the natural resonance conditions for EM-to-gravity coupling should involve $\phi$-commensurate frequencies and dimensions. The frequency formula $F_0 = \phi^m \cdot k_B K / h$ gives:
-
-- At $m = 2$ (EM anchor): $F_0 \propto \phi^2 \approx 2.618$
-- At $m \approx 6$ (quantum gravity, $C = 15$): $F_0 \propto \phi^6 \approx 17.94$
-- Ratio: $\phi^4 \approx 6.854$
-
-The lattice predicts that the pump-to-core frequency relationship should satisfy:
-
-$$
-\frac{f_{\text{pump}}}{f_{\text{core}}} = \phi^n, \qquad n \in \mathbb{Z}
-$$
-
-and the geometric proportions of the apparatus should follow:
-
-$$
-\frac{R_{\text{outer}}}{R_{\text{inner}}} \sim \phi^k
-$$
-
-for small integers $k$. A cavity with $\phi$-proportioned dimensions would have natural mode spacings commensurate with the lattice, maximizing the overlap integral between EM and gravitational modes.
-
-**The "core humming" condition.** The resonance occurs when the pump frequency, the cavity geometry, and the core's natural oscillation frequency all lock into a $\phi$-commensurate relationship. At this point, the cavity coherently enhances the Gertsenshtein-type mode conversion by $\sim N^2$, where $N$ is the number of coherent oscillation cycles.
-
-**Quantitative scale check.** Even with $N \sim 10^{12}$ coherent cycles (achievable with high-$Q$ superconducting RF cavities, $Q \sim 10^{12}$), the enhancement is $N^2 \sim 10^{24}$. The Gertsenshtein suppression is $\sim 10^{-44}$. The residual suppression is $\sim 10^{-20}$, corresponding to $\sim 42$ lattice steps of $\phi$. Bridging this remaining gap would require either:
-
-- Vastly higher cavity $Q$ than any known technology.
-- A nonlinear enhancement mechanism that scales faster than $N^2$ (e.g., parametric amplification, where the gain is exponential rather than quadratic).
-- Multiple cascaded stages, each providing a partial $\Delta m$ shift.
-
-The framework makes the target quantitative: for any given level of coherent enhancement, the lattice predicts exactly which $C$ and $m$ you arrive at and what effective gravitational coupling you would observe.
-
-### 13.9 The gravitoelectromagnetic analogy
-
-General relativity in the weak-field limit produces field equations structurally identical to Maxwell's equations. This is not a metaphor -- it is a mathematical identity of linearized Einstein gravity:
-
-| Electromagnetism | Gravitoelectromagnetism (GEM) |
-|---|---|
-| Electric charge $q$ | Mass-energy $M$ |
-| Electric current $\mathbf{J} = q\mathbf{v}$ | Mass current $\mathbf{J}_g = M\mathbf{v}$ |
-| $\mathbf{E}$ field (Coulomb) | Gravitoelectric field $\mathbf{E}_g$ (Newtonian gravity) |
-| $\mathbf{B}$ field (Ampère) | Gravitomagnetic field $\mathbf{B}_g$ (frame-dragging) |
-| Lorentz force $q(\mathbf{E} + \mathbf{v} \times \mathbf{B})$ | Geodesic force $M(\mathbf{E}_g + \mathbf{v} \times \mathbf{B}_g)$ |
-
-The gravitomagnetic field has been measured experimentally (Gravity Probe B, 2011; LARES satellite, 2012). It is produced by rotating mass-energy and causes frame-dragging -- nearby objects are pulled along with the rotation of the source.
-
-The gravitomagnetic-to-gravitoelectric ratio scales as $v/c$, where $v$ is the velocity of the mass-energy current. For a rotating EM field, $v$ can approach $c$ (the field pattern rotates at the speed of light in a waveguide), so the gravitomagnetic component is not suppressed relative to the gravitoelectric component of the EM field's own gravitational signature. The challenge remains the overall coupling strength ($G_N$), not the ratio of gravitomagnetic to gravitoelectric.
-
-This establishes that rotating EM fields produce qualitatively different gravitational signatures (including frame-dragging) from static EM fields, which supports the hypothesis that rotational coherence is a distinct m-shifting mechanism from simple energy accumulation.
-
-### 13.10 Ring magnet core and the NMR analogy (speculative)
-
-The central core in the three-phase + cavity configuration (Section 13.8) could itself be a permanent magnet -- specifically, a ring (toroidal) magnet. This is not an arbitrary choice: a ring magnet provides exactly the ingredients the Gertsenshtein mechanism requires, and the resulting interaction is structurally identical to nuclear magnetic resonance.
-
-**Why a ring magnet.** The Gertsenshtein photon-to-graviton conversion does not occur in vacuum -- it requires a background magnetic field $\mathbf{B}_0$. The conversion probability scales as $B_0^2 \cdot L^2$. A ring magnet provides this background field passively (always on, zero power dissipation for a permanent magnet), and the toroidal geometry confines the strong-field region to the ring interior, where the three-phase pump field is also concentrated. This maximizes the spatial overlap integral between the pump and the conversion medium.
-
-**Toroidal cavity modes.** A torus with major radius $R$ and minor radius $r$ supports discrete electromagnetic modes whose frequencies depend on the ratio $R/r$. If the ring proportions are chosen so that $R/r = \phi$, the cavity's mode spacing becomes commensurate with the phi-lattice, and resonance conditions naturally align with lattice transitions. The field inside the torus is relatively uniform and strong, while outside it falls as $\sim 1/r^3$ (dipole), providing natural mode confinement.
-
-**The NMR structural analogy.** The complete configuration -- static background field plus rotating transverse drive -- is identical in structure to nuclear magnetic resonance:
-
-| NMR | Ring magnet + three-phase pump |
-|---|---|
-| Strong static field $B_0$ (solenoid) | Ring magnet's static field |
-| Oscillating RF pulse ($\perp$ to $B_0$) | Three-phase rotating field (in the ring plane) |
-| Larmor resonance $\omega_L = \gamma B_0$ | Phi-commensurate resonance frequency |
-| Nuclear spin precession | EM-to-gravitational mode coupling |
-| Coherent spin echo | Coherent gravitational signal |
-| Quality factor $Q$ of RF coil | Quality factor of the toroidal cavity |
-
-In NMR, the essential discovery was that at **one specific frequency** (the Larmor frequency, determined by the gyromagnetic ratio $\gamma$ and the static field $B_0$), a weak RF pulse drives enormous coherent precession of nuclear spins -- billions of spins rotating in phase. Away from resonance, nothing measurable happens. The resonance condition is sharp.
-
-The lattice equivalent: the "Larmor frequency" of the ring magnet cavity would be the frequency at which the ratio of pump frequency to the ring's natural electromagnetic mode frequency equals $\phi^n$ for some integer $n$, locking into a lattice transition. The static field strength sets the scale; the pump frequency must be tuned to the $\phi$-commensurate resonance.
-
-**Superconducting ring: macroscopic quantum coherence.** If the ring is a superconductor rather than a permanent magnet, several qualitatively new features emerge:
-
-- **Quantized magnetic flux.** The magnetic flux threading a superconducting ring is exactly quantized: $\Phi = n \Phi_0$, where $\Phi_0 = h / (2e) \approx 2.07 \times 10^{-15}$ Wb is the magnetic flux quantum. The integer $n$ is a topological invariant -- it cannot change without destroying the superconducting state.
-- **Persistent currents.** The circulating supercurrent that maintains the flux experiences zero dissipation. The effective $Q$ factor for the static field mode approaches infinity.
-- **Cooper pair coherence.** Every electron pair in the ring is phase-locked into a single macroscopic quantum state. This is the most extreme form of "coherence upscaling" available in the laboratory -- the entire ring, potentially containing $\sim 10^{23}$ Cooper pairs, acts as one quantum object.
-- **Meissner effect.** The ring expels external magnetic fields from its bulk, creating a sharp boundary between the interior conversion region and the exterior. This is natural mode confinement for the pump field.
-
-**The Aharonov-Bohm topological connection.** A ring magnet (especially a superconducting one) has a topological property beyond its local field: even outside the ring, where $\mathbf{B} = 0$, the vector potential $\mathbf{A} \neq 0$, and quantum particles are affected by the enclosed flux. This is the Aharonov-Bohm effect -- a purely quantum, purely topological phenomenon confirmed experimentally (Tonomura et al., 1986).
-
-The connection to the lattice is structural: the $C$ values in the phi-lattice derive from gauge-group topology (dimensions, Coxeter numbers -- integers characterizing the group). A superconducting ring with $n$ flux quanta is literally a piece of U(1) gauge topology realized in hardware. The flux quantum number $n$ is an integer, just as the harmonic index $m$ is an integer. Whether the lattice's integer structure and the ring's flux quantization are related -- whether locking $n$ to a specific value selects a specific $m$-transition -- is an open question that the framework makes precise.
-
-**Summary of the ring magnet configuration:**
-
-| Component | Role | Physics basis |
-|---|---|---|
-| Ring magnet (core) | Background $B_0$ field for mode conversion | Gertsenshtein effect |
-| Toroidal cavity | Resonant mode confinement | Cavity QED |
-| $\phi$-proportioned dimensions ($R/r = \phi$) | Lattice-commensurate mode spacing | Phi-lattice resonance hypothesis |
-| Three-phase pump (outer EMs) | Rotating drive field with definite $L$ | GEM / frame-dragging |
-| Superconducting ring (optional upgrade) | Quantized flux, infinite $Q$, macroscopic coherence | BCS theory, Aharonov-Bohm |
-| Flux quantum number $n$ | Topological integer selecting the conversion mode | U(1) gauge topology |
+**See [`PROTOTYPE_DESIGN.md`](PROTOTYPE_DESIGN.md)** for the full device design, including:
+- Resonant EM-to-gravity mode conversion (Gertsenshtein effect + cavity enhancement)
+- Gravitoelectromagnetic analogy and rotating field signatures
+- Ring magnet core with NMR structural analogy
+- Concrete prototype specifications (dimensions, electronics, cost)
+- Funding and monetization paths
 
 ---
 
