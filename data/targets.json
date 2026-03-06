@@ -3,58 +3,60 @@
     "note": "Curated external inputs (values + 1σ uncertainties + context). Keep this small and auditable.",
     "status": "exploratory",
     "sources": [
-      "CODATA 2018 / NIST constants",
-      "PDG Review of Particle Physics (RPP)"
-    ]
+      "CODATA 2022 / NIST constants (published May 2024)",
+      "PDG Review of Particle Physics 2024 (RPP)",
+      "PDG 2024 Electroweak review (Sec.10, revised 31 May 2024)"
+    ],
+    "accuracy_notes": "Values verified against primary sources (NIST web database, PDG PDF). Entries with 'CAUTION' or 'BROAD' in scheme field have larger-than-typical ambiguities. The PDG 2024 physical constants table still cites CODATA 2018 for alpha (noting CODATA 2022 update pending); we use CODATA 2022 here."
   },
   "alpha0": {
-    "value": 0.0072973525693,
+    "value": 0.0072973525643,
     "sigma": 1.1e-12,
     "Q_GeV": null,
-    "scheme": "vacuum (Thomson limit); CODATA 2018",
-    "citation": "NIST CODATA 2018 (alpha)"
+    "scheme": "vacuum (Thomson limit); CODATA 2022",
+    "citation": "NIST CODATA 2022 (alpha)"
   },
   "alpha_inv_mZ": {
-    "value": 127.955,
-    "sigma": 0.01,
-    "Q_GeV": 91.1876,
-    "scheme": "effective EM coupling at mZ (scheme-dependent; commonly quoted)",
-    "citation": "PDG RPP (alpha(mZ))"
+    "value": 127.930,
+    "sigma": 0.008,
+    "Q_GeV": 91.1880,
+    "scheme": "MSbar 5-flavor inverse EM coupling at mZ; CAUTION: scheme-dependent -- differs from on-shell running (~128.9) by ~1 unit due to MSbar subtraction terms. The specific value depends on alpha_s(mZ) and the hadronic vacuum polarization input.",
+    "citation": "PDG RPP 2024 Electroweak review Sec.10.2.2: alpha_hat^{-1}(5)(MZ)=127.930+/-0.008"
   },
   "alpha_s_mZ": {
-    "value": 0.1179,
+    "value": 0.1180,
     "sigma": 0.0009,
-    "Q_GeV": 91.1876,
-    "scheme": "MSbar world average at mZ (approx)",
-    "citation": "PDG RPP (alpha_s(mZ))"
+    "Q_GeV": 91.1880,
+    "scheme": "MSbar world average at mZ",
+    "citation": "PDG RPP 2024 (alpha_s(mZ))"
   },
   "mW_GeV": {
-    "value": 80.379,
-    "sigma": 0.012,
+    "value": 80.3692,
+    "sigma": 0.0133,
     "Q_GeV": null,
-    "scheme": "pole mass (benchmark)",
-    "citation": "PDG RPP (mW)"
+    "scheme": "pole mass; PDG world average (excl. CDF II); CAUTION: CDF II (2022) reported mW=80.4335±0.0094 GeV, 3.6σ above this average. The PDG excludes CDF II due to 0.5% compatibility probability when included. CMS (2024) reports mW=80.3602±0.0099 GeV, consistent with non-CDF average.",
+    "citation": "PDG RPP 2024 (mW); LHC-TeV MW WG combination excl. CDF II; see also CDF II: PRL 129 (2022) 121801"
   },
   "mZ_GeV": {
-    "value": 91.1876,
-    "sigma": 0.0021,
+    "value": 91.1880,
+    "sigma": 0.0020,
     "Q_GeV": null,
-    "scheme": "pole mass (benchmark)",
-    "citation": "PDG RPP (mZ)"
+    "scheme": "pole mass",
+    "citation": "PDG RPP 2024 (mZ)"
   },
   "mH_GeV": {
-    "value": 125.0,
-    "sigma": null,
+    "value": 125.11,
+    "sigma": 0.11,
     "Q_GeV": null,
-    "scheme": "chosen benchmark scale for strict strong target",
-    "citation": "project convention (mH benchmark)"
+    "scheme": "pole mass; world average (ATLAS+CMS)",
+    "citation": "PDG RPP 2024/2025 (mH)"
   },
   "mt_GeV": {
-    "value": 172.76,
-    "sigma": 0.3,
+    "value": 172.57,
+    "sigma": 0.29,
     "Q_GeV": null,
-    "scheme": "pole mass (approx benchmark)",
-    "citation": "PDG RPP (mt)"
+    "scheme": "pole mass; world average (Tevatron+LHC)",
+    "citation": "PDG RPP 2024 (mt)"
   },
   "delta_alpha_lept_mZ2": {
     "value": 0.0314977,
@@ -64,11 +66,11 @@
     "citation": "PDG RPP (Delta alpha_lept)"
   },
   "delta_alpha_had5_mZ2": {
-    "value": 0.02764,
-    "sigma": 0.00007,
-    "Q_GeV": 91.1876,
-    "scheme": "hadronic vacuum polarization (5 flavors) at mZ^2 (approx)",
-    "citation": "PDG RPP (Delta alpha_had^(5))"
+    "value": 0.02783,
+    "sigma": 0.00006,
+    "Q_GeV": 91.1880,
+    "scheme": "on-shell hadronic vacuum polarization (5 flavors) at mZ^2; CAUTION: this quantity is actively contested -- dispersive (e+e-) evaluations give ~0.02760, lattice QCD (Cè et al.) gives ~0.02773, and the PDG 2024 EW review (MS-to-on-shell conversion) gives 0.02783. The spread directly affects alpha(mZ) and is correlated with the muon g-2 tension.",
+    "citation": "PDG RPP 2024 Electroweak review Table 10.1: Delta alpha_had^(5)(MZ)=0.02783+/-0.00006 (updated with more precise charm quark mass; see also Davier et al. 0.02760+/-0.00010, Keshavarzi et al. 0.02761+/-0.00011)"
   },
   "delta_alpha_top_mZ2": {
     "value": -0.00007,
@@ -78,18 +80,18 @@
     "citation": "PDG RPP (Delta alpha_top)"
   },
   "sin2thetaW_mZ_MSbar": {
-    "value": 0.23122,
-    "sigma": 0.00003,
-    "Q_GeV": 91.1876,
-    "scheme": "MSbar weak mixing angle at mZ (commonly quoted; scheme-dependent)",
-    "citation": "PDG RPP (sin^2theta_W MSbar)"
+    "value": 0.23129,
+    "sigma": 0.00004,
+    "Q_GeV": 91.1880,
+    "scheme": "MSbar weak mixing angle at mZ; CAUTION: scheme-dependent -- the MSbar value (0.23129) differs from the on-shell value (~0.2232) and the effective leptonic Z-pole value (~0.23153). These are NOT interchangeable; each is a valid sin2thetaW in a different renormalization convention. The PDG 2024 global fit value sin2theta_eff_lept=0.23153(4) corresponds to s_hat^2(MSbar)=0.23129(4) via radiative corrections.",
+    "citation": "PDG RPP 2024 Physical Constants Table: sin^2 theta_hat(MZ) (MS) = 0.23129(4)"
   },
   "sin2thetaW_on_shell": {
-    "value": 0.22305,
-    "sigma": 0.00023,
+    "value": 0.2232094928,
+    "sigma": 0.00026,
     "Q_GeV": null,
     "scheme": "on-shell weak mixing angle (pole-mass definition); sin^2(thetaW)=1-mW^2/mZ^2",
-    "citation": "CODATA 2022 (sin^2theta_W on-shell)"
+    "citation": "derived from PDG RPP 2024 mW and mZ"
   },
   "tgt_sin2thetaW(Qweak)": {
     "value": 0.2383,
@@ -109,25 +111,25 @@
     "value": 0.254,
     "sigma": 0.024,
     "Q_GeV": 0.001,
-    "scheme": "sin2thetaW_eff: low-energy nu-e scattering global fit (reactor+accelerator); MeV-scale; single-Q approximation",
+    "scheme": "sin2thetaW_eff: PV low-energy nu-e scattering global fit (reactor+accelerator); MeV-scale; single-Q approximation; BROAD (sigma/value~10%): very broad uncertainty makes this a weak constraint",
     "citation": "arXiv:1608.02671 (\"The weak mixing angle from low energy neutrino measurements: a global update\")"
   },
   "tgt_sin2thetaW(CHARMII)": {
     "value": 0.2324,
     "sigma": 0.0083,
     "Q_GeV": 0.1,
-    "scheme": "sin2thetaW_eff: nu_mu-e scattering (CHARM II); sin^2Theta_{nu e} from differential cross-section ratio; representative Q^2~0.01 GeV^2 (Q~0.1 GeV)",
+    "scheme": "sin2thetaW_eff: nu_mu-e scattering (CHARM II); sin^2Theta_{nu e} from differential cross-section ratio; representative Q^2~0.01 GeV^2 (Q~0.1 GeV); BROAD (sigma~3.6%): limited statistics from 1990s detector",
     "citation": "CHARM II Collaboration (P. Vilain et al.), Phys. Lett. B335 (1994) 246-252: sin^2Theta_{nu e}=0.2324+-0.0083"
   },
   "tgt_sin2thetaW(NuTeV)": {
-    "value": 0.22773860593642055,
+    "value": 0.22774458741258919,
     "sigma": 0.0015524175,
     "Q_GeV": 4.472135955,
-    "scheme": "sin2thetaW_on_shell: NuTeV nu_mu-N DIS extraction of s_W^2 (Paschos-Wolfenstein style); Davidson et al. Eq.(9) quotes: s_W^2=0.2276±0.0013(stat)±0.0006(syst)±0.0006(th) -0.00003(Mt/GeV-175)+0.00032 ln(mh/100 GeV). Here base value 0.2276 corresponds to Mt=175 GeV,mh=100 GeV (mass terms vanish). Stored value applies the quoted mass correction using registry benchmarks mt=172.76 GeV, mH=125.0 GeV: delta=+1.386059364e-4. sigma stored is quadrature-combined from the three ± terms (0.0015524…≈0.0016). Representative DIS scale Q^2~20 GeV^2 (Q~4.47 GeV)",
+    "scheme": "sin2thetaW_on_shell: NuTeV nu_mu-N DIS extraction (Paschos-Wolfenstein style); CAUTION (known anomaly ~3σ above SM): debated for decades -- possible explanations include strange-sea asymmetry (s vs sbar PDFs), isospin-violating effects, and nuclear shadowing corrections. Davidson et al. Eq.(9): s_W^2=0.2276±0.0013(stat)±0.0006(syst)±0.0006(th) -0.00003(Mt/GeV-175)+0.00032 ln(mh/100 GeV). Stored value applies mass correction with mt=172.57, mH=125.11. Representative DIS scale Q^2~20 GeV^2 (Q~4.47 GeV)",
     "mass_correction": {
-      "mt_GeV": 172.76,
-      "mH_GeV": 125.0,
-      "delta": 0.00013860593642054712
+      "mt_GeV": 172.57,
+      "mH_GeV": 125.11,
+      "delta": 0.00014458741258918976
     },
     "sigma_components": {
       "stat": 0.0013,
@@ -154,21 +156,21 @@
     "value": 0.2381,
     "sigma": 0.0011,
     "Q_GeV": 0.0,
-    "scheme": "sin2thetaW_eff: Cs-133 atomic parity violation (APV); E→0 effective limit; scheme of Ref. [31] in Porsev et al.",
+    "scheme": "sin2thetaW_eff: Cs-133 atomic parity violation (APV); E→0 effective limit; scheme of Ref. [31] in Porsev et al.; CAUTION: extracting sin2thetaW from APV requires precise many-body atomic theory calculations. Different groups give systematically different results (cf. CsAPV vs CsAPV_PDG entries; spread ~0.003)",
     "citation": "Porsev, Beloy, Derevianko (arXiv:0902.0335): sin^2θW^eff(E→0)=0.2381(11)"
   },
   "tgt_sin2thetaW(CsAPV_PDG)": {
     "value": 0.2349,
     "sigma": 0.0018,
     "Q_GeV": 0.0024,
-    "scheme": "sin2thetaW_eff: Cs atomic parity violation (APV) interpreted as a low-energy weak mixing angle point; PDG quote at 2.4 MeV",
+    "scheme": "sin2thetaW_eff: Cs atomic parity violation (APV) as low-energy weak mixing angle point; PDG quote at 2.4 MeV; CAUTION: differs from CsAPV entry (0.2381 vs 0.2349) due to different atomic structure theory and scheme conventions -- the spread reflects theoretical systematics in interpreting the same Cs APV measurement",
     "citation": "PDG RPP 2025 (Standard Model review, rpp2025-rev-standard-model.pdf): s_hat^2(2.4 MeV)=0.2349+/-0.0018 (Cs APV)"
   },
   "tgt_sin2thetaW(eDIS)": {
     "value": 0.2299,
     "sigma": 0.0043,
     "Q_GeV": 1.0416333328,
-    "scheme": "sin2thetaW_eff: polarized electron-deuteron DIS (eDIS; SLAC E122 + JLab Hall A); PDG quote; representative DIS#1 scale Q^2≈1.085 GeV^2",
+    "scheme": "sin2thetaW_eff: polarized electron-deuteron DIS (eDIS; SLAC E122 + JLab Hall A); PDG quote; representative DIS#1 scale Q^2≈1.085 GeV^2; BROAD (sigma~1.9%): dominated by systematic/statistical limitations of the vintage SLAC E122 data",
     "citation": "PDG RPP 2025 (Standard Model review, rpp2025-rev-standard-model.pdf): s_hat_Z^2=0.2299+/-0.0043 (eDIS)"
   },
   "tgt_sin2thetaW(LEP_SLC_Zpole)": {
@@ -186,11 +188,67 @@
     "citation": "Tevatron Run II combination of sin^2θ_eff^lept from CDF+D0 Drell–Yan A_FB, sin^2θ_eff^lept=0.23148±0.00033 (combined 9–10 fb^-1 per experiment; 2001–2011)"
   },
   "G_F_GeV_minus2": {
-    "value": 1.1663787e-05,
+    "value": 1.1663788e-05,
     "sigma": 6e-12,
     "Q_GeV": null,
     "scheme": "Fermi constant from muon lifetime (GeV^-2)",
-    "citation": "PDG RPP (G_F)"
+    "citation": "PDG RPP 2024 (G_F)"
+  },
+  "tgt_sin2thetaW(CMS_mW_2024)": {
+    "value": 0.22338,
+    "sigma": 0.00019,
+    "Q_GeV": null,
+    "scheme": "sin2thetaW_on_shell: derived on-shell weak mixing angle from CMS mW=80.3602±0.0099 GeV (2024) and PDG mZ=91.1880 GeV",
+    "citation": "CMS Collaboration, CMS-PAS-SMP-23-002 (2024): mW=80360.2±9.9 MeV; sin2thetaW=1-mW^2/mZ^2"
+  },
+  "tgt_mp_over_me": {
+    "value": 1836.152673426,
+    "sigma": 0.000000032,
+    "Q_GeV": null,
+    "scheme": "proton-to-electron mass ratio (dimensionless; CODATA 2022); verified directly from NIST database",
+    "citation": "NIST CODATA 2022: m_p/m_e = 1836.152 673 426(32)"
+  },
+  "tgt_mmu_over_me": {
+    "value": 206.7682827,
+    "sigma": 0.0000046,
+    "Q_GeV": null,
+    "scheme": "muon-to-electron mass ratio (dimensionless; CODATA 2022); verified directly from NIST database",
+    "citation": "NIST CODATA 2022: m_mu/m_e = 206.768 2827(46)"
+  },
+  "tgt_mt_over_mW": {
+    "value": 2.1472,
+    "sigma": 0.0045,
+    "Q_GeV": null,
+    "scheme": "top/W mass ratio (pole masses); sensitive to EW symmetry breaking dynamics",
+    "citation": "derived from PDG RPP 2024: mt=172.57(29) GeV, mW=80.3692(133) GeV"
+  },
+  "tgt_mW_over_mZ": {
+    "value": 0.88136,
+    "sigma": 0.00015,
+    "Q_GeV": null,
+    "scheme": "W/Z mass ratio = cos(thetaW); fundamental EW structure constant",
+    "citation": "derived from PDG RPP 2024: mW=80.3692(133) GeV, mZ=91.1880(20) GeV"
+  },
+  "tgt_mt_over_mb": {
+    "value": 41.26,
+    "sigma": 0.17,
+    "Q_GeV": null,
+    "scheme": "top/bottom mass ratio (mt pole / mb MSbar at mb); probes Yukawa hierarchy",
+    "citation": "derived from PDG RPP 2024: mt=172.57(29) GeV, mb(MSbar)=4.183(7) GeV"
+  },
+  "tgt_mb_over_mtau": {
+    "value": 2.354,
+    "sigma": 0.004,
+    "Q_GeV": null,
+    "scheme": "bottom/tau mass ratio (mb MSbar at mb / mtau pole); famous near-equality at GUT scale in SU(5)-type unification",
+    "citation": "derived from PDG RPP 2024: mb(MSbar)=4.183(7) GeV, mtau=1.77686(12) GeV"
+  },
+  "tgt_mtau_over_mmu": {
+    "value": 16.817,
+    "sigma": 0.0001,
+    "Q_GeV": null,
+    "scheme": "tau/muon mass ratio; probes lepton mass generation mechanism",
+    "citation": "derived from PDG RPP 2024: mtau=1.77686(12) GeV, mmu=0.1056584 GeV"
   }
 }
 
