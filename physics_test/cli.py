@@ -4695,6 +4695,870 @@ def cmd_gut_pheno(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gut_struct(args: argparse.Namespace) -> int:
+    """
+    Round 7: lattice renormalization, cosmological phase transitions,
+    anomaly matching, hadron spectrum, lattice topology.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        lattice_renormalization,
+        cosmological_phase_transitions,
+        anomaly_matching_analysis,
+        full_hadron_spectrum,
+        lattice_topology,
+        build_address_table,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. LATTICE RENORMALIZATION
+    # ===================================================================
+    print("=" * 80)
+    print("1. LATTICE RENORMALIZATION: COUPLING RESIDENCE TIMES")
+    print("=" * 80)
+    print()
+
+    lr = lattice_renormalization(lattice)
+
+    for name in ["α₁⁻¹", "α₂⁻¹", "α₃⁻¹"]:
+        sites = lr['residence_times'].get(name, [])
+        print(f"  {name}: {len(sites)} lattice crossings")
+        if sites:
+            for s in sites[:20]:
+                bar = "█" * max(1, int(s['residence_dlogQ'] * 5))
+                print(f"    ({s['C']:4g},{s['m']:3d}) val={s['value']:7.2f}  "
+                      f"Q={s['Q_GeV']:.2e}  Δlog₁₀Q={s['residence_dlogQ']:.2f} {bar}")
+            if len(sites) > 20:
+                print(f"    ... ({len(sites)-20} more)")
+        print()
+
+    print("  SLOW ZONES (longest residence at a single site):")
+    for sz in lr['slow_zones']:
+        print(f"    {sz['coupling']}: ({sz['C']:g},{sz['m']}) at Q={sz['Q_GeV']:.2e} GeV  "
+              f"Δlog₁₀Q = {sz['residence']:.2f}")
+    print()
+
+    # ===================================================================
+    # 2. COSMOLOGICAL PHASE TRANSITIONS
+    # ===================================================================
+    print("=" * 80)
+    print("2. COSMOLOGICAL PHASE TRANSITIONS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    cpt = cosmological_phase_transitions(lattice)
+
+    print(f"  {'Transition':<30s} {'E [GeV]':>10s} {'(C,m)':>10s} {'Lattice E':>10s} {'Error':>8s}")
+    print("  " + "-" * 75)
+    for t in cpt['transitions']:
+        addr = f"({t['C']:g},{t['m']})"
+        pct = t['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else " *  " if abs(pct) < 5 else "    "
+        print(f"  {t['name']:<30s} {t['E_GeV']:10.3g} {addr:>10s} {t['lattice_E_GeV']:10.3g} {pct:+7.2f}%{marker}")
+    print()
+
+    if cpt['phi_relations']:
+        print("  φ-power relations between transition energies:")
+        for pr in cpt['phi_relations']:
+            print(f"    {pr['high']:<30s} / {pr['low']:<20s} ≈ φ^{pr['phi_power']} "
+                  f"({pr['ratio']:.3g} vs {pr['phi_predicted']:.3g}, {pr['frac_err']*100:+.1f}%)")
+        print()
+
+    # ===================================================================
+    # 3. ANOMALY MATCHING
+    # ===================================================================
+    print("=" * 80)
+    print("3. GAUGE ANOMALY CANCELLATION ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    am = anomaly_matching_analysis()
+
+    print("  SM fermion hypercharges:")
+    for name, f in am['fermions'].items():
+        print(f"    {name:<5s}: Y = {f['Y']:+6.3f}  SU(3)={f['SU3']}  SU(2)={f['SU2']}  [{f['desc']}]")
+    print()
+
+    print("  Anomaly cancellation checks:")
+    print(f"    Tr[Y]         = {am['tr_Y']:.6f}  {'✓' if abs(am['tr_Y']) < 1e-10 else '✗'}")
+    print(f"    Tr[Y³]        = {am['tr_Y3']:.6f}  {'✓' if abs(am['tr_Y3']) < 1e-10 else '✗'}")
+    print(f"    Tr[SU(2)²×Y]  = {am['tr_SU2Y']:.6f}  {'✓' if abs(am['tr_SU2Y']) < 1e-10 else '✗'}")
+    print(f"    Tr[SU(3)²×Y]  = {am['tr_SU3Y']:.6f}  {'✓' if abs(am['tr_SU3Y']) < 1e-10 else '✗'}")
+    print()
+
+    print(f"  Y in units of 1/6: {am['Y_units']}")
+    print(f"  Weighted sum (should be 0): {am['sum_weighted']}")
+    print(f"  Sum |Y|: {am['sum_abs_Y']:.4f} = 8/3")
+    print(f"  {am['denominator_connection']}")
+    print()
+
+    # ===================================================================
+    # 4. FULL HADRON SPECTRUM
+    # ===================================================================
+    print("=" * 80)
+    print("4. HADRON SPECTRUM ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    hs = full_hadron_spectrum(lattice)
+
+    print(f"  {hs['n_hadrons']} hadrons tested (mass/m_π):")
+    print(f"    Sub-1%: {hs['n_sub1_pi']}, Sub-3%: {hs['n_sub3_pi']}")
+    print()
+
+    print(f"  {'Hadron':<10s} {'Mass':>8s} {'m/m_π':>10s} {'(C,m)':>10s} {'Lattice':>10s} {'Error':>8s} {'Type':>8s}")
+    print("  " + "-" * 75)
+    for r in hs['pi_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<10s} {r['mass']:8.4f} {r['ratio']:10.4f} {addr:>10s} "
+              f"{r['lattice_val']:10.4f} {pct:+7.2f}%{marker} {r['kind']:>8s}")
+    print()
+
+    if hs['meson_cross_ratios']:
+        print("  Best inter-meson mass ratios (< 2%):")
+        for r in hs['meson_cross_ratios'][:10]:
+            addr = f"({r['C']:g},{r['m']})"
+            pct = r['rel_err'] * 100
+            print(f"    {r['pair']:<12s} = {r['ratio']:8.4f} → {addr:>10s}  ({pct:+.2f}%)")
+        print()
+
+    # Baryon ratios to proton
+    if hs['p_ratios']:
+        print("  Baryon/proton mass ratios:")
+        for r in hs['p_ratios']:
+            addr = f"({r['C']:g},{r['m']})"
+            pct = r['rel_err'] * 100
+            marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+            print(f"    {r['name']:<5s}: m/m_p = {r['ratio']:8.5f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+        print()
+
+    # ===================================================================
+    # 5. LATTICE TOPOLOGY
+    # ===================================================================
+    print("=" * 80)
+    print("5. LATTICE TOPOLOGY")
+    print("=" * 80)
+    print()
+
+    addr_table = build_address_table(lattice)
+    topo = lattice_topology(addr_table)
+
+    print(f"  Sites:          {topo['n_sites']}")
+    print(f"  Same-C edges:   {topo['n_same_c_edges']} (Δm = 1 within a band)")
+    print(f"  Same-m edges:   {topo['n_same_m_edges']} (cross-band at same m)")
+    print(f"  Total edges:    {topo['n_total_edges']}")
+    print(f"  Components:     {topo['n_components']}")
+    print(f"  Largest:        {topo['largest_component']} sites")
+    print()
+
+    if topo['horizontal_lines']:
+        print("  Horizontal lines (same m, multiple C-bands):")
+        for m_val in sorted(topo['horizontal_lines'].keys()):
+            cs = topo['horizontal_lines'][m_val]
+            print(f"    m = {m_val:4d}: C = {cs}  ({len(cs)} bands)")
+        print()
+
+    if topo['vertical_chains']:
+        print("  Vertical chains (consecutive m in same C):")
+        for vc in topo['vertical_chains']:
+            print(f"    C = {vc['C']:4g}: m = {vc['chain']}  (length {vc['length']})")
+        print()
+
+    return 0
+
+
+def cmd_gut_precision(args: argparse.Namespace) -> int:
+    """
+    Round 8: electroweak precision, lattice action, CP violation, inflation.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        electroweak_precision,
+        lattice_action_principle,
+        cp_violation_analysis,
+        inflation_analysis,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. ELECTROWEAK PRECISION OBSERVABLES
+    # ===================================================================
+    print("=" * 80)
+    print("1. ELECTROWEAK PRECISION OBSERVABLES")
+    print("=" * 80)
+    print()
+
+    ew = electroweak_precision(lattice)
+
+    print("  Mass ratios on the lattice:")
+    print(f"  {'Quantity':<35s} {'Value':>10s} {'(C,m)':>10s} {'Lattice':>10s} {'Error':>8s}")
+    print("  " + "-" * 78)
+    for r in ew['mass_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} {r['value']:10.6f} {addr:>10s} "
+              f"{r['lattice']:10.6f} {pct:+7.2f}%{marker}")
+    print()
+
+    print(f"  ρ parameter: {ew['rho']:.6f} (should be 1.0000)")
+    print(f"  1/(G_F·v²) = {ew['fermi_check']:.4f} (should be √2 = {_math.sqrt(2):.4f})")
+    print()
+
+    print("  Weinberg angle tests:")
+    for a in ew['angle_tests']:
+        addr = f"({a['C']:g},{a['m']})"
+        pct = a['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {a['name']:<25s} = {a['value']:.6f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 2. LATTICE ACTION PRINCIPLE
+    # ===================================================================
+    print("=" * 80)
+    print("2. LATTICE ACTION PRINCIPLE")
+    print("=" * 80)
+    print()
+
+    la = lattice_action_principle(lattice)
+
+    print(f"  Occupied sites: {la['n_occupied']}")
+    print(f"  Total |m|:      {la['total_abs_m']}  (mean = {la['mean_abs_m']:.1f})")
+    print(f"  C-weighted |m|: {la['c_weighted_m']}")
+    print(f"  Pairwise dist:  {la['total_pairwise_dist']}")
+    print()
+    print(f"  C-band entropy:  {la['c_entropy']:.3f} bits (max = {la['max_entropy']:.3f})")
+    print(f"  Efficiency:      {la['entropy_efficiency']*100:.1f}%")
+    print(f"  Golden zone fraction (m ∈ [-5,15]): {la['frac_golden_zone']*100:.1f}%")
+    print(f"  Fibonacci spacing fraction: {la['n_fib_gaps']}/{la['n_gaps']} = {la['fib_spacing_frac']*100:.1f}%")
+    print()
+
+    # ===================================================================
+    # 3. CP VIOLATION
+    # ===================================================================
+    print("=" * 80)
+    print("3. CP VIOLATION ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    cp = cp_violation_analysis(lattice)
+
+    print("  Jarlskog invariants:")
+    for r in cp['jarlskog']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<20s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    pf = cp['phase_fraction']
+    pct = pf['rel_err'] * 100
+    print(f"  δ_CKM = {cp['delta_CKM_rad']:.3f} rad (68.4°)")
+    print(f"  δ_CKM/(2π) = {pf['value']:.4f} → ({pf['C']:g},{pf['m']})  ({pct:+.2f}%)")
+    print()
+
+    print("  Wolfenstein parameters:")
+    for w in cp['wolfenstein']:
+        addr = f"({w['C']:g},{w['m']})"
+        pct = w['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {w['name']:<20s} = {w['value']:.6f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 4. INFLATION PARAMETERS
+    # ===================================================================
+    print("=" * 80)
+    print("4. INFLATION PARAMETERS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    inf = inflation_analysis(lattice)
+
+    print("  CMB observables:")
+    for r in inf['observables']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<25s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    print("  Slow-roll estimates:")
+    for r in inf['slow_roll']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<25s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    print(f"  N from n_s: {inf['N_from_ns']:.1f} e-folds")
+    if inf['inflation_scale_GeV'] > 0:
+        print(f"  Inflation energy scale: V^{{1/4}} ≈ {inf['inflation_scale_GeV']:.2e} GeV")
+    print()
+
+    return 0
+
+
+def cmd_gut_nuclear(args: argparse.Namespace) -> int:
+    """
+    Round 9: nuclear physics, astrophysical scales, lattice bootstrap,
+    coupling ratios, QCD observables.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice,
+        nuclear_physics_analysis,
+        astrophysical_scales,
+        lattice_bootstrap,
+        coupling_ratio_evolution,
+        qcd_observables,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. NUCLEAR PHYSICS
+    # ===================================================================
+    print("=" * 80)
+    print("1. NUCLEAR PHYSICS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    nuc = nuclear_physics_analysis(lattice)
+
+    print(f"  {'Ratio':<35s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s}")
+    print("  " + "-" * 82)
+    for r in nuc['nuclear_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} {r['value']:12.4f} {addr:>10s} "
+              f"{r['lattice']:12.4f} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  Nuclear magic numbers on the lattice:")
+    for r in nuc['magic_numbers']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['magic_number']:>4d} → {addr:>10s}  lattice = {r['lattice']:8.2f}  ({pct:+.2f}%){marker}")
+    print()
+
+    if nuc['magic_ratios']:
+        print("  Magic number ratios (< 5%):")
+        for r in nuc['magic_ratios'][:8]:
+            addr = f"({r['C']:g},{r['m']})"
+            pct = r['rel_err'] * 100
+            print(f"    {r['pair']:<8s} = {r['ratio']:8.3f} → {addr:>10s}  ({pct:+.2f}%)")
+        print()
+
+    print("  Bethe-Weizsäcker coefficients:")
+    for r in nuc['bethe_weiszacker']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<20s} = {r['value']:10.5f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 2. ASTROPHYSICAL SCALES
+    # ===================================================================
+    print("=" * 80)
+    print("2. ASTROPHYSICAL MASS SCALES")
+    print("=" * 80)
+    print()
+
+    astro = astrophysical_scales(lattice)
+
+    for r in astro['astro_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<30s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    print(f"  M_Pl/m_p as φ-power: φ^{astro['MPl_over_mp_phi_power']:.2f}")
+    print(f"  Nearest integer: φ^{astro['nearest_phi_power']}  (error: {astro['phi_power_err']*100:+.2f}%)")
+    print()
+
+    print("  Dirac large numbers:")
+    for r in astro['large_numbers']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<30s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 3. LATTICE BOOTSTRAP
+    # ===================================================================
+    print("=" * 80)
+    print("3. LATTICE BOOTSTRAP: DERIVING PHYSICS FROM SEEDS")
+    print("=" * 80)
+    print()
+
+    boot = lattice_bootstrap(lattice)
+
+    print(f"  Seeds: {boot['seeds']}")
+    print()
+    print("  Minimum hops from seed set to known sites:")
+    for sd in boot['site_distances']:
+        print(f"    {sd['name']:<25s} ({sd['C']:g},{sd['m']}) → {sd['hops']} hops")
+    print()
+
+    # ===================================================================
+    # 4. COUPLING RATIO EVOLUTION
+    # ===================================================================
+    print("=" * 80)
+    print("4. COUPLING RATIO EVOLUTION")
+    print("=" * 80)
+    print()
+
+    cre = coupling_ratio_evolution(lattice)
+
+    print(f"  {'E [GeV]':>10s}  {'α₁⁻¹/α₂⁻¹':>12s} {'(C,m)':>8s} {'err':>6s}  "
+          f"{'α₂⁻¹/α₃⁻¹':>12s} {'(C,m)':>8s} {'err':>6s}")
+    print("  " + "-" * 78)
+    for row in cre['evolution']:
+        r12 = row.get("α₁⁻¹/α₂⁻¹", {})
+        r23 = row.get("α₂⁻¹/α₃⁻¹", {})
+        if r12 and r23:
+            a12 = f"({r12['C']:g},{r12['m']})"
+            a23 = f"({r23['C']:g},{r23['m']})"
+            print(f"  {row['E_GeV']:10.1e}  {r12['value']:12.4f} {a12:>8s} {r12['rel_err']*100:+5.1f}%  "
+                  f"{r23['value']:12.4f} {a23:>8s} {r23['rel_err']*100:+5.1f}%")
+    print()
+
+    if cre['best_hits']:
+        print("  Best coupling-ratio lattice hits (< 0.5%):")
+        for h in cre['best_hits'][:10]:
+            addr = f"({h['C']:g},{h['m']})"
+            print(f"    {h['ratio']:<15s} at E={h['E_GeV']:.1e}: {h['value']:.4f} → {addr:>10s}  ({h['rel_err']*100:+.2f}%)")
+        print()
+
+    # ===================================================================
+    # 5. QCD OBSERVABLES
+    # ===================================================================
+    print("=" * 80)
+    print("5. QCD NON-PERTURBATIVE OBSERVABLES")
+    print("=" * 80)
+    print()
+
+    qcd = qcd_observables(lattice)
+
+    for r in qcd['qcd_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<30s} = {r['value']:10.4f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    reg = qcd['regge']
+    pct = reg['rel_err'] * 100
+    print(f"  Regge slope: α'·m_p² = {reg['alpha_prime_mp2']:.4f} → ({reg['C']:g},{reg['m']})  ({pct:+.2f}%)")
+    print()
+
+    return 0
+
+
+def cmd_gut_final(args: argparse.Namespace) -> int:
+    """
+    Round 10: Yukawa hierarchy, vacuum energy, grid symmetries, scorecard.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice,
+        yukawa_hierarchy,
+        vacuum_energy_analysis,
+        grid_symmetries,
+        comprehensive_scorecard,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. YUKAWA COUPLING HIERARCHY
+    # ===================================================================
+    print("=" * 80)
+    print("1. YUKAWA COUPLING HIERARCHY")
+    print("=" * 80)
+    print()
+
+    yh = yukawa_hierarchy(lattice)
+
+    print("  Inter-generation mass ratios:")
+    print(f"  {'Sector':<20s} {'Ratio':<15s} {'Value':>10s} {'(C,m)':>10s} {'Error':>8s}")
+    print("  " + "-" * 68)
+    for r in yh['inter_generation']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        phi_p = f"  φ^{r.get('phi_power', 0):.1f}" if 'phi_power' in r else ""
+        print(f"  {r['sector']:<20s} {r['ratio_name']:<15s} {r['ratio']:10.2f} {addr:>10s} "
+              f"{pct:+7.2f}%{marker}{phi_p}")
+    print()
+
+    print("  Cross-sector same-generation ratios:")
+    for r in yh['cross_sector']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    Gen {r['generation']}: {r['ratio_name']:<12s} = {r['ratio']:10.2f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    print("  Yukawa couplings as lattice quantities:")
+    for r in yh['yukawa_lattice']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    y_{r['fermion']:<3s} = {r['yukawa']:12.5e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 2. VACUUM ENERGY / COSMOLOGICAL CONSTANT
+    # ===================================================================
+    print("=" * 80)
+    print("2. VACUUM ENERGY AND COSMOLOGICAL CONSTANT")
+    print("=" * 80)
+    print()
+
+    ve = vacuum_energy_analysis(lattice)
+
+    print(f"  ρ_vac/ρ_Pl = {ve['rho_vac_over_Pl']:.2e}")
+    print(f"  log_φ(ρ_Pl/ρ_vac) = {ve['log_phi_ratio']:.2f}")
+    print(f"  Nearest integer: φ^{ve['nearest_phi_power']}  (err: {ve['phi_power_err']*100:+.2f}%)")
+    print()
+
+    for r in ve['quantities']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} = {r['value']:12.4e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 3. HIDDEN SYMMETRIES
+    # ===================================================================
+    print("=" * 80)
+    print("3. HIDDEN SYMMETRIES OF THE (C,m) GRID")
+    print("=" * 80)
+    print()
+
+    gs = grid_symmetries(lattice)
+
+    print(f"  Sites: {gs['n_sites']}")
+    print(f"  m-center: {gs['m_center']:.1f}")
+    print(f"  m-reflection fraction: {gs['m_reflection_frac']*100:.1f}%")
+    print(f"  C-duality (360/C at same m): {gs['c_dual_frac']*100:.1f}%")
+    print(f"  Diagonal (C₂/C₁ = φ^(m₁-m₂)) hits: {gs['diagonal_hits']}")
+    print()
+
+    print("  Best m-translations (Δm → number of shared sites):")
+    for dm, count in gs['best_translations']:
+        print(f"    Δm = {dm:+3d}: {count} sites overlap")
+    print()
+
+    print("  Most frequent C-band pairings (same m):")
+    for (c1, c2), count in gs['best_c_pairs']:
+        print(f"    ({c1:g}, {c2:g}): {count} shared m-values")
+    print()
+
+    # ===================================================================
+    # 4. COMPREHENSIVE SCORECARD
+    # ===================================================================
+    print("=" * 80)
+    print("4. COMPREHENSIVE SCORECARD: ALL TESTED QUANTITIES")
+    print("=" * 80)
+    print()
+
+    sc = comprehensive_scorecard(lattice)
+
+    print(f"  Total quantities tested: {sc['n_total']}")
+    print(f"  Sub-1%:  {sc['n_sub1']:3d}  ({sc['n_sub1']/sc['n_total']*100:.0f}%)")
+    print(f"  Sub-3%:  {sc['n_sub3']:3d}  ({sc['n_sub3']/sc['n_total']*100:.0f}%)")
+    print(f"  Sub-5%:  {sc['n_sub5']:3d}  ({sc['n_sub5']/sc['n_total']*100:.0f}%)")
+    print(f"  Over 5%: {sc['n_over5']:3d}  ({sc['n_over5']/sc['n_total']*100:.0f}%)")
+    print()
+
+    print(f"  C-band distribution: {sc['c_distribution']}")
+    print()
+
+    print(f"  {'Rank':>4s}  {'Quantity':<30s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s}")
+    print("  " + "-" * 82)
+    for i, r in enumerate(sc['all_results']):
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        tier = "***" if abs(pct) < 1 else "** " if abs(pct) < 3 else "*  " if abs(pct) < 5 else "   "
+        print(f"  {i+1:4d}  {r['name']:<30s} {r['value']:12.4e} {addr:>10s} "
+              f"{r['lattice']:12.4e} {pct:+7.2f}% {tier}")
+    print()
+
+    return 0
+
+
+def cmd_gut_deep2(args: argparse.Namespace) -> int:
+    """
+    Round 11: black hole thermodynamics, lepton universality,
+    base-360 derivation, fine-tuning integer decomposition.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice,
+        black_hole_thermodynamics,
+        lepton_universality,
+        base_360_derivation,
+        fine_tuning_integers,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. BLACK HOLE THERMODYNAMICS
+    # ===================================================================
+    print("=" * 80)
+    print("1. BLACK HOLE THERMODYNAMICS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    bh = black_hole_thermodynamics(lattice)
+
+    for r in bh['bh_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} = {r['value']:10.4f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    se = bh['planck_bh_entropy']
+    print(f"  Planck-BH entropy 4π = {se['value']:.4f} → ({se['C']:g},{se['m']})  ({se['rel_err']*100:+.2f}%)")
+    ht = bh['hawking_T_ratio']
+    print(f"  Hawking T/M_Pl = 1/(8π) = {ht['value']:.5f} → ({ht['C']:g},{ht['m']})  ({ht['rel_err']*100:+.2f}%)")
+    print(f"  log_φ(M_Chandrasekhar) ≈ {bh['log_phi_Chandrasekhar']:.1f}")
+    print()
+
+    # ===================================================================
+    # 2. LEPTON UNIVERSALITY
+    # ===================================================================
+    print("=" * 80)
+    print("2. LEPTON UNIVERSALITY AND B-PHYSICS")
+    print("=" * 80)
+    print()
+
+    lu = lepton_universality(lattice)
+
+    print("  B/D-meson mass ratios:")
+    for r in lu['meson_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<15s} = {r['value']:8.4f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    print("  R-ratios (lepton universality):")
+    for r in lu['r_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"    {r['name']:<25s} = {r['value']:8.5f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 3. WHY BASE 360?
+    # ===================================================================
+    print("=" * 80)
+    print("3. WHY BASE 360? DERIVATION ATTEMPTS")
+    print("=" * 80)
+    print()
+
+    b360 = base_360_derivation()
+
+    print("  Candidate constructions yielding 360:")
+    for name, val in b360['candidates'].items():
+        hit = " ✓" if val == 360 else ""
+        print(f"    {name:<40s} = {val:>6d}{hit}")
+    print()
+
+    print(f"  τ(360) = {b360['n_divisors']} = dim(SU(5))  ← number of divisors")
+    print(f"  φ(360) = {b360['euler_totient']} = 4 × dim(SU(5))  ← Euler totient")
+    print()
+
+    print("  360 = Σdim(SM) × (dim(SU(5)) + h(SU(5)) + 1) = 12 × 30")
+    print("      = (dim(SU(3)) + dim(SU(2)) + dim(U(1))) × (24 + 5 + 1)")
+    print()
+
+    # ===================================================================
+    # 4. THE FINE-TUNING INTEGERS: 91 AND 588
+    # ===================================================================
+    print("=" * 80)
+    print("4. NUMBER THEORY OF 91 (HIERARCHY) AND 588 (CC)")
+    print("=" * 80)
+    print()
+
+    ft = fine_tuning_integers()
+
+    for label in ["91 (hierarchy)", "588 (CC)"]:
+        info = ft[label]
+        print(f"  {label}:")
+        print(f"    Factorization: {info['factorization']}")
+        print(f"    Zeckendorf (Fibonacci sum): {info['n']} = {' + '.join(str(f) for f in info['zeckendorf'])}")
+        print(f"    Is Fibonacci: {info['is_fibonacci']}")
+        for c in info['connections']:
+            print(f"    • {c}")
+        print()
+
+    rel = ft['relationship']
+    print(f"  Relationship between 91 and 588:")
+    print(f"    588 / 91 = {rel['ratio']:.4f}")
+    print(f"    588 mod 91 = {rel['remainder']}")
+    print(f"    gcd(91, 588) = {rel['gcd']}")
+    print(f"    {rel['note_588_eq_91x6_plus_42']}")
+    print(f"    {rel['note_gcd']}")
+    print()
+
+    return 0
+
+
+def cmd_gut_predict2(args: argparse.Namespace) -> int:
+    """
+    Round 12: mathematical constants, condensed matter, sharp predictions.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice,
+        mathematical_constants,
+        condensed_matter_constants,
+        sharp_predictions,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. MATHEMATICAL CONSTANTS
+    # ===================================================================
+    print("=" * 80)
+    print("1. MATHEMATICAL CONSTANTS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    mc = mathematical_constants(lattice)
+
+    for r in mc['constants']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} = {r['value']:12.6f} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 2. CONDENSED MATTER CONSTANTS
+    # ===================================================================
+    print("=" * 80)
+    print("2. CONDENSED MATTER AND METROLOGY")
+    print("=" * 80)
+    print()
+
+    cm = condensed_matter_constants(lattice)
+
+    for r in cm['condensed_matter']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['name']:<35s} = {r['value']:12.6e} → {addr:>10s}  ({pct:+.2f}%){marker}")
+    print()
+
+    # ===================================================================
+    # 3. SHARP PREDICTIONS
+    # ===================================================================
+    print("=" * 80)
+    print("3. SHARP TESTABLE PREDICTIONS FROM THE LATTICE")
+    print("=" * 80)
+    print()
+
+    sp = sharp_predictions(lattice)
+
+    for p in sp['predictions']:
+        print(f"  {p['name']}:")
+        if isinstance(p['predicted'], float) and p['predicted'] > 1e10:
+            print(f"    Lattice predicts: {p['predicted']:.2e}")
+        else:
+            print(f"    Lattice predicts: {p['predicted']:.4f}")
+        print(f"    Current exp:     {p['current_exp']}")
+        if p['discrepancy_pct'] != 0:
+            print(f"    Discrepancy:     {p['discrepancy_pct']:+.3f}%")
+        print(f"    How to test:     {p['testable']}")
+        print()
+
+    return 0
+
+
 def cmd_solve_K(args: argparse.Namespace) -> int:
     K = temperature_K_from_frequency(args.m, args.F0)
     print(f"m = {args.m}")
@@ -6083,6 +6947,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_gut_pheno = sub.add_parser("gut-pheno", help="Round 6: proton decay, dark matter, muon g-2, information theory, neutrinos")
     p_gut_pheno.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
     p_gut_pheno.set_defaults(func=cmd_gut_pheno)
+
+    p_gut_struct = sub.add_parser("gut-struct", help="Round 7: lattice renormalization, phase transitions, anomaly matching, hadron spectrum, topology")
+    p_gut_struct.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_struct.set_defaults(func=cmd_gut_struct)
+
+    p_gut_precision = sub.add_parser("gut-precision", help="Round 8: EW precision, action principle, CP violation, inflation")
+    p_gut_precision.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_precision.set_defaults(func=cmd_gut_precision)
+
+    p_gut_nuclear = sub.add_parser("gut-nuclear", help="Round 9: nuclear physics, astrophysics, bootstrap, coupling ratios, QCD")
+    p_gut_nuclear.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_nuclear.set_defaults(func=cmd_gut_nuclear)
+
+    p_gut_final = sub.add_parser("gut-final", help="Round 10: Yukawa hierarchy, vacuum energy, grid symmetries, scorecard")
+    p_gut_final.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_final.set_defaults(func=cmd_gut_final)
+
+    p_gut_deep2 = sub.add_parser("gut-deep2", help="Round 11: BH thermo, lepton universality, base-360 derivation, 91/588 analysis")
+    p_gut_deep2.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_deep2.set_defaults(func=cmd_gut_deep2)
+
+    p_gut_predict2 = sub.add_parser("gut-predict2", help="Round 12: math constants, condensed matter, sharp predictions")
+    p_gut_predict2.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_predict2.set_defaults(func=cmd_gut_predict2)
 
     p_opt2 = sub.add_parser("pair-forces-option2", help="Option-2 pairing: use F0 inputs for EM/strong/weak and solve K")
     p_opt2.add_argument("--set", dest="set_name", default="octave-union", help="Candidate C set name (default: octave-union).")

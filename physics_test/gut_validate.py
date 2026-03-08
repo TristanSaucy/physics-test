@@ -3344,3 +3344,1956 @@ def neutrino_lattice_predictions(lattice: List[LatticePoint]) -> dict:
         mbb_candidates=mbb_candidates,
         mass_ratio_m3_m2=mass_ratio_hit,
     )
+
+
+# ---------------------------------------------------------------------------
+# Lattice renormalization: how the lattice structure changes under RG
+# ---------------------------------------------------------------------------
+
+def lattice_renormalization(lattice: List[LatticePoint]) -> dict:
+    """
+    Under RG flow, dimensionless couplings run. If a quantity G is at (C, m)
+    at scale μ₁, where does it sit at scale μ₂? This defines a "lattice
+    beta function" — the rate at which a quantity hops between lattice sites.
+    """
+    m_Z = 91.1876
+
+    # SM 1-loop beta coefficients
+    betas = {
+        "α₁⁻¹": 41.0/6.0,
+        "α₂⁻¹": -19.0/6.0,
+        "α₃⁻¹": -7.0,
+    }
+    initial = {
+        "α₁⁻¹": 59.01,
+        "α₂⁻¹": 29.57,
+        "α₃⁻¹": 8.47,
+    }
+
+    # For each coupling, compute: at what energy does it cross
+    # each lattice value? This gives the "residence time" at each site.
+    residence_times = {}
+    for name in betas:
+        b = betas[name]
+        a0 = initial[name]
+        sites_visited = []
+
+        # Find all lattice values in the coupling's range
+        if b > 0:
+            # Coupling decreases (α₁⁻¹ increases → α₁ decreases at high E)
+            min_val, max_val = 0, a0 + 50
+        else:
+            # Coupling increases at high E
+            min_val, max_val = a0, a0 + 60
+
+        relevant_sites = [lp for lp in lattice if min_val < lp.value < max_val]
+        relevant_sites.sort(key=lambda lp: lp.value)
+
+        for lp in relevant_sites:
+            # Solve: a0 - (b/(2π)) ln(Q/m_Z) = lp.value
+            # ln(Q/m_Z) = (a0 - lp.value) × 2π/b
+            if b == 0:
+                continue
+            ln_ratio = (a0 - lp.value) * 2 * math.pi / b
+            if abs(ln_ratio) > 80:
+                continue
+            Q = m_Z * math.exp(ln_ratio)
+            if Q < 1 or Q > 1e20:
+                continue
+            sites_visited.append(dict(
+                C=lp.C, m=lp.m, value=lp.value, Q_GeV=Q,
+            ))
+
+        sites_visited.sort(key=lambda s: s['Q_GeV'])
+
+        # Compute residence time (in log-energy units) at each site
+        for i in range(len(sites_visited)):
+            if i < len(sites_visited) - 1:
+                dlogQ = math.log10(sites_visited[i+1]['Q_GeV']) - math.log10(sites_visited[i]['Q_GeV'])
+            else:
+                dlogQ = 0
+            sites_visited[i]['residence_dlogQ'] = dlogQ
+
+        residence_times[name] = sites_visited
+
+    # Identify "slow zones" — energy ranges where a coupling stays at one
+    # lattice site for many decades of energy
+    slow_zones = []
+    for name, sites in residence_times.items():
+        for s in sites:
+            if s['residence_dlogQ'] > 1.5:
+                slow_zones.append(dict(
+                    coupling=name, C=s['C'], m=s['m'],
+                    Q_GeV=s['Q_GeV'],
+                    residence=s['residence_dlogQ'],
+                ))
+
+    slow_zones.sort(key=lambda s: -s['residence'])
+
+    return dict(
+        residence_times=residence_times,
+        slow_zones=slow_zones[:10],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cosmological phase transitions from the lattice
+# ---------------------------------------------------------------------------
+
+def cosmological_phase_transitions(lattice: List[LatticePoint]) -> dict:
+    """
+    The lattice sites correspond to energy scales. As the universe cools
+    through these scales, phase transitions occur. Map known cosmological
+    phase transitions to lattice addresses.
+    """
+    m_e_GeV = 0.000510999
+
+    # Known phase transitions and their approximate temperatures/energies
+    transitions = [
+        ("GUT symmetry breaking", 1.6e16, "SU(5) → SM"),
+        ("EW symmetry breaking", 246.22, "SU(2)×U(1) → U(1)_EM"),
+        ("QCD confinement", 0.2, "quarks → hadrons"),
+        ("EW crossover (SM)", 159.5, "Higgs field transition"),
+        ("Neutrino decoupling", 0.001, "ν freeze-out ~ 1 MeV"),
+        ("BBN", 0.001, "nucleosynthesis ~ 1 MeV"),
+        ("e⁺e⁻ annihilation", 0.000511, "T ~ m_e"),
+        ("Recombination", 0.235e-9, "T ~ 0.235 eV"),
+        ("Matter-radiation eq.", 0.75e-9, "T ~ 0.75 eV"),
+        ("Dark energy domination", 0.33e-9, "T ~ 0.33 eV"),
+    ]
+
+    results = []
+    for name, E_GeV, description in transitions:
+        ratio = E_GeV / m_e_GeV
+        C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+        results.append(dict(
+            name=name, E_GeV=E_GeV, description=description,
+            ratio=ratio, C=C, m=m_idx,
+            lattice_E_GeV=lv * m_e_GeV, rel_err=err,
+        ))
+
+    # Check if phase transition energies are related by φ-powers
+    phi_relations = []
+    for i in range(len(results)):
+        for j in range(i+1, len(results)):
+            if results[i]['E_GeV'] > 0 and results[j]['E_GeV'] > 0:
+                ratio = results[i]['E_GeV'] / results[j]['E_GeV']
+                if ratio > 1:
+                    log_ratio = math.log(ratio) / math.log(PHI)
+                    nearest_int = round(log_ratio)
+                    if nearest_int > 0 and abs(log_ratio - nearest_int) < 0.5:
+                        frac_err = (log_ratio - nearest_int) / nearest_int
+                        if abs(frac_err) < 0.15:
+                            phi_relations.append(dict(
+                                high=results[i]['name'],
+                                low=results[j]['name'],
+                                ratio=ratio,
+                                phi_power=nearest_int,
+                                phi_predicted=PHI**nearest_int,
+                                frac_err=frac_err,
+                            ))
+
+    return dict(transitions=results, phi_relations=phi_relations)
+
+
+# ---------------------------------------------------------------------------
+# Anomaly matching on the lattice
+# ---------------------------------------------------------------------------
+
+def anomaly_matching_analysis() -> dict:
+    """
+    Gauge anomaly cancellation in the SM requires specific relationships
+    between fermion charges. Check whether these constraints map to
+    lattice relationships.
+    """
+    # SM anomaly cancellation conditions:
+    # 1. Tr[Y³] = 0 per generation
+    # 2. Tr[Y] = 0 (gravitational anomaly)
+    # 3. Tr[SU(2)² Y] = 0
+    # 4. Tr[SU(3)² Y] = 0
+
+    # Per-generation hypercharges — all as left-handed Weyl fermions
+    # (right-handed fields charge-conjugated: Y → -Y)
+    fermions = {
+        "Q_L":  dict(Y= 1/6,  SU3=3, SU2=2, n=1, desc="left-handed quark doublet"),
+        "u_Rc": dict(Y=-2/3,  SU3=3, SU2=1, n=1, desc="(u_R)^c  left-handed"),
+        "d_Rc": dict(Y= 1/3,  SU3=3, SU2=1, n=1, desc="(d_R)^c  left-handed"),
+        "L":    dict(Y=-1/2,  SU2=2, SU3=1, n=1, desc="left-handed lepton doublet"),
+        "e_Rc": dict(Y= 1,    SU2=1, SU3=1, n=1, desc="(e_R)^c  left-handed"),
+    }
+
+    # Check anomaly conditions
+    # Tr[Y] = 3×2×(1/6) + 3×1×(2/3) + 3×1×(-1/3) + 2×(-1/2) + 1×(-1) = 0
+    tr_Y = sum(f['SU3'] * f['SU2'] * f['Y'] for f in fermions.values())
+
+    # Tr[Y³]
+    tr_Y3 = sum(f['SU3'] * f['SU2'] * f['Y']**3 for f in fermions.values())
+
+    # Tr[SU(2)² Y] (only SU(2) doublets contribute)
+    tr_SU2Y = sum(f['SU3'] * f['Y'] for f in fermions.values() if f['SU2'] == 2)
+
+    # Tr[SU(3)² Y] (only SU(3) triplets contribute)
+    tr_SU3Y = sum(f['SU2'] * f['Y'] for f in fermions.values() if f['SU3'] == 3)
+
+    # Map hypercharge combinations to lattice
+    # The hypercharges are: 1/6, 2/3, -1/3, -1/2, -1
+    # Their absolute values times 6: 1, 4, 2, 3, 6
+    # Sum of |Y|: 1/6 + 2/3 + 1/3 + 1/2 + 1 = 1/6 + 4/6 + 2/6 + 3/6 + 6/6 = 16/6 = 8/3
+    sum_abs_Y = sum(abs(f['Y']) for f in fermions.values())
+
+    # Y values as fractions of 1/6
+    Y_units = {k: int(f['Y'] * 6) for k, f in fermions.items()}
+
+    # Lattice connection: do the hypercharge units relate to C-values?
+    # Y_max = 1 (e_R), 1/Y_max = 1
+    # Y_min = 1/6 (Q_L), 6/Y_min = 36 = not a standard C but 360/10
+    # Product of all |Y|: (1/6)(2/3)(1/3)(1/2)(1) = 2/108 = 1/54
+    # 54 = not a divisor of 360 directly
+    # But: 6 × 360 = 2160 = 6! × 3
+
+    # The key insight: Σ(Y in units of 1/6) = 1 + 4 + 2 + 3 + 6 = 16
+    # Weighted by color+isospin multiplicity:
+    # 3×2×1 + 3×1×4 + 3×1×(-2) + 1×2×(-3) + 1×1×(-6) = 6+12-6-6-6 = 0 ✓
+    sum_weighted = sum(f['SU3'] * f['SU2'] * Y_units[k] for k, f in fermions.items())
+
+    # Number theory: the denominators of Y are always factors of 6 = h(SU(3))
+    # This connects to C = 360/6 = 60 (the SU(3) Coxeter band)
+
+    return dict(
+        fermions=fermions,
+        tr_Y=tr_Y,
+        tr_Y3=tr_Y3,
+        tr_SU2Y=tr_SU2Y,
+        tr_SU3Y=tr_SU3Y,
+        sum_abs_Y=sum_abs_Y,
+        Y_units=Y_units,
+        sum_weighted=sum_weighted,
+        denominator_connection="All Y denominators divide h(SU(3))=6, connecting to C=60=360/6",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Extended hadron/meson/baryon spectrum
+# ---------------------------------------------------------------------------
+
+def full_hadron_spectrum(lattice: List[LatticePoint]) -> dict:
+    """
+    Map the full known hadron spectrum to the lattice via mass ratios
+    to the proton or pion.
+    """
+    m_p = 0.938272  # GeV
+    m_pi = 0.13957  # GeV (π±)
+
+    # Hadron masses (PDG 2024)
+    hadrons = [
+        # Mesons
+        ("π±", 0.13957, "meson"),
+        ("π⁰", 0.13498, "meson"),
+        ("K±", 0.49368, "meson"),
+        ("K⁰", 0.49761, "meson"),
+        ("η", 0.54786, "meson"),
+        ("η'", 0.95778, "meson"),
+        ("ρ", 0.77526, "meson"),
+        ("ω", 0.78266, "meson"),
+        ("φ", 1.01946, "meson"),
+        ("J/ψ", 3.09690, "meson"),
+        ("ϒ(1S)", 9.46040, "meson"),
+        ("D±", 1.86966, "meson"),
+        ("D⁰", 1.86484, "meson"),
+        ("Ds", 1.96835, "meson"),
+        ("B±", 5.27934, "meson"),
+        ("Bs", 5.36688, "meson"),
+        # Baryons
+        ("p", 0.938272, "baryon"),
+        ("n", 0.939565, "baryon"),
+        ("Λ", 1.11568, "baryon"),
+        ("Σ⁺", 1.18937, "baryon"),
+        ("Σ⁰", 1.19264, "baryon"),
+        ("Σ⁻", 1.19745, "baryon"),
+        ("Ξ⁰", 1.31486, "baryon"),
+        ("Ξ⁻", 1.32171, "baryon"),
+        ("Ω⁻", 1.67245, "baryon"),
+        ("Λc", 2.28646, "baryon"),
+        ("Λb", 5.61960, "baryon"),
+    ]
+
+    # Ratios to pion
+    pi_ratios = []
+    for name, mass, kind in hadrons:
+        ratio = mass / m_pi
+        C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+        pi_ratios.append(dict(
+            name=name, mass=mass, kind=kind,
+            ratio=ratio, C=C, m=m_idx,
+            lattice_val=lv, rel_err=err,
+        ))
+
+    # Ratios to proton (for baryons)
+    p_ratios = []
+    for name, mass, kind in hadrons:
+        if kind == "baryon":
+            ratio = mass / m_p
+            C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+            p_ratios.append(dict(
+                name=name, mass=mass,
+                ratio=ratio, C=C, m=m_idx,
+                lattice_val=lv, rel_err=err,
+            ))
+
+    # Meson mass ratios (to each other)
+    meson_cross = []
+    mesons = [(n, m) for n, m, k in hadrons if k == "meson"]
+    for i in range(len(mesons)):
+        for j in range(i+1, len(mesons)):
+            n1, m1 = mesons[i]
+            n2, m2 = mesons[j]
+            if m1 > m2:
+                ratio = m1 / m2
+            else:
+                ratio = m2 / m1
+                n1, n2 = n2, n1
+            if 1.5 < ratio < 100:
+                C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+                if abs(err) < 0.02:
+                    meson_cross.append(dict(
+                        pair=f"{n1}/{n2}", ratio=ratio,
+                        C=C, m=m_idx, lattice_val=lv, rel_err=err,
+                    ))
+
+    meson_cross.sort(key=lambda x: abs(x['rel_err']))
+
+    pi_ratios.sort(key=lambda x: abs(x['rel_err']))
+    p_ratios.sort(key=lambda x: abs(x['rel_err']))
+
+    n_sub1 = sum(1 for r in pi_ratios if abs(r['rel_err']) < 0.01)
+    n_sub3 = sum(1 for r in pi_ratios if abs(r['rel_err']) < 0.03)
+
+    return dict(
+        pi_ratios=pi_ratios,
+        p_ratios=p_ratios,
+        meson_cross_ratios=meson_cross[:15],
+        n_hadrons=len(hadrons),
+        n_sub1_pi=n_sub1,
+        n_sub3_pi=n_sub3,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Topological structure of the (C, m) lattice
+# ---------------------------------------------------------------------------
+
+def lattice_topology(occupied: List[dict]) -> dict:
+    """
+    Analyze the topological structure of occupied sites in (C, m) space.
+    Look for: connected components, cycles, nearest-neighbor patterns.
+    """
+    if not occupied:
+        return dict(error="no occupied sites")
+
+    sites = [(a['C'], a['m']) for a in occupied]
+    site_set = set(sites)
+
+    # Same-C neighbors (Δm = 1)
+    same_c_edges = []
+    for c, m in sites:
+        if (c, m+1) in site_set:
+            same_c_edges.append(((c, m), (c, m+1)))
+
+    # Same-m neighbors (different C)
+    from collections import defaultdict
+    m_groups = defaultdict(list)
+    for c, m in sites:
+        m_groups[m].append(c)
+
+    same_m_edges = []
+    for m, cs in m_groups.items():
+        if len(cs) > 1:
+            cs_sorted = sorted(cs)
+            for i in range(len(cs_sorted)):
+                for j in range(i+1, len(cs_sorted)):
+                    same_m_edges.append(((cs_sorted[i], m), (cs_sorted[j], m)))
+
+    # Connected components (union-find)
+    parent = {s: s for s in sites}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    all_edges = same_c_edges + same_m_edges
+    for a, b in all_edges:
+        union(a, b)
+
+    components = defaultdict(list)
+    for s in sites:
+        components[find(s)].append(s)
+
+    # m-value "horizontal lines" — m-values with sites in multiple C-bands
+    horizontal_lines = {m: sorted(cs) for m, cs in m_groups.items() if len(cs) >= 2}
+
+    # "Vertical chains" — sequences of consecutive m in same C
+    vertical_chains = []
+    for c in sorted(set(s[0] for s in sites)):
+        m_vals = sorted(s[1] for s in sites if s[0] == c)
+        chain = [m_vals[0]]
+        for i in range(1, len(m_vals)):
+            if m_vals[i] == chain[-1] + 1:
+                chain.append(m_vals[i])
+            else:
+                if len(chain) >= 2:
+                    vertical_chains.append(dict(C=c, chain=list(chain), length=len(chain)))
+                chain = [m_vals[i]]
+        if len(chain) >= 2:
+            vertical_chains.append(dict(C=c, chain=list(chain), length=len(chain)))
+
+    return dict(
+        n_sites=len(sites),
+        n_same_c_edges=len(same_c_edges),
+        n_same_m_edges=len(same_m_edges),
+        n_total_edges=len(all_edges),
+        n_components=len(components),
+        largest_component=max(len(v) for v in components.values()),
+        horizontal_lines=horizontal_lines,
+        vertical_chains=vertical_chains,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Electroweak precision observables
+# ---------------------------------------------------------------------------
+
+def electroweak_precision(lattice: List[LatticePoint]) -> dict:
+    """
+    Electroweak precision: test S, T, U Peskin-Takeuchi parameters
+    and key EW observables (ρ parameter, Δr) against the lattice.
+    """
+    m_W = 80.3692  # GeV
+    m_Z = 91.1876
+    m_H = 125.25
+    m_t = 172.69
+    v_H = 246.22   # GeV (Higgs VEV)
+    G_F = 1.1663788e-5  # GeV⁻²
+    alpha_em = 1.0 / 137.036
+
+    # Key EW dimensionless ratios
+    ratios = [
+        ("m_W/m_Z", m_W / m_Z),
+        ("m_H/v_H", m_H / v_H),
+        ("m_t/v_H", m_t / v_H),
+        ("m_H/m_W", m_H / m_W),
+        ("m_t/m_W", m_t / m_W),
+        ("m_t/m_H", m_t / m_H),
+        ("m_Z/v_H", m_Z / v_H),
+        ("m_W²/m_Z²  (ρ·cos²θ_W)", (m_W / m_Z)**2),
+        ("v_H²·G_F  (≈ 1/√2)", v_H**2 * G_F),
+        ("√2·G_F·m_W² / (π·α)", math.sqrt(2) * G_F * m_W**2 / (math.pi * alpha_em)),
+    ]
+
+    results = []
+    for name, val in ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # ρ parameter: ρ = m_W² / (m_Z² cos²θ_W) — should be 1 at tree level
+    sin2w = 1 - (m_W / m_Z)**2
+    rho = m_W**2 / (m_Z**2 * (1 - sin2w))
+
+    # Weinberg angle at different scales (Z-pole, low energy)
+    sin2w_Zpole = 0.23122
+    sin2w_low = 0.2397   # at Q→0
+
+    # Test the Fermi constant relation: G_F = g²/(4√2 m_W²)
+    # → 1/(G_F · v_H²) = √2  (tree-level)
+    fermi_check = 1.0 / (G_F * v_H**2)
+
+    # EW mixing: test if sin²θ_W is a lattice quantity
+    angle_tests = [
+        ("sin²θ_W(M_Z)", sin2w_Zpole),
+        ("sin²θ_W(0)", sin2w_low),
+        ("1 - m_W²/m_Z²", 1 - (m_W / m_Z)**2),
+        ("cos²θ_W", (m_W / m_Z)**2),
+    ]
+    angle_results = []
+    for name, val in angle_tests:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        angle_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(
+        mass_ratios=results,
+        rho=rho,
+        fermi_check=fermi_check,
+        angle_tests=angle_results,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lattice action principle
+# ---------------------------------------------------------------------------
+
+def lattice_action_principle(lattice: List[LatticePoint]) -> dict:
+    """
+    Can we define a "lattice action" S[{C_i, m_i}] that is minimized
+    by the observed configuration of physical quantities?
+    """
+    # Known occupied sites (from the master address table)
+    occupied = [
+        (360, -3), (180, -3), (120, -1), (60, -1), (360, -1), (180, -1),
+        (15, -2), (360, 2), (45, 2), (45, 3), (60, 3), (120, 3), (180, 3),
+        (15, 4), (60, 4), (15, 5), (60, 5), (45, 6), (120, 6), (360, 6),
+        (15, 7), (45, 7), (360, 10), (120, 10), (45, 11), (60, 11),
+        (180, 12), (360, 12), (120, 24),
+    ]
+
+    n_occ = len(occupied)
+    m_vals = [m for _, m in occupied]
+    c_vals = [c for c, _ in occupied]
+
+    # Candidate action 1: "Minimal total m" — nature minimizes Σ|m_i|
+    total_abs_m = sum(abs(m) for m in m_vals)
+    mean_abs_m = total_abs_m / n_occ
+
+    # Candidate action 2: "Minimal total lattice distance"
+    # Sum of all pairwise distances d = |Δm| (within same C) or 1 (cross-C at same m)
+    total_dist = 0
+    for i in range(n_occ):
+        for j in range(i+1, n_occ):
+            ci, mi = occupied[i]
+            cj, mj = occupied[j]
+            if ci == cj:
+                total_dist += abs(mi - mj)
+            elif mi == mj:
+                total_dist += 1
+
+    # Candidate action 3: "C-weighted m" — nature minimizes Σ C_i × |m_i|
+    weighted = sum(c * abs(m) for c, m in occupied)
+
+    # Candidate action 4: "Entropy" — nature maximizes C-band entropy
+    from collections import Counter
+    c_counts = Counter(c_vals)
+    total = sum(c_counts.values())
+    entropy = -sum((n/total) * math.log2(n/total) for n in c_counts.values())
+    max_entropy = math.log2(len(c_counts))
+
+    # Test: what fraction of sites are in the "golden zone" m ∈ [-5, 15]?
+    n_golden = sum(1 for m in m_vals if -5 <= m <= 15)
+    frac_golden = n_golden / n_occ
+
+    # Fibonacci spacing test: are inter-site gaps preferentially Fibonacci?
+    m_sorted = sorted(set(m_vals))
+    gaps = [m_sorted[i+1] - m_sorted[i] for i in range(len(m_sorted)-1)]
+    fib_set = {1, 2, 3, 5, 8, 13, 21, 34, 55}
+    n_fib_gaps = sum(1 for g in gaps if g in fib_set)
+    frac_fib = n_fib_gaps / len(gaps) if gaps else 0
+
+    return dict(
+        n_occupied=n_occ,
+        total_abs_m=total_abs_m,
+        mean_abs_m=mean_abs_m,
+        total_pairwise_dist=total_dist,
+        c_weighted_m=weighted,
+        c_entropy=entropy,
+        max_entropy=max_entropy,
+        entropy_efficiency=entropy / max_entropy if max_entropy > 0 else 0,
+        frac_golden_zone=frac_golden,
+        fib_spacing_frac=frac_fib,
+        n_fib_gaps=n_fib_gaps,
+        n_gaps=len(gaps),
+    )
+
+
+# ---------------------------------------------------------------------------
+# CP violation / Jarlskog invariant
+# ---------------------------------------------------------------------------
+
+def cp_violation_analysis(lattice: List[LatticePoint]) -> dict:
+    """
+    The Jarlskog invariant J ≈ 3.18×10⁻⁵ measures CP violation.
+    Test J and related quantities against the lattice.
+    """
+    J_CKM = 3.18e-5
+    J_PMNS = 0.033  # approximate
+
+    # CP violation quantities
+    quantities = [
+        ("J_CKM", J_CKM),
+        ("J_PMNS", J_PMNS),
+        ("J_CKM/J_PMNS", J_CKM / J_PMNS),
+        ("1/J_CKM", 1.0 / J_CKM),
+        ("1/J_PMNS", 1.0 / J_PMNS),
+        ("J_CKM × 10⁵", J_CKM * 1e5),
+    ]
+
+    results = []
+    for name, val in quantities:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # CP phase δ_CKM ≈ 1.196 rad (68.4°)
+    delta_CKM = 1.196
+    delta_CKM_deg = 68.4
+
+    # Test: is the CP phase related to lattice geometry?
+    # δ = π/φ³ = 0.736... no
+    # δ = 2π/φ⁴ = 0.915... no
+    # But δ/π = 0.3806, and 360 × δ/(2π) = 68.4° → test 68.4/360
+    phase_frac = delta_CKM_deg / 360.0
+    C_pf, m_pf, lv_pf, err_pf = nearest_lattice(phase_frac, lattice)
+
+    # PMNS CP phase: δ_CP ≈ 197° (T2K/NOvA), still poorly constrained
+    delta_PMNS_deg = 197
+    delta_PMNS = delta_PMNS_deg * math.pi / 180
+
+    # CKM Wolfenstein parameters
+    wolfenstein = [
+        ("λ (Cabibbo)", 0.22650),
+        ("A", 0.790),
+        ("ρ̄", 0.141),
+        ("η̄", 0.357),
+        ("λ²", 0.22650**2),
+        ("Aλ²", 0.790 * 0.22650**2),
+    ]
+
+    wolf_results = []
+    for name, val in wolfenstein:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        wolf_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(
+        jarlskog=results,
+        delta_CKM_rad=delta_CKM,
+        phase_fraction=dict(value=phase_frac, C=C_pf, m=m_pf, lattice=lv_pf, rel_err=err_pf),
+        wolfenstein=wolf_results,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Inflation parameters
+# ---------------------------------------------------------------------------
+
+def inflation_analysis(lattice: List[LatticePoint]) -> dict:
+    """
+    Test inflationary observables: spectral index n_s, tensor-to-scalar
+    ratio r, amplitude A_s, and the number of e-folds N.
+    """
+    # CMB measurements (Planck 2018)
+    n_s = 0.9649          # spectral index
+    A_s = 2.1e-9          # scalar amplitude
+    r_upper = 0.036       # tensor-to-scalar ratio (BICEP/Keck 2021 upper bound)
+    N_efolds = 60         # typical number of e-folds
+
+    # Derived quantities
+    one_minus_ns = 1 - n_s  # = 0.0351, the tilt
+    ln_As = math.log(A_s)   # = -19.98
+
+    quantities = [
+        ("n_s", n_s),
+        ("1 - n_s (tilt)", one_minus_ns),
+        ("A_s × 10⁹", A_s * 1e9),
+        ("1/A_s", 1.0 / A_s),
+        ("N_e-folds", float(N_efolds)),
+        ("r (upper bound)", r_upper),
+        ("16(1-n_s)", 16 * one_minus_ns),
+        ("1/(1-n_s)", 1.0 / one_minus_ns),
+    ]
+
+    results = []
+    for name, val in quantities:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Power spectrum ratio: test if P_s / P_t is a lattice quantity
+    # At Starobinsky-like r = 0.004:
+    r_starobinsky = 0.004
+    # n_s = 1 - 2/N for quadratic inflation:  N = 2/(1-n_s) = 57
+    N_from_ns = 2.0 / one_minus_ns
+
+    # Slow-roll parameters from n_s
+    epsilon_from_ns = one_minus_ns / 2  # first-order estimate for single-field
+    eta_from_ns = (1 - n_s) / 2
+
+    slow_roll = [
+        ("ε ≈ (1-n_s)/2", epsilon_from_ns),
+        ("N ≈ 2/(1-n_s)", N_from_ns),
+        ("16ε (= r for single-field)", 16 * epsilon_from_ns),
+    ]
+
+    sr_results = []
+    for name, val in slow_roll:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        sr_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Inflation energy scale: V^{1/4} ~ (3π²A_s r / 2)^{1/4} M_Pl
+    M_Pl = 1.2209e19
+    if r_upper > 0:
+        V_quarter = (3 * math.pi**2 * A_s * r_upper / 2)**0.25 * M_Pl
+    else:
+        V_quarter = 0
+
+    return dict(
+        observables=results,
+        slow_roll=sr_results,
+        inflation_scale_GeV=V_quarter,
+        N_from_ns=N_from_ns,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Yukawa coupling hierarchy
+# ---------------------------------------------------------------------------
+
+def yukawa_hierarchy(lattice: List[LatticePoint]) -> dict:
+    """
+    The Yukawa couplings y_f = √2 m_f / v determine the mass spectrum.
+    Test whether inter-generation Yukawa ratios are lattice quantities,
+    and look for a generation formula.
+    """
+    v_H = 246.22  # GeV
+    sqrt2 = math.sqrt(2)
+
+    # Fermion masses (pole masses, GeV)
+    fermions = {
+        "u": 0.00216, "d": 0.00467, "e": 0.000511,
+        "c": 1.27, "s": 0.093, "μ": 0.10566,
+        "t": 172.69, "b": 4.18, "τ": 1.777,
+    }
+
+    yuks = {f: sqrt2 * m / v_H for f, m in fermions.items()}
+
+    # Inter-generation ratios within each charge sector
+    sectors = {
+        "up-type": ["u", "c", "t"],
+        "down-type": ["d", "s", "b"],
+        "charged leptons": ["e", "μ", "τ"],
+    }
+
+    inter_gen = []
+    for sector, names in sectors.items():
+        for i in range(len(names)):
+            for j in range(i+1, len(names)):
+                n1, n2 = names[i], names[j]
+                ratio = fermions[n2] / fermions[n1]
+                C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+                inter_gen.append(dict(
+                    sector=sector,
+                    ratio_name=f"m_{n2}/m_{n1}", ratio=ratio,
+                    C=C, m=m_idx, lattice=lv, rel_err=err,
+                ))
+
+    # Cross-sector same-generation ratios
+    cross_gen = []
+    for i, (u, d, l) in enumerate(zip(
+        ["u", "c", "t"], ["d", "s", "b"], ["e", "μ", "τ"]
+    )):
+        gen = i + 1
+        pairs = [(u, d), (u, l), (d, l)]
+        for a, b in pairs:
+            if fermions[a] > fermions[b]:
+                ratio = fermions[a] / fermions[b]
+                name = f"m_{a}/m_{b}"
+            else:
+                ratio = fermions[b] / fermions[a]
+                name = f"m_{b}/m_{a}"
+            C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+            cross_gen.append(dict(
+                generation=gen, ratio_name=name, ratio=ratio,
+                C=C, m=m_idx, lattice=lv, rel_err=err,
+            ))
+
+    # Test: does y_f = C_f / φ^{m_f} predict masses?
+    # If m_f/v = C_f/(√2 φ^{m_f}), then the Yukawa IS a lattice quantity.
+    yuk_lattice = []
+    for f, y in yuks.items():
+        C, m_idx, lv, err = nearest_lattice(y, lattice)
+        yuk_lattice.append(dict(
+            fermion=f, yukawa=y, C=C, m=m_idx, lattice=lv, rel_err=err,
+        ))
+
+    # Generation spacing: are the m-separations between generations constant?
+    for sector, names in sectors.items():
+        masses = [fermions[n] for n in names]
+        for i in range(len(masses)-1):
+            ratio = masses[i+1] / masses[i]
+            log_phi = math.log(ratio) / math.log(PHI)
+            inter_gen_for_sector = [ig for ig in inter_gen
+                                    if ig['sector'] == sector and
+                                    ig['ratio_name'] == f"m_{names[i+1]}/m_{names[i]}"]
+            if inter_gen_for_sector:
+                inter_gen_for_sector[0]['phi_power'] = log_phi
+
+    return dict(
+        inter_generation=inter_gen,
+        cross_sector=cross_gen,
+        yukawa_lattice=yuk_lattice,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Vacuum energy / cosmological constant
+# ---------------------------------------------------------------------------
+
+def vacuum_energy_analysis(lattice: List[LatticePoint]) -> dict:
+    """
+    The cosmological constant problem: ρ_vac / ρ_Pl ≈ 10⁻¹²² is the
+    most extreme fine-tuning in physics. Test lattice representations.
+    """
+    # Observed vacuum energy density
+    rho_vac = 2.846e-47  # GeV⁴ (from Λ = 1.1056e-52 m⁻²)
+    rho_Pl = 2.22e76     # GeV⁴ (Planck energy density)
+
+    ratio_vac_Pl = rho_vac / rho_Pl  # ≈ 1.28e-123
+
+    # In lattice terms: can this extreme number be expressed?
+    # log_φ(ρ_Pl/ρ_vac) should give us a lattice index
+    log_phi_ratio = math.log(rho_Pl / rho_vac) / math.log(PHI)
+
+    # ρ_vac^{1/4} ≈ 2.3 meV — the dark energy scale
+    rho_vac_quarter = rho_vac**0.25  # GeV
+
+    m_e_GeV = 0.000511
+    m_p_GeV = 0.938272
+
+    quantities = [
+        ("ρ_vac^{1/4} / m_e", rho_vac_quarter / m_e_GeV),
+        ("ρ_vac^{1/4} [meV]  (× 10³)", rho_vac_quarter * 1e3 * 1e3),
+        ("m_e / ρ_vac^{1/4}", m_e_GeV / rho_vac_quarter),
+        ("(m_e/M_Pl)⁴", (m_e_GeV / 1.2209e19)**4),
+        ("Ω_Λ", 0.6889),
+        ("Ω_Λ / Ω_m", 0.6889 / 0.3111),
+        ("1 - Ω_Λ", 1 - 0.6889),
+        ("H₀ / (100 km/s/Mpc)", 67.36 / 100),
+        ("H₀ [km/s/Mpc]", 67.36),
+        ("Age of universe × H₀", 13.787e9 * 67.36 / (3.086e22 / 3.156e7 / 1e3)),
+    ]
+
+    results = []
+    for name, val in quantities:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # The CC problem on the lattice: ρ_Pl/ρ_vac = φ^N where N ≈ ?
+    nearest_int_phi = round(log_phi_ratio)
+    phi_err = (log_phi_ratio - nearest_int_phi) / nearest_int_phi
+
+    return dict(
+        quantities=results,
+        rho_vac_over_Pl=ratio_vac_Pl,
+        log_phi_ratio=log_phi_ratio,
+        nearest_phi_power=nearest_int_phi,
+        phi_power_err=phi_err,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Hidden symmetries of the (C,m) grid
+# ---------------------------------------------------------------------------
+
+def grid_symmetries(lattice: List[LatticePoint]) -> dict:
+    """
+    Search for reflection, rotation, and translation symmetries
+    in the occupied (C, m) sites.
+    """
+    occupied = [
+        (360, -3), (180, -3), (120, -1), (60, -1), (360, -1), (180, -1),
+        (15, -2), (360, 2), (45, 2), (45, 3), (60, 3), (120, 3), (180, 3),
+        (15, 4), (60, 4), (15, 5), (60, 5), (45, 6), (120, 6), (360, 6),
+        (15, 7), (45, 7), (360, 10), (120, 10), (45, 11), (60, 11),
+        (180, 12), (360, 12), (120, 24),
+    ]
+
+    site_set = set(occupied)
+    m_vals = [m for _, m in occupied]
+    c_vals = [c for c, _ in occupied]
+
+    m_center = sum(m_vals) / len(m_vals)
+
+    # Test m-reflection: how many sites have a "partner" at m' = 2×m_center - m?
+    reflection_pairs = 0
+    for c, m in occupied:
+        m_mirror = round(2 * m_center - m)
+        if (c, m_mirror) in site_set and m != m_mirror:
+            reflection_pairs += 1
+    reflection_frac = reflection_pairs / len(occupied)
+
+    # Test C-duality: for each (C, m), does (360/C, m) exist?
+    c_dual_pairs = 0
+    for c, m in occupied:
+        dual_c = 360.0 / c if c > 0 else 0
+        for c2, m2 in occupied:
+            if m2 == m and abs(c2 - dual_c) < 0.01:
+                c_dual_pairs += 1
+                break
+    c_dual_frac = c_dual_pairs / len(occupied)
+
+    # Test m-translation: is there a Δm such that many sites shift into other sites?
+    translation_scores = {}
+    for dm in range(-20, 21):
+        if dm == 0:
+            continue
+        hits = sum(1 for c, m in occupied if (c, m + dm) in site_set)
+        translation_scores[dm] = hits
+
+    best_translations = sorted(translation_scores.items(), key=lambda x: -x[1])[:5]
+
+    # C-band permutation symmetry: which C-value pairs appear together
+    # at the same m-values?
+    from collections import defaultdict
+    c_pairs = defaultdict(int)
+    m_to_cs = defaultdict(set)
+    for c, m in occupied:
+        m_to_cs[m].add(c)
+
+    for m, cs in m_to_cs.items():
+        cs_list = sorted(cs)
+        for i in range(len(cs_list)):
+            for j in range(i+1, len(cs_list)):
+                c_pairs[(cs_list[i], cs_list[j])] += 1
+
+    best_c_pairs = sorted(c_pairs.items(), key=lambda x: -x[1])[:8]
+
+    # Diagonal symmetry: (C, m) → (C', m') where C'/C = φ^(m-m')?
+    diagonal_hits = 0
+    for i in range(len(occupied)):
+        for j in range(i+1, len(occupied)):
+            c1, m1 = occupied[i]
+            c2, m2 = occupied[j]
+            if m1 == m2:
+                continue
+            predicted_ratio = PHI**(m1 - m2)
+            actual_ratio = c2 / c1
+            if abs(predicted_ratio - actual_ratio) / max(predicted_ratio, 0.01) < 0.05:
+                diagonal_hits += 1
+
+    return dict(
+        n_sites=len(occupied),
+        m_center=m_center,
+        m_reflection_frac=reflection_frac,
+        c_dual_frac=c_dual_frac,
+        best_translations=best_translations,
+        best_c_pairs=best_c_pairs,
+        diagonal_hits=diagonal_hits,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Comprehensive score card
+# ---------------------------------------------------------------------------
+
+def comprehensive_scorecard(lattice: List[LatticePoint]) -> dict:
+    """
+    Compile all tested quantities into one scorecard:
+    sub-1%, sub-3%, sub-5%, >5%.
+    """
+    ALL_QUANTITIES = [
+        ("1/α_em", 137.036),
+        ("1/α_s(M_Z)", 1/0.1180),
+        ("sin²θ_W", 0.23122),
+        ("m_p/m_e", 1836.15),
+        ("m_μ/m_e", 206.768),
+        ("m_τ/m_e", 3477.23),
+        ("m_W/m_Z", 80.379/91.1876),
+        ("m_H/m_W", 125.25/80.379),
+        ("m_t/m_W", 172.69/80.379),
+        ("m_Z/v_H", 91.1876/246.22),
+        ("m_p/m_π", 938.272/139.570),
+        ("(m_n-m_p)/m_e", (939.565-938.272)/0.511),
+        ("BE/A(⁵⁶Fe)/m_e", (492.258/56)/0.511),
+        ("f_π/Λ_QCD", 92.2/217),
+        ("√σ/f_π", 440/92.2),
+        ("m_p/f_π", 938.272/92.2),
+        ("4πf²/m_p²", 4*3.14159*92.2**2/938.272**2),
+        ("J_PMNS", 0.033),
+        ("1/J_CKM", 1/3.18e-5),
+        ("λ_Cabibbo", 0.2265),
+        ("A (Wolf.)", 0.790),
+        ("ρ̄ (Wolf.)", 0.141),
+        ("n_s", 0.9649),
+        ("N_e-folds", 60.0),
+        ("1/A_s", 1/2.1e-9),
+        ("1/(1-n_s)", 1/0.0351),
+        ("16(1-n_s)", 16*0.0351),
+        ("K±/π", 493.68/139.57),
+        ("Ds/π", 1968.35/139.57),
+        ("p/π", 938.272/139.57),
+        ("η/π⁰", 547.86/134.977),
+        ("Σ⁻/p", 1197.45/938.272),
+        ("m_H/v_H", 125.25/246.22),
+        ("m_t/v_H", 172.69/246.22),
+        ("M_Pl/m_p × φ⁻⁹¹", 1.3012e19 / PHI**91),
+        ("Ω_Λ/Ω_m", 0.6889/0.3111),
+        ("H₀/100", 67.36/100),
+        ("m_c/m_u", 1270/2.16),
+        ("m_t/m_c", 172690/1270),
+        ("m_b/m_s", 4180/93),
+        ("m_s/m_d", 93/4.67),
+        ("m_τ/m_μ", 1776.86/105.66),
+        ("m_μ/m_e  (problem)", 206.768),
+        ("magic 82/28", 82/28),
+        ("a_V/a_S", 15.56/17.23),
+        ("Ω_DM", 0.266),
+        ("m_W²/m_Z²", (80.379/91.1876)**2),
+    ]
+
+    results = []
+    for name, val in ALL_QUANTITIES:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    results.sort(key=lambda x: abs(x['rel_err']))
+
+    n_total = len(results)
+    n_sub1 = sum(1 for r in results if abs(r['rel_err']) < 0.01)
+    n_sub3 = sum(1 for r in results if abs(r['rel_err']) < 0.03)
+    n_sub5 = sum(1 for r in results if abs(r['rel_err']) < 0.05)
+    n_over5 = n_total - n_sub5
+
+    # C-band distribution
+    from collections import Counter
+    c_dist = Counter(r['C'] for r in results)
+
+    return dict(
+        all_results=results,
+        n_total=n_total,
+        n_sub1=n_sub1,
+        n_sub3=n_sub3,
+        n_sub5=n_sub5,
+        n_over5=n_over5,
+        c_distribution=dict(c_dist),
+    )
+
+def nuclear_physics_analysis(lattice: List[LatticePoint]) -> dict:
+    """
+    Test nuclear physics quantities: binding energies, magic numbers,
+    nuclear force range, and key nuclear ratios.
+    """
+    # Masses in MeV
+    m_p = 938.272
+    m_n = 939.565
+    m_pi_charged = 139.570
+    m_pi_zero = 134.977
+    m_e = 0.510999
+
+    # Nuclear binding energies (total, in MeV)
+    deuteron_BE = 2.2246  # MeV
+    He4_BE = 28.296       # MeV  (alpha particle)
+    C12_BE = 92.162       # MeV
+    O16_BE = 127.619      # MeV
+    Fe56_BE = 492.258     # MeV  (most tightly bound per nucleon)
+
+    # Key nuclear dimensionless ratios
+    ratios = [
+        ("m_n/m_p", m_n / m_p),
+        ("m_p/m_π±", m_p / m_pi_charged),
+        ("m_p/m_e", m_p / m_e),
+        ("m_n - m_p [MeV]  /  m_e", (m_n - m_p) / m_e),
+        ("BE(d) / m_π", deuteron_BE / m_pi_charged),
+        ("BE(⁴He) / m_π", He4_BE / m_pi_charged),
+        ("BE(¹²C) / m_π", C12_BE / m_pi_charged),
+        ("BE(¹⁶O) / m_π", O16_BE / m_pi_charged),
+        ("BE(⁵⁶Fe) / m_π", Fe56_BE / m_pi_charged),
+        ("BE/A(⁴He) [MeV]  /  m_e", (He4_BE / 4) / m_e),
+        ("BE/A(⁵⁶Fe) [MeV] / m_e", (Fe56_BE / 56) / m_e),
+        ("BE/A(⁵⁶Fe) / BE/A(d)", (Fe56_BE / 56) / (deuteron_BE / 2)),
+        ("Nuclear range m_p/m_π", m_p / m_pi_charged),
+        ("Compton/nuclear: m_π/m_p", m_pi_charged / m_p),
+    ]
+
+    results = []
+    for name, val in ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Nuclear magic numbers: 2, 8, 20, 28, 50, 82, 126
+    magic = [2, 8, 20, 28, 50, 82, 126]
+    magic_results = []
+    for n in magic:
+        C, m_idx, lv, err = nearest_lattice(float(n), lattice)
+        magic_results.append(dict(
+            magic_number=n, C=C, m=m_idx, lattice=lv, rel_err=err,
+        ))
+
+    # Ratios between magic numbers
+    magic_ratios = []
+    for i in range(len(magic)):
+        for j in range(i+1, len(magic)):
+            ratio = magic[j] / magic[i]
+            C, m_idx, lv, err = nearest_lattice(ratio, lattice)
+            if abs(err) < 0.05:
+                magic_ratios.append(dict(
+                    pair=f"{magic[j]}/{magic[i]}", ratio=ratio,
+                    C=C, m=m_idx, lattice=lv, rel_err=err,
+                ))
+    magic_ratios.sort(key=lambda x: abs(x['rel_err']))
+
+    # Semi-empirical mass formula coefficients (Bethe-Weizsäcker)
+    a_V = 15.56   # volume term (MeV)
+    a_S = 17.23   # surface term
+    a_C = 0.697   # Coulomb term
+    a_A = 23.29   # asymmetry term
+    a_P = 12.0    # pairing term
+
+    bethe_ratios = [
+        ("a_V/m_π", a_V / m_pi_charged),
+        ("a_S/m_π", a_S / m_pi_charged),
+        ("a_A/m_π", a_A / m_pi_charged),
+        ("a_V/a_S", a_V / a_S),
+        ("a_A/a_V", a_A / a_V),
+        ("a_V/m_e", a_V / m_e),
+    ]
+
+    bethe_results = []
+    for name, val in bethe_ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        bethe_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(
+        nuclear_ratios=results,
+        magic_numbers=magic_results,
+        magic_ratios=magic_ratios,
+        bethe_weiszacker=bethe_results,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Astrophysical mass scales
+# ---------------------------------------------------------------------------
+
+def astrophysical_scales(lattice: List[LatticePoint]) -> dict:
+    """
+    Test fundamental astrophysical scales: Chandrasekhar mass, Jeans mass
+    at recombination, Eddington luminosity ratio, etc.
+    """
+    m_e_GeV = 0.000510999
+    m_p_GeV = 0.938272
+    M_Pl_GeV = 1.2209e19
+    M_sun_GeV = 1.116e57  # solar mass in GeV
+    alpha_em = 1.0 / 137.036
+    alpha_G = (m_p_GeV / M_Pl_GeV)**2  # gravitational fine structure constant
+
+    # Chandrasekhar mass: M_Ch ~ M_Pl³/m_p² ≈ 1.4 M_sun
+    M_Ch_over_Msun = 1.44
+    # In Planck units: M_Ch/m_p ~ (M_Pl/m_p)³ (schematic)
+    M_Pl_over_mp = M_Pl_GeV / m_p_GeV
+
+    # Key astrophysical dimensionless ratios
+    ratios = [
+        ("M_Pl/m_p", M_Pl_GeV / m_p_GeV),
+        ("M_Pl/m_e", M_Pl_GeV / m_e_GeV),
+        ("M_☉/m_p", M_sun_GeV / m_p_GeV),
+        ("M_Ch/M_☉", M_Ch_over_Msun),
+        ("1/α_G (= M_Pl²/m_p²)", 1.0 / alpha_G),
+        ("α_em/α_G", alpha_em / alpha_G),
+        ("√(α_em/α_G)", math.sqrt(alpha_em / alpha_G)),
+        ("(m_e/m_p)²", (m_e_GeV / m_p_GeV)**2),
+        ("α_em × m_p/m_e", alpha_em * m_p_GeV / m_e_GeV),
+    ]
+
+    results = []
+    for name, val in ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Dirac large numbers: are the famous large-number coincidences
+    # lattice relations?
+    # N1 = e²/(G m_e m_p) ~ 10^39  →  1/α_G × α_em
+    N1 = alpha_em / alpha_G
+    # N2 = age of universe / (e²/(m_e c³)) ~ 10^40
+    # N3 = number of baryons in observable universe ~ 10^80
+    # N1² ~ N3 (Dirac's observation)
+
+    large_numbers = [
+        ("N1 = α_em/α_G", N1),
+        ("√N1", math.sqrt(N1)),
+        ("N1²  (≈ N_baryons?)", N1**2),
+        ("log₁₀(N1)", math.log10(N1)),
+    ]
+
+    ln_results = []
+    for name, val in large_numbers:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        ln_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # φ-power test: is M_Pl/m_p a power of φ?
+    log_phi_mp = math.log(M_Pl_GeV / m_p_GeV) / math.log(PHI)
+    nearest_phi_pow = round(log_phi_mp)
+    phi_err = (log_phi_mp - nearest_phi_pow) / nearest_phi_pow
+
+    return dict(
+        astro_ratios=results,
+        large_numbers=ln_results,
+        MPl_over_mp_phi_power=log_phi_mp,
+        nearest_phi_power=nearest_phi_pow,
+        phi_power_err=phi_err,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lattice bootstrap: derive table from seeds
+# ---------------------------------------------------------------------------
+
+def lattice_bootstrap(lattice: List[LatticePoint]) -> dict:
+    """
+    Can we reconstruct the observed lattice addresses from a small set
+    of 'seed' quantities plus lattice arithmetic?
+
+    Hypothesis: start from {α_em, α_s, sin²θ_W} at M_Z, and derive
+    everything else using φ-multiplication and C-band transitions.
+    """
+    # Seed values at M_Z
+    seeds = {
+        "1/α_em": (120, -1, 120 * PHI),           # = 194.16... actual 137.036
+        "1/α_s(M_Z)": (60, 4, 60 / PHI**4),       # = 8.75... actual 8.47
+        "sin²θ_W": (120, 13, 120 / PHI**13),       # actual 0.23122
+    }
+
+    # Actually, let's use the measured values and their actual lattice addresses
+    measured = [
+        ("1/α_em", 137.036, 120, -1),
+        ("1/α_s(M_Z)", 1/0.1180, 60, 4),
+        ("sin²θ_W(M_Z)", 0.23122, 120, 13),
+        ("m_p/m_e", 1836.15, 360, -3),
+        ("m_W/m_e", 80379/0.511, 360, -15),
+    ]
+
+    # For each measured quantity's lattice address (C, m), what other
+    # quantities can we reach by simple operations?
+    derivations = []
+
+    for name, val, C, m in measured:
+        # Multiply by φ (shift m by -1)
+        target_val_up = C / PHI**(m - 1)
+        C_up, m_up, lv_up, err_up = nearest_lattice(target_val_up, lattice)
+
+        # Divide by φ (shift m by +1)
+        target_val_dn = C / PHI**(m + 1)
+        C_dn, m_dn, lv_dn, err_dn = nearest_lattice(target_val_dn, lattice)
+
+        derivations.append(dict(
+            source=name, source_addr=(C, m),
+            phi_up=dict(predicted=target_val_up, C=C_up, m=m_up, err=err_up),
+            phi_dn=dict(predicted=target_val_dn, C=C_dn, m=m_dn, err=err_dn),
+        ))
+
+    # Test: can we derive the GUT unification from seeds?
+    # At M_GUT, all three couplings ≈ (15, -2) = 39.27
+    # From 1/α_em = (120, -1): divide by φ³ → (120, 2) = 45.84 (not quite)
+    # From 1/α_s = (60, 4): multiply by φ⁶ → (60, -2) = 60φ² = 156.98 (no)
+    # Cross-band: (120, -1) → (15, -2) requires C: 120→15 (÷8) and m: -1→-2 (shift -1)
+
+    # Minimal seed set test: what fraction of the full address table
+    # can we reach from just {(15,-2), (60,0), (120,-1)} using:
+    #   - φ-shifts (m → m±1)
+    #   - C-band jumps at same m
+    seed_addrs = {(15, -2), (60, 0), (120, -1)}
+    reachable = set(seed_addrs)
+    MAX_HOPS = 30
+
+    # All C values in lattice
+    c_values = sorted(set(lp.C for lp in lattice))
+
+    for _hop in range(MAX_HOPS):
+        new = set()
+        for c, m in reachable:
+            # φ-shift
+            new.add((c, m + 1))
+            new.add((c, m - 1))
+            # C-band jump at same m
+            for c2 in c_values:
+                new.add((c2, m))
+        reachable |= new
+
+    # Which occupied sites are reachable?
+    occupied_addrs = set()
+    for lp in lattice:
+        occupied_addrs.add((lp.C, lp.m))
+
+    # With unlimited hops, everything is trivially reachable.
+    # More interesting: minimum number of hops to reach each site.
+    distances = {}
+    frontier = list(seed_addrs)
+    visited = {s: 0 for s in seed_addrs}
+
+    while frontier:
+        next_frontier = []
+        for c, m in frontier:
+            d = visited[(c, m)]
+            neighbors = [(c, m+1), (c, m-1)] + [(c2, m) for c2 in c_values]
+            for nb in neighbors:
+                if nb not in visited:
+                    visited[nb] = d + 1
+                    next_frontier.append(nb)
+        frontier = next_frontier
+        if frontier and visited[frontier[0]] > 20:
+            break
+
+    # For known physical quantities, report distances
+    known_sites = [
+        ("1/α_em", 120, -1),
+        ("1/α_s", 60, 4),
+        ("GUT coupling", 15, -2),
+        ("m_p/m_e", 360, -3),
+        ("m_e/m_μ (approx)", 120, 10),
+        ("Ω_DM", 360, 15),
+        ("n_s", 45, 8),
+        ("Cabibbo angle", 45, 11),
+    ]
+
+    site_distances = []
+    for name, c, m in known_sites:
+        d = visited.get((c, m), -1)
+        site_distances.append(dict(name=name, C=c, m=m, hops=d))
+
+    return dict(
+        derivations=derivations,
+        site_distances=site_distances,
+        seeds=list(seed_addrs),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Coupling constant ratios at multiple scales
+# ---------------------------------------------------------------------------
+
+def coupling_ratio_evolution(lattice: List[LatticePoint]) -> dict:
+    """
+    Track ratios between gauge couplings as energy increases.
+    Test whether these ratios are lattice quantities.
+    """
+    # SM 1-loop beta coefficients (for 1/α)
+    b1 = 41.0 / (6.0 * 2 * math.pi)
+    b2 = -19.0 / (6.0 * 2 * math.pi)
+    b3 = -7.0 / (2 * math.pi)
+
+    m_Z = 91.1876
+    a1_inv_0 = 59.01
+    a2_inv_0 = 29.57
+    a3_inv_0 = 8.47
+
+    # Evaluate at several energy scales
+    energies = [1, 10, 91.2, 1e3, 1e4, 1e6, 1e8, 1e10, 1e12, 1e14, 1e16]
+
+    rows = []
+    for E in energies:
+        t = math.log(E / m_Z)
+        a1_inv = a1_inv_0 + b1 * t
+        a2_inv = a2_inv_0 + b2 * t
+        a3_inv = a3_inv_0 + b3 * t
+
+        if a3_inv <= 0:
+            continue
+
+        r12 = a1_inv / a2_inv
+        r13 = a1_inv / a3_inv
+        r23 = a2_inv / a3_inv
+
+        ratios = [
+            ("α₁⁻¹/α₂⁻¹", r12),
+            ("α₁⁻¹/α₃⁻¹", r13),
+            ("α₂⁻¹/α₃⁻¹", r23),
+        ]
+
+        row_results = dict(E_GeV=E)
+        for name, val in ratios:
+            C, m_idx, lv, err = nearest_lattice(val, lattice)
+            row_results[name] = dict(value=val, C=C, m=m_idx, rel_err=err)
+        rows.append(row_results)
+
+    # Special: at what energy do ratios become exact lattice values?
+    best_ratio_hits = []
+    for log_E in [x * 0.1 for x in range(0, 170)]:
+        E = 10**log_E
+        t = math.log(E / m_Z)
+        a1_inv = a1_inv_0 + b1 * t
+        a2_inv = a2_inv_0 + b2 * t
+        a3_inv = a3_inv_0 + b3 * t
+        if a2_inv <= 0 or a3_inv <= 0:
+            continue
+
+        for name, val in [("α₁⁻¹/α₂⁻¹", a1_inv/a2_inv),
+                          ("α₂⁻¹/α₃⁻¹", a2_inv/a3_inv)]:
+            C, m_idx, lv, err = nearest_lattice(val, lattice)
+            if abs(err) < 0.005:
+                best_ratio_hits.append(dict(
+                    ratio=name, E_GeV=E, value=val,
+                    C=C, m=m_idx, rel_err=err,
+                ))
+
+    best_ratio_hits.sort(key=lambda x: abs(x['rel_err']))
+
+    return dict(
+        evolution=rows,
+        best_hits=best_ratio_hits[:15],
+    )
+
+
+# ---------------------------------------------------------------------------
+# QCD non-perturbative observables
+# ---------------------------------------------------------------------------
+
+def qcd_observables(lattice: List[LatticePoint]) -> dict:
+    """
+    Test QCD non-perturbative quantities against the lattice:
+    string tension, gluon condensate, topological susceptibility, etc.
+    """
+    m_pi = 0.13957  # GeV
+    m_p = 0.938272
+    f_pi = 0.0922   # pion decay constant (GeV)
+    Lambda_QCD = 0.217  # GeV (MS-bar, Nf=5)
+
+    # QCD string tension: σ ≈ (440 MeV)² → √σ = 0.440 GeV
+    sqrt_sigma = 0.440  # GeV
+
+    # Gluon condensate: <αs/π G²> ≈ 0.012 GeV⁴
+    # → (αs/π G²)^{1/4} ≈ 0.33 GeV
+    gluon_cond_quarter = 0.33  # GeV
+
+    # Topological susceptibility: χ^{1/4} ≈ 75.5 MeV (quenched)
+    chi_quarter = 0.0755  # GeV
+
+    # Dimensionless QCD ratios
+    ratios = [
+        ("m_p/Λ_QCD", m_p / Lambda_QCD),
+        ("√σ / Λ_QCD", sqrt_sigma / Lambda_QCD),
+        ("f_π / Λ_QCD", f_pi / Lambda_QCD),
+        ("m_p / f_π", m_p / f_pi),
+        ("m_π / f_π", m_pi / f_pi),
+        ("√σ / m_p", sqrt_sigma / m_p),
+        ("√σ / f_π", sqrt_sigma / f_pi),
+        ("m_p / √σ", m_p / sqrt_sigma),
+        ("χ^{1/4} / f_π", chi_quarter / f_pi),
+        ("m_π / Λ_QCD", m_pi / Lambda_QCD),
+        ("f_π / m_π", f_pi / m_pi),
+        ("4πf_π²/m_p²  (≈ σ_πN)", 4 * math.pi * f_pi**2 / m_p**2),
+    ]
+
+    results = []
+    for name, val in ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Regge trajectory: α'(0) ≈ 0.88 GeV⁻², m² = α'⁻¹ × (n + α₀)
+    # Test: Regge slope in units of m_p
+    alpha_prime = 0.88  # GeV⁻²
+    regge_dimensionless = alpha_prime * m_p**2
+    C_r, m_r, lv_r, err_r = nearest_lattice(regge_dimensionless, lattice)
+
+    return dict(
+        qcd_ratios=results,
+        regge=dict(
+            alpha_prime_mp2=regge_dimensionless,
+            C=C_r, m=m_r, lattice=lv_r, rel_err=err_r,
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Black hole thermodynamics
+# ---------------------------------------------------------------------------
+
+def black_hole_thermodynamics(lattice: List[LatticePoint]) -> dict:
+    """
+    Test black hole thermodynamics quantities:
+    - Bekenstein-Hawking entropy S = A/(4 l_Pl²)
+    - Hawking temperature T_H = ℏc³/(8πGMk_B)
+    - Key dimensionless ratios involving M_BH and M_Pl
+    """
+    M_Pl = 1.2209e19  # GeV
+    m_p = 0.938272
+
+    # For a solar-mass black hole:
+    M_sun_GeV = 1.116e57
+    # Schwarzschild radius r_s = 2GM/c² → dimensionless ratio r_s/l_Pl
+    # S_BH = 4π(GM/c²)² / l_Pl² = 4π(M/M_Pl)²
+    # For M = M_sun: S ~ 10^77
+
+    # Test: Bekenstein-Hawking entropy of a Planck-mass BH
+    # S = 4π ≈ 12.566
+    S_planck = 4 * math.pi
+    C_sp, m_sp, lv_sp, err_sp = nearest_lattice(S_planck, lattice)
+
+    # Hawking temperature for M_Pl BH: T_H = M_Pl/(8π) in natural units
+    # T_H/M_Pl = 1/(8π) ≈ 0.03979
+    T_ratio = 1.0 / (8 * math.pi)
+    C_t, m_t, lv_t, err_t = nearest_lattice(T_ratio, lattice)
+
+    # Key dimensionless BH quantities
+    bh_ratios = [
+        ("4π (Planck BH entropy)", 4 * math.pi),
+        ("8π (inverse Hawking T ratio)", 8 * math.pi),
+        ("1/(8π)", 1.0 / (8 * math.pi)),
+        ("4π² (area quantum?)", 4 * math.pi**2),
+        ("32π² (entropy production)", 32 * math.pi**2),
+        ("π (fundamental)", math.pi),
+        ("2π", 2 * math.pi),
+        ("4π/3 (sphere volume factor)", 4 * math.pi / 3),
+    ]
+
+    results = []
+    for name, val in bh_ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # Minimum BH mass that evaporates in age of universe
+    # t_evap ~ M³/(M_Pl⁴) × constant → M_min ~ (t_univ × M_Pl⁴)^{1/3}
+    # M_min ~ 5×10¹¹ kg ~ 2.8×10³⁸ GeV
+    # M_min/M_Pl = 2.8e38/1.22e19 ~ 2.3e19
+    M_min_over_Mpl = 2.3e19
+    C_mm, m_mm, lv_mm, err_mm = nearest_lattice(M_min_over_Mpl, lattice)
+
+    # Chandrasekhar limit as M_Pl³/m_p² (schematic)
+    M_Ch_schematic = M_Pl**3 / m_p**2
+    # log_φ of this
+    log_phi_Ch = math.log(M_Ch_schematic) / math.log(PHI)
+
+    return dict(
+        bh_ratios=results,
+        planck_bh_entropy=dict(value=S_planck, C=C_sp, m=m_sp, rel_err=err_sp),
+        hawking_T_ratio=dict(value=T_ratio, C=C_t, m=m_t, rel_err=err_t),
+        M_min_over_Mpl=dict(value=M_min_over_Mpl, C=C_mm, m=m_mm, rel_err=err_mm),
+        log_phi_Chandrasekhar=log_phi_Ch,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lepton universality tests
+# ---------------------------------------------------------------------------
+
+def lepton_universality(lattice: List[LatticePoint]) -> dict:
+    """
+    Test quantities related to lepton universality and B-physics anomalies.
+    R(D), R(D*), R(K), R(K*) — ratios that should be ~1 if leptons
+    are universal but show experimental tensions.
+    """
+    # B-meson masses
+    m_B = 5.27934   # GeV (B±)
+    m_Bs = 5.36688  # GeV
+    m_D = 1.86966   # GeV (D±)
+    m_Dstar = 2.01026  # GeV (D*±)
+
+    # Lepton universality ratios (SM predictions)
+    R_D_SM = 0.298     # R(D) = Br(B→Dτν)/Br(B→Dlν)
+    R_Dstar_SM = 0.254 # R(D*)
+    R_K_SM = 1.0       # R(K) = Br(B→Kμμ)/Br(B→Kee) — SM prediction
+    R_Kstar_SM = 1.0   # R(K*)
+
+    # Experimental values (world averages ~2023)
+    R_D_exp = 0.342    # tension ~2σ
+    R_Dstar_exp = 0.287 # tension ~3σ
+
+    # Mass ratios of B-physics mesons
+    meson_ratios = [
+        ("m_B/m_D", m_B / m_D),
+        ("m_B/m_D*", m_B / m_Dstar),
+        ("m_Bs/m_B", m_Bs / m_B),
+        ("m_D*/m_D", m_Dstar / m_D),
+        ("m_B/m_τ", m_B / 1.777),
+        ("m_B/m_b", m_B / 4.18),
+        ("m_D/m_c", m_D / 1.27),
+    ]
+
+    meson_results = []
+    for name, val in meson_ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        meson_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    # R-ratios on lattice
+    r_ratios = [
+        ("R(D) SM", R_D_SM),
+        ("R(D*) SM", R_Dstar_SM),
+        ("R(D) exp", R_D_exp),
+        ("R(D*) exp", R_Dstar_exp),
+        ("R(D)_exp / R(D)_SM", R_D_exp / R_D_SM),
+        ("R(D*)_exp / R(D*)_SM", R_Dstar_exp / R_Dstar_SM),
+    ]
+
+    r_results = []
+    for name, val in r_ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        r_results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(
+        meson_ratios=meson_results,
+        r_ratios=r_results,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Why base 360? Derivation from first principles
+# ---------------------------------------------------------------------------
+
+def base_360_derivation() -> dict:
+    """
+    Attempt to derive base=360 from gauge group properties alone,
+    without assuming it.
+    """
+    # Standard Model gauge group: SU(3) × SU(2) × U(1)
+    groups = [
+        ("SU(3)", 8, 3, 6, 4),   # dim, rank, Coxeter h, dual Coxeter
+        ("SU(2)", 3, 1, 2, 2),
+        ("U(1)",  1, 1, 1, 1),
+    ]
+
+    # Candidate base constructions
+    candidates = {}
+
+    # Product of dimensions: 8 × 3 × 1 = 24 = dim(SU(5))
+    prod_dim = 8 * 3 * 1
+    candidates["∏ dim"] = prod_dim
+
+    # Sum of dimensions: 8 + 3 + 1 = 12
+    sum_dim = 8 + 3 + 1
+    candidates["Σ dim"] = sum_dim
+
+    # Product of Coxeter: 6 × 2 × 1 = 12
+    prod_cox = 6 * 2 * 1
+    candidates["∏ h"] = prod_cox
+
+    # LCM of Coxeter: lcm(6, 2, 1) = 6
+    candidates["lcm(h)"] = 6
+
+    # Product of (dim × Coxeter): 48 × 6 × 1 = 288
+    candidates["∏(dim×h)"] = 8*6 * 3*2 * 1
+
+    # dim(SU(5)) = 24, h(SU(5)) = 5, 24 × 5 = 120
+    candidates["dim(SU5)×h(SU5)"] = 24 * 5
+
+    # Key: 360 = what?
+    # 360 = 24 × 15 = dim(SU(5)) × dim(SU(5))_adjoint_casimir?
+    # 360 = 8 × 45 = dim(SU(3)) × dim(SU(10)_antisym)?
+    # 360 = 12 × 30 = (8+3+1) × (5×6) = Σdim × h(SU(5))×h(SU(3))
+    # 360 = 6! / 2 = 720/2
+    # 360 = lcm(1..6) × k? lcm(1..6) = 60, 360/60 = 6 = h(SU(3))
+    candidates["lcm(1..6) × h(SU3)"] = 60 * 6
+    candidates["6!/2"] = 720 // 2
+
+    # Most elegant: 360 = Σdim × ∏h × (rank(SU5))
+    # = 12 × 6 × 5 = 360? No: 12 × 6 × 5 = 360! Yes!
+    candidates["Σdim × ∏h × rank(SU5)"] = sum_dim * prod_cox * 5
+    # Alternatively: 360 = 12 × 30 where 30 = dim(SU(5))+h(SU(5))+1 = 24+5+1=30
+    candidates["Σdim × (dim(SU5)+h(SU5)+1)"] = sum_dim * 30
+
+    # 360 divisors and their group-theory meanings
+    divs_360 = []
+    for d in range(1, 361):
+        if 360 % d == 0:
+            meanings = []
+            if d == 1: meanings.append("trivial")
+            if d == 2: meanings.append("rank(SU(2))+1")
+            if d == 3: meanings.append("dim(SU(2))")
+            if d == 4: meanings.append("rank(SU(3))+2")
+            if d == 5: meanings.append("h(SU(5)), rank(SU(5))")
+            if d == 6: meanings.append("h(SU(3))")
+            if d == 8: meanings.append("dim(SU(3))")
+            if d == 9: meanings.append("3²")
+            if d == 10: meanings.append("2×h(SU(5))")
+            if d == 12: meanings.append("Σ dim(SM)")
+            if d == 15: meanings.append("dim(SU(5))/Coxeter")
+            if d == 18: meanings.append("3×h(SU(3))")
+            if d == 20: meanings.append("magic number")
+            if d == 24: meanings.append("dim(SU(5))")
+            if d == 30: meanings.append("dim(SU(5))+h(SU(5))+1")
+            if d == 36: meanings.append("6²")
+            if d == 40: meanings.append("2×magic(20)")
+            if d == 45: meanings.append("C_dual_coxeter(SU(2))")
+            if d == 60: meanings.append("C_coxeter(SU(3))")
+            if d == 72: meanings.append("3×dim(SU(5))")
+            if d == 90: meanings.append("360/4")
+            if d == 120: meanings.append("C_coxeter(SU(2))")
+            if d == 180: meanings.append("C_coxeter(SU(3))×3")
+            if d == 360: meanings.append("base")
+            divs_360.append(dict(d=d, complement=360//d, meanings=meanings))
+
+    # τ(360) = 24 = dim(SU(5)) — the number of divisors IS the GUT dimension
+    n_divisors = len(divs_360)
+
+    # φ(360) = 96 = 4 × dim(SU(5)) — Euler totient
+    phi_360 = 360
+    for p in [2, 3, 5]:
+        phi_360 = phi_360 * (p - 1) // p
+
+    return dict(
+        candidates=candidates,
+        n_divisors=n_divisors,
+        euler_totient=phi_360,
+        divisors=divs_360,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Decompose 91 and 588 — number theory
+# ---------------------------------------------------------------------------
+
+def fine_tuning_integers() -> dict:
+    """
+    Analyze the number-theoretic properties of 91 (hierarchy) and 588 (CC).
+    """
+    def factorize(n):
+        factors = {}
+        d = 2
+        while d * d <= n:
+            while n % d == 0:
+                factors[d] = factors.get(d, 0) + 1
+                n //= d
+            d += 1
+        if n > 1:
+            factors[n] = factors.get(n, 0) + 1
+        return factors
+
+    def is_fibonacci(n):
+        a, b = 0, 1
+        while b < n:
+            a, b = b, a + b
+        return b == n
+
+    results = {}
+    for name, n in [("91 (hierarchy)", 91), ("588 (CC)", 588)]:
+        facts = factorize(n)
+        fib_decomp = []
+        rem = n
+        fibs = []
+        a, b = 1, 1
+        while b <= n:
+            fibs.append(b)
+            a, b = b, a + b
+        for f in reversed(fibs):
+            if f <= rem:
+                fib_decomp.append(f)
+                rem -= f
+
+        # Connection to group dimensions
+        connections = []
+        if n == 91:
+            connections.append("91 = 7 × 13")
+            connections.append("7 and 13 are Fibonacci-adjacent primes (F(3)=2,F(7)=13)")
+            connections.append("91 = T(13) = 13th triangular number")
+            connections.append("91 = dim(SU(14))/2 - 13 = (14²-1)/2 - 13 = 97.5 - no")
+            connections.append("91 ≈ 4 × dim(SU(5)) - 5 = 4×24 - 5")
+            connections.append("91 = 1+2+3+...+13")
+        if n == 588:
+            connections.append("588 = 4 × 147 = 4 × 3 × 49")
+            connections.append("588 = 12 × 49 = Σdim(SM) × 7²")
+            connections.append("588/91 = 6.46 ≈ h(SU(3)) + 0.46")
+            connections.append("588 = 24 × 24.5 ≈ dim(SU(5))²")
+            connections.append("588/4 = 147: for ρ_Pl/ρ_vac ~ (M_Pl/Λ)⁴, Λ = φ^147 × [unit]")
+
+        # Relationship between 91 and 588
+        ratio = 588 / 91
+        remainder = 588 % 91
+
+        results[name] = dict(
+            n=n,
+            factorization=facts,
+            zeckendorf=fib_decomp,
+            is_fibonacci=is_fibonacci(n),
+            connections=connections,
+        )
+
+    results["relationship"] = dict(
+        ratio=588/91,
+        remainder=588 % 91,
+        gcd=math.gcd(91, 588),
+        note_588_eq_91x6_plus_42="588 = 91×6 + 42, and 42 = dim(SU(3))×h(SU(3))-6 or just 6×7",
+        note_gcd="gcd(91,588) = 7: both share the factor 7",
+    )
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Mathematical constants on the lattice
+# ---------------------------------------------------------------------------
+
+def mathematical_constants(lattice: List[LatticePoint]) -> dict:
+    """
+    Test mathematical constants and their combinations against the lattice.
+    """
+    e = math.e
+    pi = math.pi
+
+    constants = [
+        ("e", e),
+        ("π", pi),
+        ("e²", e**2),
+        ("π²", pi**2),
+        ("eπ", e * pi),
+        ("e^π", e**pi),
+        ("π^e", pi**e),
+        ("e^(π√163) mod 1 (Ramanujan)", e**(pi * math.sqrt(163)) % 1),
+        ("ln(2)", math.log(2)),
+        ("ln(10)", math.log(10)),
+        ("√2", math.sqrt(2)),
+        ("√3", math.sqrt(3)),
+        ("√5", math.sqrt(5)),
+        ("(1+√5)/2 = φ", PHI),
+        ("φ²", PHI**2),
+        ("1/φ", 1.0 / PHI),
+        ("2π²/5 (ζ-related)", 2 * pi**2 / 5),
+        ("π²/6 = ζ(2)", pi**2 / 6),
+        ("π⁴/90 = ζ(4)", pi**4 / 90),
+        ("Euler-Mascheroni γ", 0.5772156649),
+        ("Catalan G", 0.9159655941),
+        ("Apéry ζ(3)", 1.2020569031),
+    ]
+
+    results = []
+    for name, val in constants:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(constants=results)
+
+
+# ---------------------------------------------------------------------------
+# Condensed matter / metrology constants
+# ---------------------------------------------------------------------------
+
+def condensed_matter_constants(lattice: List[LatticePoint]) -> dict:
+    """
+    Dimensionless ratios involving condensed matter and metrology constants.
+    """
+    alpha = 1.0 / 137.036
+    h_eV_s = 4.135667696e-15  # Planck constant in eV·s
+    e_C = 1.602176634e-19     # elementary charge in C
+    k_B_eV_K = 8.617333262e-5 # Boltzmann constant in eV/K
+    m_e_eV = 510999           # electron mass in eV
+
+    # Von Klitzing constant: R_K = h/e² = 25812.807 Ω
+    # Dimensionless: R_K / (ℏ/e² unit) = 1/(2α) (in SI)
+    inv_2alpha = 1.0 / (2 * alpha)
+
+    # Josephson constant: K_J = 2e/h
+    # Flux quantum: Φ₀ = h/(2e)
+    # Conductance quantum: G₀ = 2e²/h = 2α/(ℏ c) in natural units
+
+    # BCS gap ratio: 2Δ/(k_BT_c) = 3.528 (weak coupling)
+    BCS_gap = 3.528
+
+    # Landau level: ℏω_c = eB/m_e → dimensionless at B ~ 1T
+    # Fine structure in H-atom: E_n = -α²m_ec²/(2n²)
+    # → E_1/m_ec² = α²/2 = 2.66×10⁻⁵
+
+    pi = math.pi
+    ratios = [
+        ("1/(2α) (von Klitzing)", inv_2alpha),
+        ("2α (conductance quantum ratio)", 2 * alpha),
+        ("α² (fine structure energy scale)", alpha**2),
+        ("α²/2 (H ground state binding)", alpha**2 / 2),
+        ("α³ (Lamb shift order)", alpha**3),
+        ("BCS gap 2Δ/kT_c", BCS_gap),
+        ("Bohr magneton ratio (α/2)", alpha / 2),
+        ("Stefan-Boltzmann: π²/60", pi**2 / 60),
+        ("Debye T₃ law: 12π⁴/5", 12 * pi**4 / 5),
+        ("Sommerfeld: π²/3", pi**2 / 3),
+    ]
+
+    results = []
+    for name, val in ratios:
+        C, m_idx, lv, err = nearest_lattice(val, lattice)
+        results.append(dict(name=name, value=val, C=C, m=m_idx, lattice=lv, rel_err=err))
+
+    return dict(condensed_matter=results)
+
+
+# ---------------------------------------------------------------------------
+# Sharp lattice predictions
+# ---------------------------------------------------------------------------
+
+def sharp_predictions(lattice: List[LatticePoint]) -> dict:
+    """
+    Generate concrete, testable predictions from the lattice:
+    quantities that SHOULD be measured to specific values if
+    the framework is correct.
+    """
+    predictions = []
+
+    # 1. Muon mass from inter-band geometric mean (Candidate A)
+    pred_muon_A = math.sqrt(120 * 360)  # = √43200 = 207.85
+    predictions.append(dict(
+        name="m_μ/m_e (geometric mean prediction)",
+        predicted=pred_muon_A,
+        current_exp=206.768,
+        discrepancy_pct=(pred_muon_A / 206.768 - 1) * 100,
+        testable="Lattice-predicted ratio vs PDG; distinguishable with better theory",
+    ))
+
+    # 2. Neutrino mass ratio m3/m2 → (15, 2) = 15/φ² = 5.729
+    pred_m3_m2 = 15 / PHI**2
+    predictions.append(dict(
+        name="m₃/m₂ (neutrino mass ratio)",
+        predicted=pred_m3_m2,
+        current_exp=5.71,
+        discrepancy_pct=(pred_m3_m2 / 5.71 - 1) * 100,
+        testable="JUNO, Hyper-K, DUNE will measure Δm² to higher precision",
+    ))
+
+    # 3. Proton decay lifetime
+    M_Pl = 1.2209e19
+    M_GUT = M_Pl / (180 * PHI**3)
+    alpha_GUT = 1.0 / (15 * PHI**2)
+    m_p = 0.938272
+    hbar = 6.582e-25
+    tau_p = (M_GUT**4) / (alpha_GUT**2 * m_p**5) * hbar / 3.156e7
+    predictions.append(dict(
+        name="τ_p (proton lifetime)",
+        predicted=tau_p,
+        current_exp="> 2.4×10³⁴ yr (Super-K bound)",
+        discrepancy_pct=0,
+        testable="Hyper-Kamiokande will reach ~10³⁵ yr sensitivity",
+    ))
+
+    # 4. Dark matter mass from Higgs coincidence
+    # √(Ω_DM) × v_H ≈ m_H → DM mass ~ 125 GeV (Higgs portal)
+    predictions.append(dict(
+        name="m_DM (Higgs-portal candidate)",
+        predicted=125.5,
+        current_exp="unknown",
+        discrepancy_pct=0,
+        testable="LHC invisible Higgs width, direct detection (XENONnT, LZ)",
+    ))
+
+    # 5. sin²θ_W at low energy should approach lattice value
+    # (120, 13) = 120/φ¹³ = 0.23033
+    pred_sin2w = 120 / PHI**13
+    predictions.append(dict(
+        name="sin²θ_W(M_Z) lattice value",
+        predicted=pred_sin2w,
+        current_exp=0.23122,
+        discrepancy_pct=(pred_sin2w / 0.23122 - 1) * 100,
+        testable="Precision EW measurements at future e⁺e⁻ colliders (FCC-ee, CEPC)",
+    ))
+
+    # 6. Spectral index n_s → (45, 8) = 45/φ⁸
+    pred_ns = 45 / PHI**8
+    predictions.append(dict(
+        name="n_s (lattice prediction)",
+        predicted=pred_ns,
+        current_exp=0.9649,
+        discrepancy_pct=(pred_ns / 0.9649 - 1) * 100,
+        testable="CMB-S4, LiteBIRD will measure n_s to ±0.002",
+    ))
+
+    # 7. Cabibbo angle → (45, 11) = 45/φ¹¹
+    pred_lambda = 45 / PHI**11
+    predictions.append(dict(
+        name="λ_Cabibbo (lattice)",
+        predicted=pred_lambda,
+        current_exp=0.22650,
+        discrepancy_pct=(pred_lambda / 0.22650 - 1) * 100,
+        testable="Belle II, LHCb precision CKM measurements",
+    ))
+
+    # 8. Sum of neutrino masses
+    # From lattice NH: Σm_ν ≈ 59.7 meV
+    predictions.append(dict(
+        name="Σm_ν (lattice NH prediction)",
+        predicted=0.0597,
+        current_exp="< 0.12 eV (Planck + BAO)",
+        discrepancy_pct=0,
+        testable="KATRIN endpoint, cosmological surveys (Euclid, DESI)",
+    ))
+
+    return dict(predictions=predictions)
