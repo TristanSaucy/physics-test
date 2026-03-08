@@ -25,6 +25,14 @@ pos_*.html
 
 # prototype design (not committed -- contains device IP)
 PROTOTYPE_DESIGN.md
+phi_lattice_prototype_schematic.png
+phi_ladder_cascade_schematic.png
+phi_ladder_circuit_diagram.png
+phi_ladder_mechanical_layout.png
+phi_ladder_parametric_design.tex
+phi_ladder_parametric_design.pdf
+phi_lattice_formulas_and_tests.tex
+phi_lattice_formulas_and_tests.pdf
 
 # Substack article drafts
 SUBSTACK_*.md
