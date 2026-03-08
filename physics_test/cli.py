@@ -3446,6 +3446,1255 @@ def cmd_gut_deep(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gut_predict(args: argparse.Namespace) -> int:
+    """
+    Extended predictions: running-coupling lattice energies, m_W cross-consistency,
+    neutrino sector, G↔1/G duality, vacancy catalog.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        running_coupling_lattice_energies,
+        mw_cross_consistency,
+        duality_analysis,
+        vacancy_catalog,
+        neutrino_predictions,
+        build_address_table,
+        binomial_p_value,
+        address_coincidences,
+        m_value_zeckendorf_analysis,
+        extended_hadron_predictions,
+        m_value_distribution,
+        lattice_coverage,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(float(v))
+    all_Cs = sorted(set(all_Cs))
+
+    lattice = build_sorted_lattice(all_Cs, m_range)
+
+    # ===================================================================
+    # 1. RUNNING COUPLING LATTICE-HIT ENERGIES
+    # ===================================================================
+    print("=" * 80)
+    print("1. RUNNING COUPLING LATTICE-HIT ENERGIES")
+    print("=" * 80)
+    print()
+    print("  At what energy Q does each gauge coupling exactly hit a lattice point?")
+    print("  Using 1-loop SM beta functions from m_Z.")
+    print()
+
+    rg_hits = running_coupling_lattice_energies(all_Cs, m_range)
+
+    # Group by coupling
+    by_coupling: dict[str, list] = {}
+    for h in rg_hits:
+        if h.coupling not in by_coupling:
+            by_coupling[h.coupling] = []
+        by_coupling[h.coupling].append(h)
+
+    for coupling in sorted(by_coupling.keys()):
+        hits = by_coupling[coupling]
+        print(f"  {coupling}:")
+        print(f"  {'C':>6s}  {'m':>4s}  {'C/φ^m':>10s}  {'Q (GeV)':>14s}  {'log₁₀Q':>8s}  Note")
+        print(f"  {'-'*6}  {'-'*4}  {'-'*10}  {'-'*14}  {'-'*8}  ----")
+
+        notable_scales = [
+            (1.0, "Λ_QCD"),
+            (2.0, "charm threshold"),
+            (5.0, "bottom threshold"),
+            (80.4, "m_W"),
+            (91.2, "m_Z"),
+            (125.3, "m_H"),
+            (172.8, "m_t"),
+            (1e3, "1 TeV"),
+            (1e4, "10 TeV"),
+            (1e16, "M_GUT"),
+            (1.2e19, "M_Planck"),
+        ]
+
+        for h in hits:
+            note = ""
+            for scale, label in notable_scales:
+                if abs(_math.log10(h.Q_GeV) - _math.log10(scale)) < 0.15:
+                    note = f"≈ {label}"
+                    break
+            if h.Q_GeV > 1e6:
+                q_str = f"{h.Q_GeV:.3e}"
+            else:
+                q_str = f"{h.Q_GeV:.2f}"
+            print(f"  {h.C:6g}  {h.m:4d}  {h.lattice_val:10.4f}  {q_str:>14s}  {_math.log10(h.Q_GeV):8.2f}  {note}")
+        print()
+
+    # Summary: crossings between couplings at lattice points
+    print("  Lattice-point crossings (two couplings at same C):")
+    for C in all_Cs:
+        hits_at_C: dict[str, list] = {}
+        for h in rg_hits:
+            if h.C == C:
+                if h.coupling not in hits_at_C:
+                    hits_at_C[h.coupling] = []
+                hits_at_C[h.coupling].append(h)
+        couplings_present = [k for k in hits_at_C if hits_at_C[k]]
+        if len(couplings_present) >= 2:
+            print(f"    C={C:g}: {', '.join(couplings_present)}")
+    print()
+
+    # ===================================================================
+    # 2. m_W CROSS-CONSISTENCY
+    # ===================================================================
+    print("=" * 80)
+    print("2. m_W CROSS-CONSISTENCY FROM MULTIPLE LATTICE PATHS")
+    print("=" * 80)
+    print()
+
+    mw_paths = mw_cross_consistency(lattice)
+
+    print(f"  {'Path':<20s}  {'Address':>12s}  {'Lattice ratio':>14s}  {'m_W pred':>10s}  {'m_W meas':>10s}  {'rel%':>7s}")
+    print(f"  {'-'*20}  {'-'*12}  {'-'*14}  {'-'*10}  {'-'*10}  {'-'*7}")
+
+    mw_values = []
+    for p in mw_paths:
+        pct = p['rel_err'] * 100.0
+        marker = "***" if abs(pct) < 1.0 else "** " if abs(pct) < 3.0 else "*  " if abs(pct) < 5.0 else "   "
+        print(f"  {p['path']:<20s}  {p['addr']:>12s}  {p['lattice_ratio']:14.6f}  {p['mW_predicted']:10.3f}  {p['mW_measured']:10.3f}  {pct:+6.2f}% {marker}")
+        if _math.isfinite(p['mW_predicted']):
+            mw_values.append(p['mW_predicted'])
+
+    if mw_values:
+        mean_mw = sum(mw_values) / len(mw_values)
+        spread = max(mw_values) - min(mw_values)
+        print()
+        print(f"  Lattice m_W predictions: {', '.join(f'{v:.2f}' for v in mw_values)} GeV")
+        print(f"  Mean: {mean_mw:.3f} GeV,  Spread: {spread:.3f} GeV")
+        print(f"  Measured (PDG): 80.377 ± 0.012 GeV")
+        print(f"  Measured (CDF): 80.434 ± 0.009 GeV")
+    print()
+
+    # ===================================================================
+    # 3. NEUTRINO SECTOR
+    # ===================================================================
+    print("=" * 80)
+    print("3. NEUTRINO SECTOR PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    nu = neutrino_predictions(lattice)
+
+    print(f"  {'Name':<22s}  {'Value':>14s}  {'C':>6s}  {'m':>4s}  {'C/φ^m':>14s}  {'rel%':>7s}  Note")
+    print(f"  {'-'*22}  {'-'*14}  {'-'*6}  {'-'*4}  {'-'*14}  {'-'*7}  {'-'*20}")
+
+    for r in nu:
+        pct = r['rel_err'] * 100.0
+        marker = "***" if abs(pct) < 1.0 else "** " if abs(pct) < 3.0 else "*  " if abs(pct) < 5.0 else "   "
+        if r['value'] > 1e4 or r['value'] < 1e-4:
+            val_str = f"{r['value']:.4e}"
+            lat_str = f"{r['lattice_val']:.4e}"
+        else:
+            val_str = f"{r['value']:.6f}"
+            lat_str = f"{r['lattice_val']:.6f}"
+        print(f"  {r['name']:<22s}  {val_str:>14s}  {r['C']:6g}  {r['m']:4d}  {lat_str:>14s}  {pct:+6.2f}% {marker} {r['note']}")
+    print()
+
+    # ===================================================================
+    # 4. G ↔ 1/G DUALITY ANALYSIS
+    # ===================================================================
+    print("=" * 80)
+    print("4. G ↔ 1/G DUALITY ANALYSIS")
+    print("=" * 80)
+    print()
+    print("  For each ratio G → (C₁, m₁), what does 1/G → (C₂, m₂)?")
+    print("  If the lattice has an inversion symmetry, ΔC and Δm should follow patterns.")
+    print()
+
+    dual = duality_analysis(lattice)
+
+    print(f"  {'Name':<12s}  {'G addr':>10s}  {'err%':>6s}  {'1/G addr':>10s}  {'err%':>6s}  {'ΔC':>6s}  {'Δm':>4s}  {'C₁×C₂':>8s}  Clean?")
+    print(f"  {'-'*12}  {'-'*10}  {'-'*6}  {'-'*10}  {'-'*6}  {'-'*6}  {'-'*4}  {'-'*8}  ------")
+
+    product_counts: dict[float, int] = {}
+    for d in dual:
+        pct1 = d['rel_err'] * 100.0
+        pct2 = d['inv_rel_err'] * 100.0
+        clean = "YES" if d['both_clean'] else "no"
+        prod = d['product_C']
+        product_counts[prod] = product_counts.get(prod, 0) + 1
+        print(f"  {d['name']:<12s}  {d['addr']:>10s}  {pct1:+5.1f}%  {d['inv_addr']:>10s}  {pct2:+5.1f}%  {d['delta_C']:+6g}  {d['delta_m']:+4d}  {prod:8g}  {clean}")
+
+    print()
+    print(f"  C₁ × C₂ distribution (inversion product):")
+    for prod in sorted(product_counts.keys()):
+        print(f"    C₁×C₂ = {prod:g}: {product_counts[prod]} ratios")
+
+    # Check for m1 + m2 pattern
+    m_sums = [d['m1'] + d['m2'] for d in dual if d['both_clean']]
+    if m_sums:
+        print(f"  m₁ + m₂ for clean pairs: {m_sums}")
+    print()
+
+    # ===================================================================
+    # 5. VACANCY CATALOG
+    # ===================================================================
+    print("=" * 80)
+    print("5. VACANCY CATALOG: EMPTY LATTICE SITES")
+    print("=" * 80)
+    print()
+
+    addr_table = build_address_table(lattice)
+    vacancies = vacancy_catalog(lattice, addr_table, m_range_display=range(-15, 25))
+
+    filled = [v for v in vacancies if v['matches']]
+    empty_count = sum(1 for v in vacancies if not v['matches'])
+
+    print(f"  Scanning {len(vacancies)} lattice sites in m ∈ [-15, 25)")
+    print(f"  Vacancies with candidate matches (<5% of a known constant):")
+    print()
+    print(f"  {'C':>6s}  {'m':>4s}  {'C/φ^m':>14s}  {'Candidate':>22s}  {'Value':>14s}  {'rel%':>7s}  Note")
+    print(f"  {'-'*6}  {'-'*4}  {'-'*14}  {'-'*22}  {'-'*14}  {'-'*7}  {'-'*20}")
+
+    for v in filled:
+        for match in v['matches']:
+            pct = match['rel_err'] * 100.0
+            if v['lattice_val'] > 1e4:
+                lv_str = f"{v['lattice_val']:.3e}"
+                mv_str = f"{match['value']:.3e}"
+            elif v['lattice_val'] < 0.001:
+                lv_str = f"{v['lattice_val']:.5e}"
+                mv_str = f"{match['value']:.5e}"
+            else:
+                lv_str = f"{v['lattice_val']:.6f}"
+                mv_str = f"{match['value']:.6f}"
+            print(f"  {v['C']:6g}  {v['m']:4d}  {lv_str:>14s}  {match['name']:>22s}  {mv_str:>14s}  {pct:+6.2f}%  {match['note']}")
+
+    print()
+    print(f"  Total vacancies scanned: {len(vacancies)}")
+    print(f"  With candidate matches: {len(filled)}")
+    print(f"  Truly empty: {empty_count}")
+    print()
+
+    # ===================================================================
+    # 6. BINOMIAL SIGNIFICANCE
+    # ===================================================================
+    print("=" * 80)
+    print("6. BINOMIAL SIGNIFICANCE TEST")
+    print("=" * 80)
+    print()
+
+    null_1 = lattice_coverage(lattice, 0.01, 5000)
+    null_3 = lattice_coverage(lattice, 0.03, 5000)
+    null_5 = lattice_coverage(lattice, 0.05, 5000)
+
+    for label, threshold, null_rate in [("1%", 0.01, null_1), ("3%", 0.03, null_3), ("5%", 0.05, null_5)]:
+        hits = sum(1 for row in addr_table if abs(row['rel_err']) < threshold)
+        n = len(addr_table)
+        pval = binomial_p_value(hits, n, null_rate)
+        sigma = -_math.log10(pval) if pval > 0 else float("inf")
+        print(f"  Tolerance < {label}:")
+        print(f"    Observed: {hits}/{n} ({hits/n:.0%})")
+        print(f"    Null rate: {null_rate:.1%}")
+        print(f"    P(X ≥ {hits} | Binomial(n={n}, p={null_rate:.4f})): {pval:.2e}")
+        print(f"    Significance: {sigma:.1f} orders of magnitude")
+        print()
+
+    # ===================================================================
+    # 7. ADDRESS COINCIDENCES
+    # ===================================================================
+    print("=" * 80)
+    print("7. ADDRESS COINCIDENCE ANALYSIS")
+    print("=" * 80)
+    print()
+
+    coinc = address_coincidences(addr_table)
+    print(f"  {coinc['n_ratios']} ratios mapped to ~{coinc['L_effective']} effective lattice sites")
+    print(f"  Expected collisions (birthday): {coinc['expected_collisions']:.1f}")
+    print(f"  Observed collisions: {coinc['observed_collisions']}")
+    print()
+
+    if coinc['shared_addresses']:
+        print(f"  Shared addresses:")
+        for (C, m), rows in sorted(coinc['shared_addresses'].items()):
+            names = [r['name'] for r in rows]
+            sectors = list(set(r.get('sector', '?') for r in rows))
+            cross = len(sectors) > 1
+            errs = [f"{r['rel_err']*100:+.1f}%" for r in rows]
+            flag = " ← CROSS-SECTOR" if cross else ""
+            print(f"    ({C:g}, {m:2d}): {', '.join(names)} [{', '.join(errs)}]{flag}")
+            if cross:
+                print(f"             sectors: {', '.join(sectors)}")
+        print()
+
+    # ===================================================================
+    # 8. EXTENDED HADRON MASS RATIOS
+    # ===================================================================
+    print("=" * 80)
+    print("8. EXTENDED HADRON/MESON/BARYON MASS RATIOS")
+    print("=" * 80)
+    print()
+
+    hadrons = extended_hadron_predictions(lattice)
+    had_h1 = had_h3 = had_h5 = 0
+
+    print(f"  {'Name':<16s}  {'Value':>10s}  {'Sector':<14s}  {'C':>6s}  {'m':>4s}  {'C/φ^m':>10s}  {'rel%':>7s}")
+    print(f"  {'-'*16}  {'-'*10}  {'-'*14}  {'-'*6}  {'-'*4}  {'-'*10}  {'-'*7}")
+
+    for h in hadrons:
+        pct = h['rel_err'] * 100.0
+        marker = "***" if abs(pct) < 1.0 else "** " if abs(pct) < 3.0 else "*  " if abs(pct) < 5.0 else "   "
+        if abs(pct) < 1.0: had_h1 += 1
+        if abs(pct) < 3.0: had_h3 += 1
+        if abs(pct) < 5.0: had_h5 += 1
+        print(f"  {h['name']:<16s}  {h['value']:10.4f}  {h['sector']:<14s}  {h['C']:6g}  {h['m']:4d}  {h['lattice_val']:10.4f}  {pct:+6.2f}% {marker}")
+
+    had_total = len(hadrons)
+    had_null_1 = lattice_coverage(lattice, 0.01, 3000)
+    print()
+    print(f"  Hadron hit rates ({had_total} ratios):")
+    print(f"    < 1%: {had_h1}/{had_total} ({had_h1/had_total:.0%}), null = {had_null_1:.1%}, enrichment = {had_h1/had_total/had_null_1:.2f}x")
+    print(f"    < 3%: {had_h3}/{had_total} ({had_h3/had_total:.0%})")
+    print(f"    < 5%: {had_h5}/{had_total} ({had_h5/had_total:.0%})")
+    print()
+
+    # ===================================================================
+    # 9. ZECKENDORF DECOMPOSITION OF m-VALUES
+    # ===================================================================
+    print("=" * 80)
+    print("9. ZECKENDORF DECOMPOSITION OF m-VALUES")
+    print("=" * 80)
+    print()
+
+    zeck = m_value_zeckendorf_analysis(addr_table)
+
+    fib_count = sum(1 for z in zeck if z['is_fibonacci'])
+    lucas_count = sum(1 for z in zeck if z['is_lucas'])
+
+    print(f"  {'Name':<20s}  {'C':>6s}  {'m':>4s}  {'|m|':>4s}  {'Fib?':>5s}  {'Luc?':>5s}  Zeckendorf")
+    print(f"  {'-'*20}  {'-'*6}  {'-'*4}  {'-'*4}  {'-'*5}  {'-'*5}  {'-'*20}")
+
+    for z in sorted(zeck, key=lambda x: (x['C'], x['m'])):
+        fib_str = "YES" if z['is_fibonacci'] else ""
+        luc_str = "YES" if z['is_lucas'] else ""
+        zeck_str = " + ".join(str(f) for f in z['zeckendorf'])
+        print(f"  {z['name']:<20s}  {z['C']:6g}  {z['m']:4d}  {z['abs_m']:4d}  {fib_str:>5s}  {luc_str:>5s}  {zeck_str}")
+
+    print()
+    print(f"  Fibonacci m-values: {fib_count}/{len(zeck)} ({fib_count/len(zeck):.0%})")
+    print(f"  Lucas m-values:     {lucas_count}/{len(zeck)} ({lucas_count/len(zeck):.0%})")
+
+    # Zeckendorf length distribution
+    len_counts: dict[int, int] = {}
+    for z in zeck:
+        l = z['zeckendorf_len']
+        len_counts[l] = len_counts.get(l, 0) + 1
+    print(f"  Zeckendorf length distribution: {dict(sorted(len_counts.items()))}")
+    print()
+
+    # ===================================================================
+    # 10. m-VALUE DISTRIBUTION ANALYSIS
+    # ===================================================================
+    print("=" * 80)
+    print("10. m-VALUE DISTRIBUTION ANALYSIS")
+    print("=" * 80)
+    print()
+
+    mdist = m_value_distribution(addr_table)
+
+    print(f"  {mdist['total_ratios']} ratios occupy {mdist['distinct_m']} distinct m-values")
+    print()
+    print(f"  Most populated m-values:")
+    for m_val, count in mdist['hot_m']:
+        names_at_m = [row['name'] for row in addr_table if row['m'] == m_val]
+        print(f"    m = {m_val:4d}: {count} ratios — {', '.join(names_at_m[:5])}" + ("..." if len(names_at_m) > 5 else ""))
+
+    print()
+    print(f"  Band-by-band gap analysis:")
+    fibs_list = [1, 2, 3, 5, 8, 13, 21, 34]
+    for C in sorted(mdist['band_stats'].keys()):
+        bs = mdist['band_stats'][C]
+        if bs['n'] < 2:
+            continue
+        frac = bs['fib_gap_fraction']
+        print(f"    C={C:6g}: {bs['n']:2d} values, m ∈ [{bs['m_range'][0]}, {bs['m_range'][1]}], "
+              f"gaps = {bs['gaps']}, Fibonacci fraction = {frac:.0%}")
+
+    print()
+
+    # ===================================================================
+    # 11. CROSS-BAND HORIZONTAL STRUCTURE
+    # ===================================================================
+    print("=" * 80)
+    print("11. CROSS-BAND HORIZONTAL STRUCTURE")
+    print("=" * 80)
+    print()
+
+    from physics_test.gut_validate import (
+        cross_band_analysis,
+        lattice_implied_relations,
+        weinberg_angle_lattice_running,
+        cosmological_constant_analysis,
+        c_band_catalog,
+    )
+
+    horiz = cross_band_analysis(addr_table)
+    print(f"  m-values occupied by 2+ ratios from different C-bands:")
+    print()
+    for m in sorted(horiz.keys()):
+        h = horiz[m]
+        if not h['cross_band']:
+            continue
+        cs_str = ", ".join(f"C={c:g}" for c in h['Cs'])
+        cross = " ← CROSS-SECTOR" if h['cross_sector'] else ""
+        print(f"  m = {m:4d}: {h['count']} ratios across [{cs_str}]{cross}")
+        for e in h['entries']:
+            pct = e['rel_err'] * 100
+            print(f"    ({e['C']:g},{m:2d}) {e['name']:<20s}  sector={e['sector']:<10s}  err={pct:+.1f}%")
+
+        for cr in h['c_ratios']:
+            print(f"    → {cr[0]}/{cr[1]}: C ratio = {cr[2]:g}/{cr[3]:g} = {cr[4]:.4f}")
+        print()
+
+    # ===================================================================
+    # 12. LATTICE-IMPLIED MASS RELATIONS
+    # ===================================================================
+    print("=" * 80)
+    print("12. LATTICE-IMPLIED MASS RELATIONS")
+    print("=" * 80)
+    print()
+
+    rels = lattice_implied_relations(addr_table)
+
+    print(f"  Same-address relations (implied equality):")
+    same_addr = [r for r in rels if r['type'] == 'same_address']
+    for r in same_addr[:10]:
+        pct = r['rel_err'] * 100
+        print(f"    {r['implied_relation']:<40s}  actual ratio = {r['actual_ratio']:.6f}  ({pct:+.2f}%)")
+
+    print()
+    print(f"  Same-C, small Δm relations (implied φ-power ratio):")
+    dm_rels = [r for r in rels if r['type'].startswith('same_C_dm') and abs(r['rel_err']) < 0.10]
+    dm_rels.sort(key=lambda r: abs(r['rel_err']))
+    for r in dm_rels[:15]:
+        pct = r['rel_err'] * 100
+        print(f"    {r['implied_relation']:<55s}  actual = {r['actual_ratio']:.4f}  ({pct:+.2f}%)")
+
+    print()
+    print(f"  Same-m, cross-band relations (implied C-ratio):")
+    same_m = [r for r in rels if r['type'] == 'same_m' and abs(r['rel_err']) < 0.10]
+    same_m.sort(key=lambda r: abs(r['rel_err']))
+    for r in same_m[:15]:
+        pct = r['rel_err'] * 100
+        print(f"    {r['implied_relation']:<55s}  actual = {r['actual_ratio']:.4f}  ({pct:+.2f}%)")
+    print()
+
+    # ===================================================================
+    # 13. WEINBERG ANGLE RUNNING ON THE LATTICE
+    # ===================================================================
+    print("=" * 80)
+    print("13. WEINBERG ANGLE RG RUNNING ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    weinberg = weinberg_angle_lattice_running(lattice)
+
+    print(f"  {'Scale':<28s}  {'sin²θ_W':>10s}  {'C':>6s}  {'m':>4s}  {'C/φ^m':>10s}  {'rel%':>7s}")
+    print(f"  {'-'*28}  {'-'*10}  {'-'*6}  {'-'*4}  {'-'*10}  {'-'*7}")
+
+    for w in weinberg:
+        pct = w['rel_err'] * 100
+        marker = "***" if abs(pct) < 1 else "** " if abs(pct) < 3 else "*  " if abs(pct) < 5 else "   "
+        print(f"  {w['label']:<28s}  {w['sin2w']:10.5f}  {w['C']:6g}  {w['m']:4d}  {w['lattice_val']:10.5f}  {pct:+6.2f}% {marker}")
+
+    # Check if address changes with scale
+    addrs = [(w['C'], w['m']) for w in weinberg]
+    unique_addrs = list(set(addrs))
+    print()
+    if len(unique_addrs) == 1:
+        print(f"  All scales map to the same address: ({unique_addrs[0][0]:g}, {unique_addrs[0][1]})")
+    else:
+        print(f"  Address changes with scale: {len(unique_addrs)} distinct addresses")
+        for addr in unique_addrs:
+            scales = [w['label'] for w in weinberg if (w['C'], w['m']) == addr]
+            print(f"    ({addr[0]:g}, {addr[1]}): {', '.join(scales)}")
+    print()
+
+    # ===================================================================
+    # 14. COSMOLOGICAL CONSTANT AND DARK SECTOR
+    # ===================================================================
+    print("=" * 80)
+    print("14. COSMOLOGICAL CONSTANT AND DARK SECTOR")
+    print("=" * 80)
+    print()
+
+    cosmo = cosmological_constant_analysis(lattice)
+
+    print(f"  {'Name':<22s}  {'Value':>14s}  {'C':>6s}  {'m':>4s}  {'C/φ^m':>14s}  {'rel%':>7s}  Note")
+    print(f"  {'-'*22}  {'-'*14}  {'-'*6}  {'-'*4}  {'-'*14}  {'-'*7}  {'-'*20}")
+
+    for c in cosmo:
+        pct = c['rel_err'] * 100
+        marker = "***" if abs(pct) < 1 else "** " if abs(pct) < 3 else "*  " if abs(pct) < 5 else "   "
+        if c['value'] > 1e4:
+            val_str = f"{c['value']:.4e}"
+            lat_str = f"{c['lattice_val']:.4e}"
+        elif c['value'] < 1e-4:
+            val_str = f"{c['value']:.4e}"
+            lat_str = f"{c['lattice_val']:.4e}"
+        else:
+            val_str = f"{c['value']:.6f}"
+            lat_str = f"{c['lattice_val']:.6f}"
+        print(f"  {c['name']:<22s}  {val_str:>14s}  {c['C']:6g}  {c['m']:4d}  {lat_str:>14s}  {pct:+6.2f}% {marker} {c['note']}")
+    print()
+
+    # ===================================================================
+    # 15. C-BAND PHYSICS CATALOG
+    # ===================================================================
+    print("=" * 80)
+    print("15. C-BAND PHYSICS CATALOG")
+    print("=" * 80)
+    print()
+
+    catalog = c_band_catalog(addr_table)
+
+    for C in sorted(catalog.keys()):
+        band = catalog[C]
+        print(f"  ┌─ C = {C:g}  ({band['origin']})")
+        print(f"  │  Role: {band['physics']}")
+        print(f"  │  Occupants: {band['n_occupants']}, Sectors: {', '.join(band['sectors'])}")
+        print(f"  │  Accuracy: {band['hits_1pct']}/{band['n_occupants']} < 1%, {band['hits_3pct']}/{band['n_occupants']} < 3%")
+        print(f"  │")
+        for occ in band['occupants']:
+            pct = occ['rel_err'] * 100
+            marker = "***" if abs(pct) < 1 else "** " if abs(pct) < 3 else "*  " if abs(pct) < 5 else "   "
+            print(f"  │  m={occ['m']:4d}  {occ['name']:<20s}  [{occ['sector']:<10s}]  {pct:+6.2f}% {marker}")
+        print(f"  └{'─'*70}")
+        print()
+
+    return 0
+
+
+def cmd_gut_explore(args: argparse.Namespace) -> int:
+    """
+    Round 4 explorations: lattice arithmetic predictions, duality axis analysis,
+    α_s comparison to data, lattice thermodynamics, 360 number theory.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        lattice_arithmetic_predictions,
+        duality_axis_analysis,
+        alpha_s_comparison,
+        lattice_thermodynamics,
+        base_360_number_theory,
+        lattice_selection_rules,
+        lattice_closure_analysis,
+        error_budget_analysis,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. LATTICE ARITHMETIC PREDICTIONS
+    # ===================================================================
+    print("=" * 80)
+    print("1. LATTICE ARITHMETIC PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    result = lattice_arithmetic_predictions(lattice)
+
+    print("  A) φ-power and C-ratio predictions from confirmed addresses")
+    print("  " + "-" * 70)
+    print(f"  {'Relation':<55s} {'Predicted':>10s} {'Actual':>10s} {'Error':>8s}")
+    print("  " + "-" * 70)
+    for p in result['lattice_relations'][:30]:
+        pct = p['rel_err'] * 100
+        marker = " ***" if abs(pct) < 0.1 else " ** " if abs(pct) < 1 else " *  " if abs(pct) < 3 else "    "
+        print(f"  {p['relation']:<55s} {p['predicted']:10.4f} {p['actual']:10.4f} {pct:+7.2f}%{marker}")
+
+    n_sub01 = sum(1 for p in result['lattice_relations'] if abs(p['rel_err']) < 0.001)
+    n_sub1 = sum(1 for p in result['lattice_relations'] if abs(p['rel_err']) < 0.01)
+    n_total = len(result['lattice_relations'])
+    print()
+    print(f"  Total: {n_total} relations, {n_sub01} < 0.1%, {n_sub1} < 1%")
+    print()
+
+    print("  B) Novel predictions (quantities predicted from lattice addresses)")
+    print("  " + "-" * 70)
+    for np_item in result['novel_predictions']:
+        pred = np_item['predicted_value']
+        meas = np_item['measured_value']
+        rel = (pred - meas) / meas * 100
+        unit = np_item.get('unit', '')
+        print(f"  {np_item['name']}")
+        print(f"    Formula:   {np_item['formula']}")
+        print(f"    Predicted: {pred:.6g} {unit}")
+        print(f"    Measured:  {meas:.6g} {unit}")
+        print(f"    Error:     {rel:+.2f}%")
+        print()
+
+    # ===================================================================
+    # 2. DUALITY AXIS ANALYSIS: m₁+m₂=23
+    # ===================================================================
+    print("=" * 80)
+    print("2. DUALITY AXIS ANALYSIS: m₁ + m₂ = 23")
+    print("=" * 80)
+    print()
+
+    da = duality_axis_analysis()
+    print(f"  Duality sum:  {da['duality_sum']}")
+    print(f"  dim(SU(5)):   {da['dim_SU5']}")
+    print(f"  Is prime:     {da['is_prime']}")
+    print(f"  Is Fibonacci: {da['is_fibonacci']}")
+    print()
+    print("  Connections:")
+    for c in da['connections']:
+        print(f"    • {c}")
+    print()
+    print("  Predictions for other GUT groups:")
+    for group, pred in da['gut_predictions'].items():
+        print(f"    {group}: duality sum → {pred}")
+    print()
+
+    # ===================================================================
+    # 3. α_s COMPARISON TO EXPERIMENTAL DATA
+    # ===================================================================
+    print("=" * 80)
+    print("3. α_s COMPARISON TO EXPERIMENTAL DATA AT MULTIPLE SCALES")
+    print("=" * 80)
+    print()
+
+    alpha_results = alpha_s_comparison(lattice)
+
+    print(f"  {'Measurement':<25s} {'Q [GeV]':>8s} {'α_s(exp)':>10s} {'±':>6s} "
+          f"{'(C,m)':>8s} {'α_s(lat)':>10s} {'Err':>7s} {'σ':>5s}")
+    print("  " + "-" * 85)
+    for r in alpha_results:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        sig = r['sigma_tension']
+        marker = " ***" if sig < 1 else " ** " if sig < 2 else " *  " if sig < 3 else "    "
+        print(f"  {r['label']:<25s} {r['Q_GeV']:8.1f} {r['alpha_s_measured']:10.4f} "
+              f"{r['uncertainty']:6.4f} {addr:>8s} {r['lattice_alpha_s']:10.4f} "
+              f"{pct:+6.2f}% {sig:4.1f}σ{marker}")
+    print()
+
+    n_1sig = sum(1 for r in alpha_results if r['sigma_tension'] < 1)
+    n_2sig = sum(1 for r in alpha_results if r['sigma_tension'] < 2)
+    print(f"  Within 1σ: {n_1sig}/{len(alpha_results)}")
+    print(f"  Within 2σ: {n_2sig}/{len(alpha_results)}")
+    print()
+
+    # ===================================================================
+    # 4. LATTICE THERMODYNAMICS
+    # ===================================================================
+    print("=" * 80)
+    print("4. LATTICE THERMODYNAMICS")
+    print("=" * 80)
+    print()
+
+    thermo = lattice_thermodynamics(Cs)
+    print(f"  Number of levels in core range: {thermo['n_levels']}")
+    print(f"  Average level spacing (in log g): {thermo['avg_spacing']:.4f}")
+    print(f"  Minimum spacing: {thermo['min_spacing']:.6f}")
+    print(f"  log(φ) = {thermo['log_phi']:.6f}")
+    ratio = thermo['avg_spacing'] / thermo['log_phi'] if thermo['log_phi'] > 0 else 0
+    print(f"  Avg spacing / log(φ) = {ratio:.4f}")
+    print()
+
+    print(f"  {'β':>8s} {'Z':>12s} {'⟨log g⟩':>10s} {'⟨g⟩':>12s} {'Entropy':>10s}")
+    print("  " + "-" * 60)
+    for bs in thermo['beta_scan']:
+        print(f"  {bs['beta']:8.2f} {bs['Z']:12.2f} {bs['avg_log_g']:10.4f} "
+              f"{bs['avg_g']:12.4g} {bs['entropy']:10.4f}")
+    print()
+
+    # Identify "natural temperature"
+    # <log g> ≈ -4.92 (log 1/137) for EM
+    # <log g> ≈ -2.14 (log 0.118) for QCD
+    log_1_over_alpha = -_math.log(137.036)
+    log_alpha_s = _math.log(0.1179)
+    print(f"  Target ⟨log g⟩ for EM:  {log_1_over_alpha:.4f} (log(1/137))")
+    print(f"  Target ⟨log g⟩ for QCD: {log_alpha_s:.4f} (log(0.118))")
+    print()
+
+    # ===================================================================
+    # 5. 360 NUMBER THEORY
+    # ===================================================================
+    print("=" * 80)
+    print("5. 360 NUMBER THEORY")
+    print("=" * 80)
+    print()
+
+    nt = base_360_number_theory()
+    print(f"  Factorization: {nt['factorization']}")
+    print(f"  Number of divisors τ(360) = {nt['n_divisors']}")
+    print(f"  τ(360) = dim(SU(5)) = 24: {nt['tau_equals_dim_SU5']}")
+    print(f"  {nt['totient_relation']}")
+    print(f"  Sum of divisors σ(360) = {nt['sigma']}")
+    print()
+
+    print("  All 24 divisors of 360:")
+    divs = nt['all_divisors']
+    for row_start in range(0, len(divs), 8):
+        chunk = divs[row_start:row_start+8]
+        print("    " + "  ".join(f"{d:4d}" for d in chunk))
+    print()
+
+    print("  C values as 360/X:")
+    for ca in nt['c_analysis']:
+        print(f"    C = {ca['C']:4g}  →  360/{ca['complement']}  (complement = {ca['complement']})")
+    print()
+
+    print(f"  C complements used: {nt['divisors_used']}")
+    print(f"  All C-values divide 360: {nt['C_all_divisors']}")
+    print()
+
+    print("  Contexts:")
+    for name, val, category in nt['contexts']:
+        print(f"    [{category:>14s}]  {name}: {val}")
+    print()
+
+    print("  360 mod primes:")
+    for p, r in nt['mod_analysis'].items():
+        print(f"    360 mod {p:2d} = {r}")
+    print()
+
+    # ===================================================================
+    # 6. LATTICE SELECTION RULES FOR PARTICLE DECAYS
+    # ===================================================================
+    print("=" * 80)
+    print("6. LATTICE SELECTION RULES FOR PARTICLE DECAYS")
+    print("=" * 80)
+    print()
+
+    sr = lattice_selection_rules()
+    for i, d in enumerate(sr['decays'], 1):
+        print(f"  {i}. {d['decay']}")
+        print(f"     Parent:  {d['parent']}")
+        if 'products' in d:
+            for prod in d['products']:
+                print(f"     Product: {prod}")
+        if 'delta_m' in d:
+            print(f"     Δm = {d['delta_m']}")
+        if 'mass_ratio' in d:
+            print(f"     Mass ratio = {d['mass_ratio']:.4f}")
+        print(f"     Notes: {d['notes']}")
+        print()
+
+    print("  EMERGENT RULES:")
+    for rule in sr['rules_summary']:
+        print(f"    → {rule}")
+    print()
+
+    # ===================================================================
+    # 7. LATTICE PRODUCT/QUOTIENT CLOSURE
+    # ===================================================================
+    print("=" * 80)
+    print("7. LATTICE PRODUCT/QUOTIENT CLOSURE")
+    print("=" * 80)
+    print()
+
+    closure = lattice_closure_analysis(lattice)
+
+    print("  A) Products of lattice quantities (nearest lattice hit)")
+    print("  " + "-" * 70)
+    print(f"  {'Pair':<35s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s}")
+    print("  " + "-" * 70)
+    for p in closure['products']:
+        addr = f"({p['C_actual']:g},{p['m_actual']})"
+        pct = p['rel_err'] * 100
+        alg = f"[{p['C_algebraic']:g},{p['m_algebraic']}]"
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {p['pair']:<35s} {p['value']:12.4g} {addr:>10s} {p['lattice_val']:12.4g} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  B) Quotients of lattice quantities")
+    print("  " + "-" * 70)
+    print(f"  {'Pair':<35s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s}")
+    print("  " + "-" * 70)
+    for q in closure['quotients']:
+        addr = f"({q['C_actual']:g},{q['m_actual']})"
+        pct = q['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {q['pair']:<35s} {q['value']:12.4g} {addr:>10s} {q['lattice_val']:12.4g} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  C) C-algebra: which C-products map to lattice via φ-shift")
+    n_alg = 0
+    for key in sorted(closure['c_algebra'].keys()):
+        entry = closure['c_algebra'][key]
+        print(f"    {key:>10s} = {entry['C_prod']:>6d}  →  {entry['maps_to_C']:g} × φ^{entry['phi_power']}")
+        n_alg += 1
+    if n_alg == 0:
+        print("    (none found with exact φ-power mapping)")
+    print()
+
+    # ===================================================================
+    # 8. ERROR BUDGET: INDEPENDENT VS DERIVED
+    # ===================================================================
+    print("=" * 80)
+    print("8. ERROR BUDGET: INDEPENDENT VS DERIVED PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    eb = error_budget_analysis()
+    print(f"  Independent input quantities: {eb['n_independent_inputs']}")
+    print(f"  Sub-1% error:  {eb['n_sub_1pct']}")
+    print(f"  Sub-0.5% error: {eb['n_sub_05pct']}")
+    print(f"  Unique (C,m) addresses: {eb['effective_dof']}")
+    print(f"  m-value span: {eb['m_span']} (from {min(eb['m_values'])} to {max(eb['m_values'])})")
+    print()
+
+    print("  C-band distribution:")
+    for c in sorted(eb['c_distribution'].keys()):
+        n = eb['c_distribution'][c]
+        bar = "█" * n
+        print(f"    C={c:4g}: {n:2d}  {bar}")
+    print()
+
+    print("  All independent entries:")
+    print(f"  {'Name':<25s} {'(C,m)':>10s} {'Value':>12s} {'Error%':>8s}")
+    print("  " + "-" * 60)
+    for e in sorted(eb['entries'], key=lambda x: x[4]):
+        addr = f"({e[1]:g},{e[2]})"
+        print(f"  {e[0]:<25s} {addr:>10s} {e[3]:12.4g} {e[4]:+7.2f}%")
+    print()
+
+    print("  Derived relations (not independent predictions):")
+    for name, rtype, note in eb['derived_relations']:
+        print(f"    {name}")
+        print(f"      Type: {rtype}")
+        print(f"      {note}")
+        print()
+
+    return 0
+
+
+def cmd_gut_spectrum(args: argparse.Namespace) -> int:
+    """
+    Round 5: fermion mass spectrum, symmetry breaking, new ratios, RG flow, outliers.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        fermion_mass_spectrum,
+        symmetry_breaking_analysis,
+        new_ratio_predictions,
+        rg_flow_on_lattice,
+        outlier_analysis,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. COMPLETE FERMION MASS SPECTRUM
+    # ===================================================================
+    print("=" * 80)
+    print("1. COMPLETE FERMION MASS SPECTRUM")
+    print("=" * 80)
+    print()
+
+    spec = fermion_mass_spectrum(lattice)
+
+    print("  A) All fermion masses as m_X/m_e → lattice address")
+    print("  " + "-" * 75)
+    print(f"  {'Fermion':<8s} {'Mass [GeV]':>12s} {'m_X/m_e':>12s} "
+          f"{'(C,m)':>10s} {'Lattice':>12s} {'Pred [GeV]':>12s} {'Error':>8s}")
+    print("  " + "-" * 75)
+    for r in sorted(spec['spectrum'], key=lambda x: -x['mass_GeV']):
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else " *  " if abs(pct) < 5 else "    "
+        print(f"  {r['fermion']:<8s} {r['mass_GeV']:12.6g} {r['ratio_to_me']:12.4g} "
+              f"{addr:>10s} {r['lattice_val']:12.4g} {r['predicted_mass']:12.6g} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  B) Inter-generation mass ratios (same charge)")
+    print("  " + "-" * 65)
+    print(f"  {'Ratio':<8s} {'Value':>10s} {'(C,m)':>10s} {'Lattice':>10s} {'Error':>8s}")
+    print("  " + "-" * 65)
+    for r in spec['generation_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['ratio']:<8s} {r['value']:10.4f} {addr:>10s} {r['lattice_val']:10.4f} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  C) Cross-sector ratios (quark/lepton)")
+    print("  " + "-" * 65)
+    print(f"  {'Ratio':<8s} {'Value':>10s} {'(C,m)':>10s} {'Lattice':>10s} {'Error':>8s}")
+    print("  " + "-" * 65)
+    for r in spec['cross_sector_ratios']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {r['ratio']:<8s} {r['value']:10.4f} {addr:>10s} {r['lattice_val']:10.4f} {pct:+7.2f}%{marker}")
+    print()
+
+    print("  D) Neutrino masses on the lattice")
+    print("  " + "-" * 70)
+    for r in spec['neutrinos']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        print(f"  {r['fermion']:<4s}  mass = {r['mass_eV']:.4g} eV → "
+              f"{addr}  lattice = {r['predicted_mass_eV']:.4g} eV  ({pct:+.2f}%)")
+    print()
+
+    h = spec['total_hierarchy']
+    print(f"  Total hierarchy m_t/m_ν₂ = {h['value']:.3g} → ({h['C']:g},{h['m']})  "
+          f"lattice = {h['lattice_val']:.3g}  ({h['rel_err']*100:+.2f}%)")
+    print()
+
+    # ===================================================================
+    # 2. SU(5) SYMMETRY BREAKING ON THE LATTICE
+    # ===================================================================
+    print("=" * 80)
+    print("2. SU(5) SYMMETRY BREAKING ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    sb = symmetry_breaking_analysis(lattice)
+
+    print("  Breaking chain: SU(5) → SU(3) × SU(2) × U(1)")
+    print(f"  Broken generators: {sb['dim_broken']} (X and Y gauge bosons)")
+    print()
+
+    print("  C-ratios encode group dimension ratios:")
+    for name, val in sb['c_ratios'].items():
+        print(f"    {name:<20s} = {val:.4g}")
+    print()
+
+    print("  Key identity: C_A/C_B = dim(B)/dim(A)")
+    print("  → The INVERSE of group dimension ratio determines the C-band ratio")
+    print()
+
+    print("  Branching rules and lattice sector mapping:")
+    for sm in sb['sector_mapping']:
+        print(f"    C = {sm['C_band']:4d} ({sm['group']:>15s}) → {sm['sector']}")
+        print(f"         Evidence: {sm['evidence']}")
+        print()
+
+    print("  SU(5) representation decompositions:")
+    for br in sb['branching_rules']:
+        print(f"    {br['su5_rep']:>3s}: {br['decomposition']}")
+        print(f"         Particles: {br['particles']}")
+    print()
+
+    # ===================================================================
+    # 3. NEW DIMENSIONLESS RATIO PREDICTIONS
+    # ===================================================================
+    print("=" * 80)
+    print("3. NEW DIMENSIONLESS RATIO PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    new_preds = new_ratio_predictions(lattice)
+
+    print(f"  {'Name':<30s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s}")
+    print("  " + "-" * 80)
+    for p in new_preds:
+        addr = f"({p['C']:g},{p['m']})"
+        pct = p['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else " *  " if abs(pct) < 5 else "    "
+        print(f"  {p['name']:<30s} {p['value']:12.4g} {addr:>10s} {p['lattice_val']:12.4g} {pct:+7.2f}%{marker}")
+    print()
+
+    n_sub1 = sum(1 for p in new_preds if abs(p['rel_err']) < 0.01)
+    n_sub3 = sum(1 for p in new_preds if abs(p['rel_err']) < 0.03)
+    print(f"  Sub-1%: {n_sub1}/{len(new_preds)}, Sub-3%: {n_sub3}/{len(new_preds)}")
+    print()
+
+    # ===================================================================
+    # 4. RG FLOW PATHS ON THE LATTICE
+    # ===================================================================
+    print("=" * 80)
+    print("4. RG FLOW PATHS ON THE LATTICE")
+    print("=" * 80)
+    print()
+
+    rg = rg_flow_on_lattice(lattice)
+
+    for name in ["α₁⁻¹", "α₂⁻¹", "α₃⁻¹"]:
+        print(f"  {name} trajectory:")
+        path = rg['paths'][name]
+        for p in path:
+            addr = f"({p['C']:g},{p['m']})"
+            pct = p['rel_err'] * 100
+            marker = " *" if abs(pct) < 1 else "  "
+            print(f"    Q = {p['Q_GeV']:10.2e} GeV  α⁻¹ = {p['value']:7.2f}  → {addr:>10s}  "
+                  f"lat = {p['lattice_val']:7.2f}  ({pct:+5.2f}%){marker}")
+        print()
+
+    print("  Transition energies (where nearest lattice site changes):")
+    for name in ["α₁⁻¹", "α₂⁻¹", "α₃⁻¹"]:
+        trans = rg['transitions'][name]
+        if trans:
+            print(f"  {name}:")
+            for t in trans:
+                print(f"    ({t['addr_from'][0]:g},{t['addr_from'][1]}) → "
+                      f"({t['addr_to'][0]:g},{t['addr_to'][1]})  "
+                      f"at Q ∈ [{t['Q_from']:.2e}, {t['Q_to']:.2e}] GeV")
+            print()
+
+    # ===================================================================
+    # 5. OUTLIER ANALYSIS: WHAT DOESN'T FIT
+    # ===================================================================
+    print("=" * 80)
+    print("5. OUTLIER ANALYSIS: WHAT DOESN'T FIT")
+    print("=" * 80)
+    print()
+
+    out = outlier_analysis(lattice)
+
+    print(f"  Tested {len(out['all_results'])} dimensionless ratios:")
+    print(f"    < 1%:  {out['n_good']:3d}  (good)")
+    print(f"    1-3%:  {out['n_marginal']:3d}  (marginal)")
+    print(f"    3-5%:  {out['n_poor']:3d}  (poor)")
+    print(f"    > 5%:  {out['n_bad']:3d}  (bad)")
+    print()
+
+    print("  Full results (sorted by error):")
+    print("  " + "-" * 75)
+    print(f"  {'Name':<25s} {'Value':>12s} {'(C,m)':>10s} {'Lattice':>12s} {'Error':>8s} {'Cat':>8s}")
+    print("  " + "-" * 75)
+    for r in out['all_results']:
+        addr = f"({r['C']:g},{r['m']})"
+        pct = r['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else " *  " if abs(pct) < 5 else "    "
+        print(f"  {r['name']:<25s} {r['value']:12.4g} {addr:>10s} {r['lattice_val']:12.4g} "
+              f"{pct:+7.2f}%{marker} {r['category']:>8s}")
+    print()
+
+    print("  WORST 5 OUTLIERS:")
+    for r in out['worst_5']:
+        pct = r['rel_err'] * 100
+        print(f"    {r['name']:<25s}  {pct:+6.2f}%  [{r['category']}]")
+    print()
+
+    return 0
+
+
+def cmd_gut_pheno(args: argparse.Namespace) -> int:
+    """
+    Round 6: phenomenological predictions — proton decay, dark matter,
+    muon g-2, information theory, neutrino properties.
+    """
+    import math as _math
+    from physics_test.gut_validate import (
+        build_sorted_lattice, nearest_lattice as nl,
+        proton_decay_prediction,
+        dark_matter_predictions,
+        muon_g2_analysis,
+        lattice_information_theory,
+        neutrino_lattice_predictions,
+        build_address_table,
+    )
+
+    PHI = (1.0 + _math.sqrt(5.0)) / 2.0
+    include = tuple(s.strip() for s in args.include.split(",") if s.strip())
+    m_range = list(range(-80, 120))
+
+    all_Cs: list[float] = []
+    for g in standard_model_gauge_groups():
+        cs = candidate_Cs_from_group(g, base=360.0, include=include)
+        for _, v in cs.items():
+            all_Cs.append(v)
+    Cs = sorted(set(all_Cs))
+    lattice = build_sorted_lattice(Cs, m_range)
+
+    # ===================================================================
+    # 1. PROTON DECAY PREDICTION
+    # ===================================================================
+    print("=" * 80)
+    print("1. PROTON DECAY LIFETIME PREDICTION")
+    print("=" * 80)
+    print()
+
+    pd = proton_decay_prediction(lattice)
+
+    print(f"  Lattice-predicted M_GUT = {pd['M_GUT_lattice']:.4e} GeV")
+    print(f"  Conventional M_GUT     = {pd['M_GUT_conventional']:.4e} GeV")
+    print(f"  Lattice 1/α_GUT        = {pd['alpha_GUT_inv_lattice']:.4f}")
+    print(f"  Lattice α_GUT          = {pd['alpha_GUT_lattice']:.6f}")
+    print()
+    print(f"  Proton lifetime predictions (p → e⁺ + π⁰):")
+    print(f"    Simple estimate (lattice):      τ_p ~ {pd['tau_simple_yr']:.2e} years")
+    print(f"    Refined estimate (lattice):     τ_p ~ {pd['tau_refined_yr']:.2e} years")
+    print(f"    Conventional (M_GUT=1.6e16):    τ_p ~ {pd['tau_conventional_yr']:.2e} years")
+    print()
+    print(f"  Experimental bound (Super-K):     τ_p > {pd['tau_exp_bound_yr']:.1e} years")
+    print(f"  Hyper-K sensitivity:              τ_p ~ 1.0e+35 years")
+    print()
+    if pd['tau_refined_yr'] > pd['tau_exp_bound_yr']:
+        print(f"  ✓ Lattice prediction CONSISTENT with current bound")
+    else:
+        print(f"  ✗ Lattice prediction EXCLUDED by current bound")
+    print(f"  Observable at Hyper-K: {'YES' if pd['observable_at_hyperK'] else 'NO'}")
+    print()
+
+    # ===================================================================
+    # 2. DARK MATTER MASS PREDICTIONS
+    # ===================================================================
+    print("=" * 80)
+    print("2. DARK MATTER MASS PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    dm = dark_matter_predictions(lattice)
+
+    print(f"  DM candidates from lattice × m_e: {dm['n_candidates']} in 1 GeV – 100 TeV range")
+    print()
+    print("  Targeted mass searches:")
+    print(f"  {'Label':<25s} {'Target':>10s} {'(C,m)':>10s} {'Lattice':>10s} {'Error':>8s}")
+    print("  " + "-" * 68)
+    for t in dm['targeted']:
+        addr = f"({t['C']:g},{t['m']})"
+        pct = t['rel_err'] * 100
+        marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+        print(f"  {t['label']:<25s} {t['target_GeV']:10.1f} {addr:>10s} "
+              f"{t['lattice_GeV']:10.2f} {pct:+7.2f}%{marker}")
+    print()
+
+    dfo = dm['dm_from_omega']
+    print(f"  From Ω_DM address (360, 15):")
+    print(f"    Lattice value:  {dfo['omega_lattice_val']:.4f}")
+    print(f"    As coupling:    g_DM = {dfo['as_coupling']:.4f}")
+    print(f"    As √Ω × v_H:   {dfo['as_mass_ratio_to_vH']:.1f} GeV")
+    print(f"    As √Ω × m_Z:   {dfo['as_mass_ratio_to_mZ']:.1f} GeV")
+    print()
+
+    # ===================================================================
+    # 3. MUON g-2 AND THE MUON MASS PROBLEM
+    # ===================================================================
+    print("=" * 80)
+    print("3. MUON g-2 AND THE MUON MASS PROBLEM")
+    print("=" * 80)
+    print()
+
+    g2 = muon_g2_analysis(lattice)
+
+    print(f"  a_μ (experiment):         {g2['a_mu_exp']:.6e}")
+    print(f"  a_μ (SM, data-driven):    {g2['a_mu_SM_dd']:.6e}")
+    print(f"  Δa_μ (data-driven):       {g2['Delta_a_mu_dd']:.0e}")
+    print(f"  Δa_μ (lattice QCD):       {g2['Delta_a_mu_lat']:.0e}")
+    print()
+    print(f"  Muon mass displacement:   δm_μ/m_μ(lat) = {g2['delta_mass_fraction']:.4f} ({g2['delta_mass_fraction']*100:.2f}%)")
+    print(f"  g-2 anomaly fraction:     Δa_μ/a_μ      = {g2['frac_anomaly']:.4e} ({g2['frac_anomaly']*100:.4f}%)")
+    print(f"  Ratio (Δa/a) / (δm/m):   {g2['ratio_frac']:.4f}")
+    print()
+    print(f"  If muon were at lattice mass (194.16 × m_e):")
+    print(f"    Hadronic VP shift:      Δa_had ~ {g2['delta_a_had']:.0e}")
+    print(f"    This is {g2['delta_a_had']/g2['Delta_a_mu_dd']*100:.0f}% of the data-driven anomaly")
+    print()
+    print(f"  a_μ/a_e = {g2['a_mu_over_a_e']:.6f} → nearest lattice: {g2['a_mu_ratio_addr']}")
+    print()
+
+    # ===================================================================
+    # 4. INFORMATION THEORY: LATTICE ENTROPY
+    # ===================================================================
+    print("=" * 80)
+    print("4. INFORMATION THEORY: LATTICE ENTROPY AND SPACING")
+    print("=" * 80)
+    print()
+
+    addr_table = build_address_table(lattice)
+    info = lattice_information_theory(lattice, addr_table)
+
+    print(f"  Occupied sites:    {info['n_occupied']}")
+    print(f"  C-bands used:      {info['n_bands']}")
+    print(f"  Shannon entropy of C-distribution: H = {info['H_C']:.4f} bits")
+    print(f"  Maximum entropy (uniform):         H_max = {info['H_max']:.4f} bits")
+    print(f"  Efficiency H/H_max:                {info['H_ratio']:.4f}")
+    print()
+    print(f"  Global m-spacing statistics:")
+    print(f"    Mean spacing:     {info['global_mean_spacing']:.2f}")
+    print(f"    Variance:         {info['global_var_spacing']:.2f}")
+    print(f"    Dispersion index: {info['dispersion_index']:.2f} (1=Poisson, <1=regular, >1=clustered)")
+    print()
+    print(f"  Fibonacci spacings: {info['n_fib_spacings']}/{info['n_total_spacings']} "
+          f"({info['fib_fraction']*100:.0f}%)")
+    print(f"  Combinatorial information: {info['bits_combinatorial']:.1f} bits")
+    print()
+
+    print("  Per-band spacing analysis:")
+    for c in sorted(info['band_spacings'].keys()):
+        bs = info['band_spacings'][c]
+        print(f"    C={c:4g}: m-values = {bs['m_values']}")
+        print(f"           spacings = {bs['spacings']}")
+        print(f"           mean={bs['mean_spacing']:.1f}, min={bs['min_spacing']}, max={bs['max_spacing']}")
+        print()
+
+    # ===================================================================
+    # 5. NEUTRINO MASS ORDERING AND PREDICTIONS
+    # ===================================================================
+    print("=" * 80)
+    print("5. NEUTRINO MASS ORDERING PREDICTIONS")
+    print("=" * 80)
+    print()
+
+    nu = neutrino_lattice_predictions(lattice)
+
+    for label in ["NH_minimal", "IH_minimal"]:
+        ordering = nu['orderings'][label]
+        kind = "Normal Hierarchy" if "NH" in label else "Inverted Hierarchy"
+        print(f"  {kind} (minimal, lightest ≈ 0):")
+        for i, h in enumerate(ordering['hits']):
+            if h['mass_eV'] > 0:
+                addr = f"({h['C']:g},{h['m']})"
+                pct = h['rel_err'] * 100
+                marker = " ***" if abs(pct) < 1 else " ** " if abs(pct) < 3 else "    "
+                print(f"    m_{i+1} = {h['mass_eV']:.4e} eV → {addr:>10s}  "
+                      f"lattice = {h['lattice_mass_eV']:.4e} eV  ({pct:+.2f}%){marker}")
+            else:
+                print(f"    m_{i+1} = 0 (lightest)")
+        print(f"    Σm_ν = {ordering['sum_masses_eV']*1000:.2f} meV  "
+              f"(lattice: {ordering['sum_lattice_eV']*1000:.2f} meV)")
+        print()
+
+    print("  Mass ratio m₃/m₂ (NH):")
+    mr = nu['mass_ratio_m3_m2']
+    print(f"    m₃/m₂ = {mr['ratio']:.4f} → ({mr['C']:g},{mr['m']})  "
+          f"lattice = {mr['lattice_val']:.4f}  ({mr['rel_err']*100:+.2f}%)")
+    print()
+
+    print("  Neutrinoless double beta decay effective mass <m_ββ>:")
+    for mc in nu['mbb_candidates']:
+        addr = f"({mc['C']:g},{mc['m']})"
+        pct = mc['rel_err'] * 100
+        print(f"    {mc['label']:<10s}: <m_ββ> = {mc['mbb_eV']*1000:.2f} meV → {addr:>10s}  "
+              f"lattice = {mc['lattice_mbb_eV']*1000:.2f} meV  ({pct:+.2f}%)")
+    print()
+
+    return 0
+
+
 def cmd_solve_K(args: argparse.Namespace) -> int:
     K = temperature_K_from_frequency(args.m, args.F0)
     print(f"m = {args.m}")
@@ -4818,6 +6067,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_gut_deep = sub.add_parser("gut-deep", help="Deep analysis: address table, CKM/PMNS, lattice operations, 360-family, n_gap")
     p_gut_deep.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
     p_gut_deep.set_defaults(func=cmd_gut_deep)
+
+    p_gut_predict = sub.add_parser("gut-predict", help="Extended predictions: RG lattice energies, m_W consistency, neutrinos, duality, vacancies")
+    p_gut_predict.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_predict.set_defaults(func=cmd_gut_predict)
+
+    p_gut_explore = sub.add_parser("gut-explore", help="Round 4: lattice arithmetic, duality axis, α_s data, thermodynamics, 360 number theory")
+    p_gut_explore.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_explore.set_defaults(func=cmd_gut_explore)
+
+    p_gut_spectrum = sub.add_parser("gut-spectrum", help="Round 5: fermion spectrum, symmetry breaking, new ratios, RG flow, outliers")
+    p_gut_spectrum.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_spectrum.set_defaults(func=cmd_gut_spectrum)
+
+    p_gut_pheno = sub.add_parser("gut-pheno", help="Round 6: proton decay, dark matter, muon g-2, information theory, neutrinos")
+    p_gut_pheno.add_argument("--include", default="base,base/dim,base/coxeter,base/dual_coxeter,base/(dim*coxeter)", help="C constructions")
+    p_gut_pheno.set_defaults(func=cmd_gut_pheno)
 
     p_opt2 = sub.add_parser("pair-forces-option2", help="Option-2 pairing: use F0 inputs for EM/strong/weak and solve K")
     p_opt2.add_argument("--set", dest="set_name", default="octave-union", help="Candidate C set name (default: octave-union).")
