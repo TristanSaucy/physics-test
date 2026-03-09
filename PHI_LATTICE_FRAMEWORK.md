@@ -2588,6 +2588,138 @@ A key prediction that could discriminate among candidates: **the lattice should 
 
 This remains the deepest open question in the framework: **what is the dynamical origin of $G = C/\varphi^m$?** The candidates above are starting points for further investigation, not conclusions.
 
+### 13.7 Thermal phi-signatures and vacuum-to-EM transduction
+
+#### 13.7.1 Core hypothesis
+
+If the phi-lattice governs the vacuum mode structure, then the spectral density of electromagnetic fluctuations is not smooth.  Standard QED predicts a featureless vacuum spectrum $u(\omega) \propto \omega^3$.  The lattice predicts weak modulations at frequencies related by powers of $\varphi$, anchored to the dark energy scale $\Lambda_\text{DE}^{1/4} \approx 2.3$ meV $\approx 556$ GHz:
+
+$$f_n = \frac{f_0}{\varphi^n}, \qquad f_0 \approx 556 \text{ GHz}$$
+
+The key extension: **thermal fluctuations inherit this structure.**  Thermal radiation fills vacuum modes; if those modes have $\varphi$-periodic spectral density, thermal noise at $\varphi$-harmonic frequencies is slightly enhanced relative to inter-rung frequencies:
+
+$$S(f) = S_\text{blackbody}(f) \times [1 + \varepsilon \cdot M(f)]$$
+
+where $M(f)$ peaks at $f_n$ and $\varepsilon$ is the modulation depth (unknown; plausibly $10^{-3}$ to $10^{-6}$).
+
+#### 13.7.2 Why thermal detection is easier than vacuum detection
+
+For pure vacuum detection, cryogenics are needed because thermal noise drowns the zero-point contribution.  For detecting **modulations** in total noise, room temperature is advantageous:
+
+- Thermal noise power $P = k_B T B$ scales with temperature.  At 300 K, there is $\sim$1000$\times$ more power per mode than at 0.3 K.
+- The absolute modulation signal is $\Delta P = \varepsilon \cdot k_B T B$, which is *larger* at higher temperature.
+- The challenge is noise *stability* (measuring a small difference), not noise *reduction*.
+
+Temperature equivalents at key ladder rungs (the temperature below which vacuum fluctuations exceed thermal contributions):
+
+| Rung $n$ | Frequency | $T_\text{crossover}$ |
+|---:|---:|---:|
+| 0 | 556 GHz | 13.3 K |
+| 5 | 50.2 GHz | 1.2 K |
+| 8 | 11.8 GHz | 0.28 K |
+| 10 | 4.5 GHz | 0.11 K |
+| 12 | 1.7 GHz | 0.04 K |
+
+For the thermal modulation approach, being *above* these temperatures is fine.
+
+#### 13.7.3 The phi-harmonic frequency ladder
+
+Accessible rungs of the ladder for experimental work:
+
+| Rung $n$ | Frequency | Wavelength | Band |
+|---:|---:|---:|---|
+| 0 | 556 GHz | 0.54 mm | THz / far-infrared |
+| 2 | 212 GHz | 1.4 mm | mmWave |
+| 4 | 81 GHz | 3.7 mm | mmWave |
+| 5 | 50 GHz | 6.0 mm | mmWave (EHF) |
+| 7 | 19.2 GHz | 15.7 mm | Microwave (Ku-band) |
+| 8 | 11.8 GHz | 25.3 mm | Microwave (X-band) |
+| 10 | 4.52 GHz | 66 mm | Microwave (C-band) |
+| 12 | 1.73 GHz | 174 mm | UHF (L-band) |
+
+Rungs $n = 7$ through $n = 12$ are standard microwave frequencies where commercial components are inexpensive and widely available.
+
+#### 13.7.4 Detection strategies
+
+**Dicke radiometer.**  Rapidly switch between two inputs — one filtered at a phi-harmonic, one filtered off-lattice — and measure the power difference via lock-in detection.  Minimum detectable equivalent temperature difference:
+
+$$\Delta T_\text{min} = \frac{T_\text{sys}}{\sqrt{B \cdot \tau}}$$
+
+At room temperature ($T_\text{sys} \sim 400$ K), with $B = 1$ MHz bandwidth:
+
+| Modulation $\varepsilon$ | $\Delta T$ | Integration time |
+|---:|---:|---:|
+| $10^{-3}$ | 0.3 K | $\sim$2 seconds |
+| $10^{-4}$ | 0.03 K | $\sim$3 minutes |
+| $10^{-5}$ | 0.003 K | $\sim$5 hours |
+| $10^{-6}$ | 0.0003 K | $\sim$21 days |
+
+**Cross-correlation between phi-harmonic pairs.**  Measure noise at two phi-related frequencies (e.g., $f_8$ and $f_{10}$, separated by $\varphi^2$) simultaneously.  Standard physics predicts zero cross-correlation between independent frequency modes.  If the lattice imposes shared vacuum structure, phi-related pairs show nonzero correlation while non-phi pairs do not.  Any nonzero result at phi-related pairs is an anomaly with no standard-physics explanation.
+
+**Phi-comb filter.**  A filter bank that passes all phi-harmonic frequencies simultaneously and rejects inter-rung frequencies.  Compare total power through the phi-comb vs. the complementary filter.  The phi-ladder cascade prototype (Section 13.8, `PROTOTYPE_DESIGN.md`) — with its passive resonator coils tuned in phi-ratios — is precisely such a matched filter.
+
+**Log-frequency lock-in.**  The phi-harmonics are equally spaced in log-frequency (period $\ln\varphi \approx 0.481$).  Converting noise power vs. frequency into a time-domain signal via logarithmic sweep turns the phi-modulation into a periodic AC signal, detectable by lock-in amplification.
+
+#### 13.7.5 Thermodynamic implications
+
+Standard thermodynamics forbids extracting net work from single-temperature equilibrium radiation (second law).  However, if thermal radiation carries phi-periodic spectral structure imposed by the vacuum, it is *not* true equilibrium: it has lower entropy than a featureless blackbody at the same temperature.  The excess order (information content of the phi-pattern) represents thermodynamic free energy.
+
+The extractable work per unit thermal energy is:
+
+$$\frac{W}{Q} \sim 1 - \frac{S_\text{actual}}{S_\text{blackbody}} \sim \mathcal{O}(\varepsilon^2)$$
+
+where $\varepsilon$ is the modulation depth.  This is small per mode but available across all phi-harmonic modes at all temperatures, including room temperature.
+
+The phi-harmonic modes have slightly higher effective temperature than inter-rung modes.  This frequency-dependent temperature gradient is functionally equivalent to a spatial temperature gradient: a Carnot engine can operate between frequency channels to extract work, with the phi-comb filter acting as the "hot reservoir" selector.
+
+#### 13.7.6 Connection to the cosmological constant
+
+The frequency anchor $f_0 \approx 556$ GHz corresponds to the dark energy scale $\Lambda_\text{DE}^{1/4} \approx 2.3$ meV, which is the lattice address $\rho_\text{Pl}/\rho_\text{vac} = \varphi^{588}$ at $+0.01\%$ accuracy.  Detecting phi-periodic structure in thermal radiation at this frequency (or its phi-harmonics) would constitute an experimental probe of the cosmological constant problem — connecting tabletop measurements to the deepest puzzle in fundamental physics.
+
+Full detector prototype design: see **[`THERMAL_PHI_DETECTOR.md`](THERMAL_PHI_DETECTOR.md)**.
+
+### 13.8 Magnetic enhancement for power extraction
+
+The thermal phi-detector (Section 13.7) measures femtowatt-level signals — sufficient for detection but not for energy harvesting.  Permanent magnets offer a route to amplify the extractable power by orders of magnitude through five established physical effects, all coupled to the phi-cascade architecture.
+
+#### 13.8.1 Magnetocaloric phi-resonance
+
+The magnetocaloric effect converts magnetic field changes into thermal energy.  In a permanent magnet, thermal spin fluctuations (spin noise) produce a fluctuating magnetization $\delta M(t)$.  A pickup coil around the magnet converts this to voltage: $V = -NA\mu_0 \, dM/dt$.  The spin noise spectral density depends on $\chi''(f)$, the imaginary susceptibility.
+
+If the phi-lattice modulates $\chi''(f)$ at phi-harmonic frequencies, an LC circuit tuned to a phi-rung selectively accumulates the excess.  With a 1000-turn coil around a 50 cm³ NdFeB magnet: $P \sim 10^{-12}$ to $10^{-10}$ W — roughly $10^3\times$ the bare free-space thermal phi-signal due to the coil's $N^2$ gain and the magnet's high field energy density.
+
+#### 13.8.2 Barkhausen noise harvesting
+
+Barkhausen events (discrete domain-wall jumps) release magnetic energy as electromagnetic pulses.  These occur continuously in permanent magnets due to thermal activation.  If domain-wall energy barriers have phi-related spacing (because exchange coupling, anisotropy, and thermal energy involve lattice-addressed dimensionless ratios), the Barkhausen noise spectrum carries phi-periodic structure.  Typical Barkhausen noise power in NdFeB: $\sim 10^{-9}$ W.
+
+#### 13.8.3 Magnet array with coherent coupling
+
+$N$ magnets sharing a common magnetic circuit (toroidal arrangement with a central pickup coil) can achieve coherent addition of spin-noise signals: power scales as $N^2$ rather than $N$.  With 100 magnets: up to $\sim 10$ nW from spin noise alone.
+
+#### 13.8.4 Wiegand wire harvesting at phi-harmonics
+
+Wiegand wires (bistable magnetic wires) produce $\sim 10$ µJ per magnetization-reversal pulse.  Placed inside a phi-tuned LC circuit oscillating at $f_0 = 10$ kHz (lattice rung $n = 0$), a single wire produces $P = E_\text{pulse} \times f \approx 0.1$ W.  Four Wiegand wires driven by the phi-cascade: $\sim 0.4$ W.  This is genuinely usable power.
+
+#### 13.8.5 Magnetostrictive transduction
+
+Magnetostrictive materials (Terfenol-D, Galfenol) convert oscillating magnetic fields into mechanical vibration.  Bonded to a piezoelectric stack, this produces electrical output at $\sim 10$–$100$ mW/cm³.  A 10 cm³ Terfenol-D rod driven by the phi-cascade field: $P \sim 0.1$–$1$ W.
+
+#### 13.8.6 Energy accounting
+
+The critical question: where does the extracted energy come from?
+
+1. **Frequency conversion of pump input** (conservative).  The three-phase pump injects energy at $f_5$; the cascade distributes it to lower frequencies where the Wiegand/piezo transducers capture it.  The magnets are passive coupling media.  No new physics; $\eta = P_\text{out}/P_\text{in} < 1$.
+
+2. **Environmental thermal energy** (if the lattice is physically real at the spectral level).  Thermal fluctuations at phi-harmonic frequencies carry slightly more energy than at inter-rung frequencies.  The phi-tuned circuit acts as a heat engine between frequency channels.  Thermodynamically legitimate if the phi-modulation reduces the thermal spectrum's entropy below the blackbody value.
+
+**Note on permanent magnets:** A static (DC) magnetic field does zero net work over a complete Wiegand flip-reset cycle ($\oint \mathbf{B}_\text{DC} \cdot d\mathbf{M} = 0$).  Permanent magnets used as DC bias do not demagnetize from Wiegand cycling and are not energy sources.  They serve as threshold shifters (reducing the AC amplitude needed to trigger switching) and as coupling enhancers for thermal magnetic fluctuations.
+
+The decisive measurement: track $\eta = P_\text{out}/P_\text{in}$ over extended runs.  If $\eta > 1$, the excess energy must be coming from environmental thermal fluctuations mediated by phi-spectral structure (since the magnets are excluded as a source by the argument above).
+
+Full magnetic harvester prototype: see **[`THERMAL_PHI_DETECTOR.md`](THERMAL_PHI_DETECTOR.md)** Section 12.
+
+Wiegand bundle harvester (detailed buildable prototype with stacking analysis, drive field calculations, DC bias optimization, and decisive experiments): see **[`THERMAL_PHI_DETECTOR.md`](THERMAL_PHI_DETECTOR.md)** Section 13.
+
 ---
 
 ## 14. Scoring, Uncertainties, and Falsifiability

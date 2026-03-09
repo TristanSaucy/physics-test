@@ -23,12 +23,15 @@ qweak_pos_*.pdf
 41586_*.xlsx
 pos_*.html
 
-# prototype design (not committed -- contains device IP)
+# prototype designs (not committed -- contains device IP)
 PROTOTYPE_DESIGN.md
+THERMAL_PHI_DETECTOR.md
+EM_PUMP_HARVESTER.md
 phi_lattice_prototype_schematic.png
 phi_ladder_cascade_schematic.png
 phi_ladder_circuit_diagram.png
 phi_ladder_mechanical_layout.png
+wiegand_bundle_prototype.png
 phi_ladder_parametric_design.tex
 phi_ladder_parametric_design.pdf
 phi_lattice_formulas_and_tests.tex

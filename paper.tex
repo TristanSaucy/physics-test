@@ -967,63 +967,85 @@ a complementary laboratory route through vacuum spectral measurements.
 \label{app:address_table}
 
 The full 43-ratio lattice mapping.  Each ratio is independent (not
-algebraically derivable from the others within the set).
+algebraically derivable from the others within the set).  Ratios are grouped
+by sector and sorted by $C$, then~$m$.
 
 \begin{table}[H]
 \centering
-\small
-\caption{Complete lattice address assignments for 43 dimensionless ratios.}
+\footnotesize
+\caption{Complete lattice address assignments for all 43 dimensionless ratios.}
 \label{tab:full_addresses}
 \begin{tabular}{@{}llrrrl@{}}
 \toprule
 Sector & Ratio & Value & $(C, m)$ & $C/\vp^m$ & Rel.~err \\
 \midrule
-\multicolumn{6}{@{}l}{\textit{Gauge couplings}} \\
-gauge & $1/\alpha$ & 137.036 & $(360, 2)$ & 137.508 & $+0.34\%$ \\
+\multicolumn{6}{@{}l}{\textit{Gauge couplings (5)}} \\
+gauge & $1/\alpha_{\mathrm{em}}$ & 137.036 & $(360, 2)$ & 137.508 & $+0.34\%$ \\
 gauge & $1/\alpha_s(m_H)$ & 8.867 & $(60, 4)$ & 8.754 & $-1.27\%$ \\
 gauge & $1/\alpha_2$ & 28.536 & $(120, 3)$ & 28.328 & $-0.73\%$ \\
 gauge & $1/\alpha_1^{\mathrm{GUT}}$ & 59.652 & $(60, 0)$ & 60.000 & $+0.58\%$ \\
+gauge & $\alpha/(2\pi)$ & 0.001161 & $(120, 24)$ & 0.001157 & $-0.35\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{Lepton mass ratios}} \\
+\multicolumn{6}{@{}l}{\textit{Lepton mass ratios (3)}} \\
 lepton & $m_\tau/m_e$ & 3477.2 & $(120, -7)$ & 3484.1 & $+0.20\%$ \\
-lepton & $m_p/m_e$ & 1836.2 & $(15, -10)$ & 1844.9 & $+0.48\%$ \\
+lepton & $m_\mu/m_e$ & 206.77 & $(120, -1)$ & 194.16 & $-6.10\%$ \\
 lepton & $m_\tau/m_\mu$ & 16.82 & $(45, 2)$ & 17.19 & $+2.21\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{Quark mass ratios}} \\
+\multicolumn{6}{@{}l}{\textit{Quark mass ratios (8)}} \\
+quark & $m_t/m_u$ & 78{,}527 & $(60, -15)$ & 81{,}840 & $+4.22\%$ \\
 quark & $m_t/m_\tau$ & 97.23 & $(60, -1)$ & 97.08 & $-0.15\%$ \\
+quark & $m_c/m_s$ & 13.66 & $(60, 3)$ & 14.16 & $+3.72\%$ \\
+quark & $m_t/m_b$ & 41.33 & $(180, 3)$ & 42.49 & $+2.81\%$ \\
 quark & $m_b/m_\tau$ & 2.352 & $(180, 9)$ & 2.368 & $+0.66\%$ \\
-quark & $m_H/m_W$ & 1.558 & $(45, 7)$ & 1.550 & $-0.54\%$ \\
-quark & $m_t/m_W$ & 2.149 & $(15, 4)$ & 2.188 & $+1.82\%$ \\
-quark & $m_Z/\Lambda_{\mathrm{QCD}}$ & 291.69 & $(180, -1)$ & 291.25 & $-0.15\%$ \\
+quark & $m_b/m_d$ & 889.4 & $(360, -2)$ & 942.5 & $+5.97\%$ \\
+quark & $m_c/m_u$ & 577.3 & $(360, -1)$ & 582.5 & $+0.90\%$ \\
+quark & $m_s/m_d$ & 19.79 & $(360, 6)$ & 20.06 & $+1.39\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{Energy hierarchy}} \\
-hierarchy & $\MPl/\mZ$ & $1.34\times 10^{17}$ & $(120, -82)$ & --- & $\sim\!0\%$ \\
-hierarchy & $\QGUT/\mZ$ & $3.5\times 10^{14}$ & $(360, -70)$ & --- & $\sim\!0\%$ \\
-hierarchy & $\MPl/\QGUT$ & $3.8\times 10^{2}$ & $(180, -1)$ & --- & $\sim\!0\%$ \\
+\multicolumn{6}{@{}l}{\textit{Baryon / meson (4)}} \\
+baryon & $m_p/m_e$ & 1836.2 & $(15, -10)$ & 1844.9 & $+0.48\%$ \\
+baryon & $(m_n - m_p)/m_e$ & 2.530 & $(45, 6)$ & 2.508 & $-0.89\%$ \\
+baryon & $m_p/m_\pi$ & 6.723 & $(120, 6)$ & 6.687 & $-0.52\%$ \\
+baryon & $m_n/m_p$ & 1.001 & $(120, 10)$ & 0.976 & $-2.57\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{CKM mixing}} \\
-CKM & $|V_{ud}|$ & 0.9737 & $(120, 10)$ & 0.9754 & $+0.20\%$ \\
+\multicolumn{6}{@{}l}{\textit{Electroweak sector (7)}} \\
+EW & $m_t/m_W$ & 2.149 & $(15, 4)$ & 2.188 & $+1.82\%$ \\
+EW & $m_H/m_Z$ & 1.374 & $(15, 5)$ & 1.353 & $-1.53\%$ \\
+EW & $m_Z/m_t$ & 0.5278 & $(15, 7)$ & 0.5166 & $-2.12\%$ \\
+EW & $m_H/m_W$ & 1.558 & $(45, 7)$ & 1.550 & $-0.54\%$ \\
+EW & $v_{\mathrm{EW}}/\mZ$ & 2.700 & $(120, 8)$ & 2.554 & $-5.40\%$ \\
+EW & $m_Z/m_W$ & 1.134 & $(360, 12)$ & 1.118 & $-1.45\%$ \\
+EW & $G_F \mZ^2$ & 0.0970 & $(360, 17)$ & 0.1008 & $+3.94\%$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{Scale hierarchies (5)}} \\
+hierarchy & $\MPl/\mZ$ & $1.34\times 10^{17}$ & $(120, -72)$ & $1.34\times 10^{17}$ & $-0.10\%$ \\
+hierarchy & $\MPl/\QGUT$ & 763.1 & $(180, -3)$ & 762.5 & $-0.07\%$ \\
+hierarchy & $\mZ/\Lambda_{\mathrm{QCD}}$ & 291.69 & $(180, -1)$ & 291.25 & $-0.15\%$ \\
+hierarchy & $\QGUT/\mZ$ & $1.75\times 10^{14}$ & $(360, -56)$ & $1.82\times 10^{14}$ & $+3.62\%$ \\
+hierarchy & $m_p/\Lambda_{\mathrm{QCD}}$ & 3.001 & $(360, 10)$ & 2.927 & $-2.48\%$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{CKM mixing (6)}} \\
 CKM & $|V_{us}|$ & 0.2243 & $(45, 11)$ & 0.2261 & $+0.81\%$ \\
-CKM & $|V_{td}|$ & 0.0080 & $(120, 20)$ & 0.0080 & $-0.84\%$ \\
-CKM & $\delta_{\mathrm{CKM}}/\pi$ & 0.364 & $(45, 10)$ & 0.365 & $+0.48\%$ \\
+CKM & $|V_{cb}/V_{ub}|$ & 10.68 & $(45, 3)$ & 10.62 & $-0.54\%$ \\
+CKM & $|V_{us}/V_{cb}|$ & 5.498 & $(60, 5)$ & 5.410 & $-1.59\%$ \\
+CKM & $|V_{ub}|$ & 0.00382 & $(60, 20)$ & 0.00397 & $+3.83\%$ \\
+CKM & $J_{\mathrm{CKM}}$ & $3.18\times 10^{-5}$ & $(60, 30)$ & $3.22\times 10^{-5}$ & $+1.41\%$ \\
+CKM & $|V_{cb}|$ & 0.0408 & $(360, 19)$ & 0.0385 & $-5.62\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{PMNS mixing}} \\
+\multicolumn{6}{@{}l}{\textit{PMNS mixing (3)}} \\
 PMNS & $\sin^2\theta_{12}$ & 0.304 & $(60, 11)$ & 0.302 & $-0.82\%$ \\
 PMNS & $\sin^2\theta_{23}$ & 0.573 & $(180, 12)$ & 0.559 & $-2.44\%$ \\
-PMNS & $\sin^2\theta_{13}$ & 0.02219 & $(120, 18)$ & 0.02077 & $-6.40\%$ \\
+PMNS & $\sin^2\theta_{13}$ & 0.02219 & $(120, 18)$ & 0.02077 & $-6.41\%$ \\
 \addlinespace
-\multicolumn{6}{@{}l}{\textit{Anomalous magnetic moments}} \\
+\multicolumn{6}{@{}l}{\textit{Anomalous magnetic moments (2)}} \\
 anomalous & $a_e = (g{-}2)_e/2$ & 0.001160 & $(120, 24)$ & 0.001157 & $-0.20\%$ \\
-anomalous & $\alpha/(2\pi)$ & 0.001161 & $(120, 24)$ & 0.001157 & $-0.35\%$ \\
-\addlinespace
-\multicolumn{6}{@{}l}{\textit{Baryon/meson}} \\
-baryon & $(m_n - m_p)/m_e$ & 2.530 & $(45, 6)$ & 2.508 & $-0.89\%$ \\
+anomalous & $a_\mu = (g{-}2)_\mu/2$ & 0.001166 & $(120, 24)$ & 0.001157 & $-0.73\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Note: this table shows a representative selection.  The complete 43-ratio
-table is available in the supplementary material.
+All 43 ratios map onto exactly the six $C$~values from the gauge-group
+construction.  No ratio requires a $C$~value outside the frozen menu.  The
+sector counts in parentheses sum to~43.
 
 \section{Reproducibility: CLI commands}
 \label{app:cli}
