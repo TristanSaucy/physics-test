@@ -604,7 +604,7 @@ $$
 \frac{G_{\text{weak}}}{G_{\text{strong}}} = \frac{C_w}{C_s} \phi^{m_s - m_w} \approx 2\phi, \qquad \frac{G_{\text{EM}}}{G_{\text{weak}}} = \frac{C_{\text{em}}}{C_w} \phi^{m_w - m_{\text{em}}} \approx 3\phi
 $$
 
-A one-step $m$ shift plus a small integer $C$ ratio produces an $\mathcal{O}(1\text{-}10)$ hierarchy across the gauge forces.
+A one-step $m$ shift plus a small integer $C$ ratio produces an $\mathcal{O}(1$–$10)$ hierarchy across the gauge forces.
 
 For **ordinary-matter gravity** (proton anchor) at $(C,m) \approx (45, -175)$:
 
@@ -1020,7 +1020,7 @@ $$
 \log_{10}\!\left(\frac{M_{\text{GUT}}^4}{\alpha_{\text{GUT}}^2 \, m_p^5}\right) \approx 68.9
 $$
 
-After converting to years (introducing a factor from $\hbar/c$ and unit conversion), this places the proton lifetime around $10^{34\text{-}35}$ years -- right at the current Super-Kamiokande bound ($\tau_p > 10^{34}$ years for $p \to e^+\pi^0$) and squarely in the Hyper-Kamiokande detection window ($\sim 10^{35}$).
+After converting to years (introducing a factor from $\hbar/c$ and unit conversion), this places the proton lifetime around $10^{34}$–$10^{35}$ years -- right at the current Super-Kamiokande bound ($\tau_p > 10^{34}$ years for $p \to e^+\pi^0$) and squarely in the Hyper-Kamiokande detection window ($\sim 10^{35}$).
 
 **This is a falsifiable prediction**: the lattice constrains both $\alpha_{\text{GUT}}$ and $M_{\text{GUT}}$, producing a specific proton lifetime range that can be tested by next-generation nucleon decay experiments.
 
@@ -1033,7 +1033,7 @@ The lattice-constrained unification analysis yields a self-consistent picture:
 3. **$m = -1$ places GUT at the gauge-gravity boundary**: one lattice step below the gauge cluster, transitioning into the gravity realm.
 4. **The energy hierarchy is phi-quantized**: $Q_{\text{GUT}}/m_Z \approx \phi^{70}$, $M_{\text{Planck}}/Q_{\text{GUT}} \approx \phi^{12}$, and $70 + 12 = 82 \approx \log_\phi(M_{\text{Planck}}/m_Z)$.
 5. **Gravity approaches the gauge sector at high energy**: the gauge-gravity gap shrinks from ~40 lattice steps (at $m_Z$) to 13 steps (at $Q_{\text{GUT}}$).
-6. **Proton lifetime falls in the testable range**: $\tau_p \sim 10^{34\text{-}35}$ years, accessible to Hyper-Kamiokande.
+6. **Proton lifetime falls in the testable range**: $\tau_p \sim 10^{34}$–$10^{35}$ years, accessible to Hyper-Kamiokande.
 
 This is a diagnostic, not proof of unification. But the convergence of multiple independent consistency checks -- group theory, m-topology, energy hierarchies, and gravity bridge -- onto a single coherent picture is non-trivial.
 
@@ -1240,7 +1240,7 @@ Twenty new dimensionless ratios not in the original test set, including neutrino
 |---|---:|---|---:|---:|
 | $\sin\theta_C$ (Cabibbo) | 0.2253 | (45, 11) | 0.2261 | **+0.37%** |
 | $\sin^2\theta_C$ | 0.05076 | (180, 17) | 0.05041 | **-0.70%** |
-| $a_e = (g{-}2)_e/2$ | 0.001160 | (120, 24) | 0.001157 | **-0.20%** |
+| $a_e = (g - 2)_e/2$ | 0.001160 | (120, 24) | 0.001157 | **-0.20%** |
 | $\alpha/(2\pi)$ | 0.001161 | (120, 24) | 0.001157 | **-0.35%** |
 | $(m_n - m_p)/m_e$ | 2.530 | (45, 6) | 2.508 | **-0.89%** |
 
@@ -1259,7 +1259,7 @@ The enrichment **persists out-of-sample**: the pre-registered set shows 1.60× e
 1. **The enrichment is real and replicable**: it holds at 1.76× across 40 independent dimensionless ratios, surviving out-of-sample testing.
 2. **Base 360 is not uniquely the best by enrichment alone**, but the top-performing bases are all members of the 360-family (divisors and multiples).
 3. **C-value clustering is not significant by count alone** — the case for $C = 15$ rests on its group-theoretic derivation and GUT connection, not on how many ratios hit it.
-4. **The Cabibbo angle and electron $g{-}2$** are the most precise pre-registered hits, both landing within 0.4% of lattice points from completely independent physics.
+4. **The Cabibbo angle and electron $g - 2$** are the most precise pre-registered hits, both landing within 0.4% of lattice points from completely independent physics.
 
 ### 12.15 Deep structural analysis (`gut-deep`)
 
@@ -1284,9 +1284,9 @@ The combined enrichment of **2.68× at <1%** is the strongest result across all 
 | C | # ratios | Representative members |
 |---:|---:|---|
 | 15 | 4 | $m_p/m_e$, $m_t/m_W$, $m_H/m_Z$, $m_Z/m_t$ |
-| 45 | 5 | $m_\tau/m_\mu$, $|V_{cb}/V_{ub}|$, $(m_n-m_p)/m_e$, $m_H/m_W$, $|V_{us}|$ |
-| 60 | 9 | $m_t/m_\tau$, $1/\alpha_s$, $\sin^2\theta_{12}^\text{PMNS}$, $|V_{us}/V_{cb}|$, $J_\text{CKM}$, ... |
-| 120 | 11 | $M_\text{Pl}/m_Z$, $m_\tau/m_e$, $\alpha/(2\pi)$, $a_e$, $a_\mu$, $|V_{ud}|$, ... |
+| 45 | 5 | $m_\tau/m_\mu$, $\lvert V_{cb}/V_{ub}\rvert$, $(m_n-m_p)/m_e$, $m_H/m_W$, $\lvert V_{us}\rvert$ |
+| 60 | 9 | $m_t/m_\tau$, $1/\alpha_s$, $\sin^2\theta_{12}^\text{PMNS}$, $\lvert V_{us}/V_{cb}\rvert$, $J_\text{CKM}$, ... |
+| 120 | 11 | $M_\text{Pl}/m_Z$, $m_\tau/m_e$, $\alpha/(2\pi)$, $a_e$, $a_\mu$, $\lvert V_{ud}\rvert$, ... |
 | 180 | 5 | $M_\text{Pl}/M_\text{GUT}$, $m_Z/\Lambda_\text{QCD}$, $m_b/m_\tau$, $\sin^2\theta_{23}^\text{PMNS}$, ... |
 | 360 | 9 | $1/\alpha_\text{em}$, $M_\text{GUT}/m_Z$, $m_c/m_u$, $m_s/m_d$, $m_Z/m_W$, ... |
 
@@ -1319,14 +1319,14 @@ All 22 mixing matrix parameters (9 CKM magnitudes, CKM ratios, Jarlskog invarian
 | < 5% | 20 | **91%** |
 
 Notable results:
-- $|V_{ud}| = 0.97373$ → $(120, 10)$ with **+0.20%** error
-- $|V_{us}| = 0.2243$ → $(45, 11)$ with **+0.81%** error (Cabibbo angle)
-- $|V_{td}| = 0.0080$ → $(120, 20)$ with **−0.84%** error
+- $\lvert V_{ud}\rvert = 0.97373$ → $(120, 10)$ with **+0.20%** error
+- $\lvert V_{us}\rvert = 0.2243$ → $(45, 11)$ with **+0.81%** error (Cabibbo angle)
+- $\lvert V_{td}\rvert = 0.0080$ → $(120, 20)$ with **−0.84%** error
 - $\delta_\text{CKM}/\pi = 0.364$ → $(45, 10)$ with **+0.48%** error
-- $|V_{us}|^2 = 0.0503$ → $(180, 17)$ with **+0.19%** error (Wolfenstein $\lambda^2$)
+- $\lvert V_{us}\rvert^2 = 0.0503$ → $(180, 17)$ with **+0.19%** error (Wolfenstein $\lambda^2$)
 - $\sin^2\theta_{12}^\text{PMNS} = 0.304$ → $(60, 11)$ with **−0.82%** error
 
-CKM/PMNS C-value clustering: $|V_{us}|$ and $|V_{cd}|$ both map to the same address $(45, 11)$, reflecting the unitarity constraint $|V_{us}| \approx |V_{cd}|$. The CKM CP phase $\delta/\pi$ also maps to $C = 45$.
+CKM/PMNS C-value clustering: $\lvert V_{us}\rvert$ and $\lvert V_{cd}\rvert$ both map to the same address $(45, 11)$, reflecting the unitarity constraint $\lvert V_{us}\rvert \approx \lvert V_{cd}\rvert$. The CKM CP phase $\delta/\pi$ also maps to $C = 45$.
 
 #### 12.15.3 Lattice operation algebra
 
@@ -1447,7 +1447,7 @@ Seven neutrino-sector dimensionless ratios were tested:
 
 The inverse splitting ratio $\Delta m^2_\text{atm}/\Delta m^2_\text{sol}$ hits $(360, 5)$ at **$-0.35\%$**, and the solar splitting in electron-mass units hits $(15, 80)$ at **$-0.66\%$**.
 
-**Cross-sector connection**: $(\Delta m^2_\text{atm})^{1/4} \approx 0.223$ maps to $(45, 11)$ — the **same address** as $|V_{us}|$ (the Cabibbo angle). This links the neutrino mass hierarchy to quark mixing through a shared lattice point.
+**Cross-sector connection**: $(\Delta m^2_\text{atm})^{1/4} \approx 0.223$ maps to $(45, 11)$ — the **same address** as $\lvert V_{us}\rvert$ (the Cabibbo angle). This links the neutrino mass hierarchy to quark mixing through a shared lattice point.
 
 #### 12.16.4 $G \leftrightarrow 1/G$ duality
 
@@ -1514,19 +1514,19 @@ Exceptions: $m_K/m_\pi$ still hits (15, 3) at **0.11%**, $m_p/m_\pi$ hits (120, 
 
 #### 12.16.9 Fibonacci structure in $m$-values
 
-Zeckendorf decomposition was applied to all 43 occupied $|m|$ values:
+Zeckendorf decomposition was applied to all 43 occupied $\lvert m\rvert$ values:
 
-| Property | Count | Rate | Expected (random $|m| \leq 75$) |
+| Property | Count | Rate | Expected (random $\lvert m\rvert \leq 75$) |
 |---|---:|---:|---:|
-| Fibonacci $|m|$ | 16/43 | **37%** | ~16% |
-| Lucas $|m|$ | 20/43 | **47%** | ~16% |
+| Fibonacci $\lvert m\rvert$ | 16/43 | **37%** | ~16% |
+| Lucas $\lvert m\rvert$ | 20/43 | **47%** | ~16% |
 
 The $m$-values are **2.3× enriched** in Fibonacci numbers and **2.9× enriched** in Lucas numbers. The Zeckendorf length distribution:
 
 | Length | Count | Meaning |
 |---:|---:|---|
-| 1 | 16 | $|m|$ is itself a Fibonacci number |
-| 2 | 20 | $|m|$ is a sum of two non-consecutive Fibonacci numbers |
+| 1 | 16 | $\lvert m\rvert$ is itself a Fibonacci number |
+| 2 | 20 | $\lvert m\rvert$ is a sum of two non-consecutive Fibonacci numbers |
 | 3 | 6 | Sum of three |
 | 4 | 1 | Sum of four |
 
@@ -1551,11 +1551,11 @@ The most populated $m$-values across all C-bands:
 
 | $m$ | Count | Fibonacci/Lucas? | Occupants |
 |---:|---:|---|---|
-| 3 | 4 | **F + L** | $|V_{cb}/V_{ub}|$, $m_c/m_s$, $1/\alpha_2$, $m_t/m_b$ |
+| 3 | 4 | **F + L** | $\lvert V_{cb}/V_{ub}\rvert$, $m_c/m_s$, $1/\alpha_2$, $m_t/m_b$ |
 | $-1$ | 4 | **F + L** | $m_t/m_\tau$, $m_\mu/m_e$, $m_Z/\Lambda_\text{QCD}$, $m_c/m_u$ |
 | 6 | 3 | — | $(m_n-m_p)/m_e$, $m_p/m_\pi$, $m_s/m_d$ |
 | 24 | 3 | — | $\alpha/(2\pi)$, $a_e$, $a_\mu$ |
-| 11 | 2 | **L** | $|V_{us}|$, $\sin^2\theta_{12}^\text{PMNS}$ |
+| 11 | 2 | **L** | $\lvert V_{us}\rvert$, $\sin^2\theta_{12}^\text{PMNS}$ |
 | 12 | 2 | — | $\sin^2\theta_{23}^\text{PMNS}$, $m_Z/m_W$ |
 
 The two most populated $m$-values ($m = 3$ and $m = -1$) are both Fibonacci *and* Lucas numbers. The address $m = 11$ hosts both the Cabibbo angle and the PMNS solar mixing angle — a CKM-PMNS coincidence at a Lucas index.
@@ -1577,7 +1577,7 @@ At this $m$-index, the C-ratios between quantities are simple integers:
 $$\frac{m_t/m_\tau}{m_Z/\Lambda_\text{QCD}} \approx \frac{60}{180} = \frac{1}{3}, \qquad \frac{m_Z/\Lambda_\text{QCD}}{m_c/m_u} \approx \frac{180}{360} = \frac{1}{2}$$
 
 Similarly at $m = 3$, four quantities from four C-bands share the index:
-- $(45, 3)$: $|V_{cb}/V_{ub}|$, $(60, 3)$: $m_c/m_s$, $(120, 3)$: $1/\alpha_2$, $(180, 3)$: $m_t/m_b$.
+- $(45, 3)$: $\lvert V_{cb}/V_{ub}\rvert$, $(60, 3)$: $m_c/m_s$, $(120, 3)$: $1/\alpha_2$, $(180, 3)$: $m_t/m_b$.
 
 The implied relation $m_c/m_s \div m_t/m_b \approx 60/180 = 1/3$ is exact to 0.88%.
 
@@ -1589,13 +1589,13 @@ The lattice assigns specific addresses to ratios. When two ratios share the same
 
 | Relation | Predicted | Actual | Error |
 |---|---:|---:|---:|
-| $\frac{|V_{cb}/V_{ub}|}{m_H/m_W} \approx \varphi^4$ | 6.8541 | 6.8543 | **+0.00%** |
+| $\frac{\lvert V_{cb}/V_{ub}\rvert}{m_H/m_W} \approx \varphi^4$ | 6.8541 | 6.8543 | **+0.00%** |
 | $\frac{M_\text{Pl}/M_\text{GUT}}{m_Z/\Lambda_\text{QCD}} \approx \varphi^2$ | 2.6180 | 2.6160 | $-0.08\%$ |
-| $\frac{|V_{cb}/V_{ub}|}{(m_n-m_p)/m_e} \approx \varphi^3$ | 4.2361 | 4.2210 | $-0.36\%$ |
+| $\frac{\lvert V_{cb}/V_{ub}\rvert}{(m_n-m_p)/m_e} \approx \varphi^3$ | 4.2361 | 4.2210 | $-0.36\%$ |
 | $\frac{m_c/m_s}{1/\alpha_s} \approx \varphi$ | 1.6180 | 1.6100 | $-0.49\%$ |
 | $\frac{m_c/m_u}{1/\alpha_\text{em}} \approx \varphi^3$ | 4.2361 | 4.2126 | $-0.55\%$ |
 
-The first relation — $|V_{cb}/V_{ub}|$ divided by $m_H/m_W$ equals $\varphi^4$ — is exact to the precision of the input data. This connects CKM quark mixing to EW mass ratios through a golden-ratio power.
+The first relation — $\lvert V_{cb}/V_{ub}\rvert$ divided by $m_H/m_W$ equals $\varphi^4$ — is exact to the precision of the input data. This connects CKM quark mixing to EW mass ratios through a golden-ratio power.
 
 **Same-$m$, cross-band relations (predicted C-ratios):**
 
@@ -1611,7 +1611,7 @@ The first relation — $(m_t/m_\tau) / (m_Z/\Lambda_\text{QCD}) = 1/3$ — conne
 
 $\sin^2\theta_W$ at all measured energy scales maps to a single lattice address:
 
-$$\sin^2\theta_W(\overline{\text{MS}}) \to (120, 13) \quad \text{at all scales from } Q \sim 0 \text{ to } 10 \text{ TeV}$$
+$$\sin^2\theta_W(\overline{\mathrm{MS}}) \to (120, 13) \quad \text{at all scales from } Q \sim 0 \text{ to } 10 \text{ TeV}$$
 
 The lattice value is $120/\varphi^{13} = 0.23033$, which is 0.39% from the $m_Z$ MSbar value. The on-shell value at $m_Z$ maps to a different address $(45, 11)$. The lattice resolves the MSbar vs on-shell scheme choice as a **band transition**: $C = 120 \to C = 45$, $m = 13 \to m = 11$.
 
@@ -1657,7 +1657,7 @@ From 22 confirmed addresses, we extract 19 non-trivial pair relations. The tight
 | Relation | Predicted | Actual | Error |
 |---|---:|---:|---:|
 | $(m_Z/\Lambda_\text{QCD}) \div (m_t/m_\tau) = 180/60$ | 3.0000 | 3.0001 | **+0.00%** |
-| $|V_{cb}/V_{ub}| \div (m_H/m_W) = \varphi^4$ | 6.8541 | 6.8556 | **+0.02%** |
+| $\lvert V_{cb}/V_{ub}\rvert \div (m_H/m_W) = \varphi^4$ | 6.8541 | 6.8556 | **+0.02%** |
 | $(M_\text{Pl}/M_\text{GUT}) \div (m_Z/\Lambda_\text{QCD}) = \varphi^2$ | 2.6180 | 2.6160 | **$-0.08\%$** |
 
 Of 19 relations: **3 exact to $<0.1\%$**, **12 under 1%**.
@@ -1670,7 +1670,7 @@ Of 19 relations: **3 exact to $<0.1\%$**, **12 under 1%**.
 | $M_\text{GUT}$ from $M_\text{Pl}$ | $M_\text{GUT} = M_\text{Pl}/(180\varphi^3)$ | $1.601 \times 10^{16}$ GeV | $1.6 \times 10^{16}$ GeV | **$+0.07\%$** |
 | $m_H$ from $m_W$ | $m_H = m_W \times 45/\varphi^7$ | 124.58 GeV | 125.25 GeV | **$-0.54\%$** |
 | $m_p$ from $m_e$ | $m_p = m_e \times 15\varphi^{10}$ | 0.9427 GeV | 0.9383 GeV | $+0.48\%$ |
-| $\sin^2\theta_{12}$ from $|V_{us}|$ | $\sin^2\theta_{12} = |V_{us}| \times 4/3$ | 0.2991 | 0.304 | $-1.62\%$ |
+| $\sin^2\theta_{12}$ from $\lvert V_{us}\rvert$ | $\sin^2\theta_{12} = \lvert V_{us}\rvert \times 4/3$ | 0.2991 | 0.304 | $-1.62\%$ |
 
 The Higgs mass prediction $m_H = m_W \times 45/\varphi^7 = 124.6$ GeV uses only $m_W$ and lattice constants — zero free parameters.
 
@@ -1704,7 +1704,7 @@ Comparing the nearest lattice point to experimental $\alpha_s$ measurements at v
 | $pp$ jets (LHC 7 TeV) | 896 | 0.089 | 0.005 | $(120, 5)$ | 0.092 | $0.7\sigma$ |
 | Lattice QCD (global) | 91.2 | 0.1184 | 0.0008 | $(60, 4)$ | 0.1142 | $5.2\sigma$ |
 
-**7 of 9 measurements within $1\sigma$** of the nearest lattice point. Only the Z-pole measurements — which are the most precisely measured — show significant tension ($4\text{-}5\sigma$). This is expected: the lattice is discrete and cannot match the Z-pole value $\alpha_s(m_Z) = 0.1179$ exactly when the nearest site gives 0.1142. The physical implication is that $\alpha_s$ at $m_Z$ sits *between* two lattice sites, with the transition from $(60, 4)$ to another address occurring near $Q \sim m_Z$.
+**7 of 9 measurements within $1\sigma$** of the nearest lattice point. Only the Z-pole measurements — which are the most precisely measured — show significant tension ($4$–$5\sigma$). This is expected: the lattice is discrete and cannot match the Z-pole value $\alpha_s(m_Z) = 0.1179$ exactly when the nearest site gives 0.1142. The physical implication is that $\alpha_s$ at $m_Z$ sits *between* two lattice sites, with the transition from $(60, 4)$ to another address occurring near $Q \sim m_Z$.
 
 ### 12.21 Lattice selection rules for decays (`gut-explore` section 6)
 
@@ -1746,7 +1746,7 @@ The framework has **22 independent input quantities**, each mapping to a unique 
 | C | Count | Physics |
 |---:|---:|---|
 | 15 | 3 | $m_p/m_e$, $m_K/m_\pi$, $\Omega_\Lambda/\Omega_m$ |
-| 45 | 5 | $|V_{cb}/V_{ub}|$, $(m_n\text{-}m_p)/m_e$, $m_H/m_W$, $|V_{us}|$, $\eta_\text{baryon}$ |
+| 45 | 5 | $\lvert V_{cb}/V_{ub}\rvert$, $(m_n - m_p)/m_e$, $m_H/m_W$, $\lvert V_{us}\rvert$, $\eta_\text{baryon}$ |
 | 60 | 2 | $m_t/m_\tau$, $\sin^2\theta_{12}$ |
 | 120 | 4 | $a_e$, $m_\tau/m_e$, $M_\text{Pl}/m_Z$, $m_p/m_\pi$ |
 | 180 | 3 | $m_Z/\Lambda_\text{QCD}$, $M_\text{Pl}/M_\text{GUT}$, $m_b/m_\tau$ |
@@ -1826,7 +1826,7 @@ Each gauge sector's particles live in their natural C-band:
 | C-band | Group | Sector | Evidence |
 |---:|---|---|---|
 | 120 | SU(2) | Leptons | $e$, $\mu$, $\tau$ mass ratios |
-| 45 | SU(3) dim | Quarks (CKM) | $|V_{cb}/V_{ub}|$, $|V_{us}|$, $(m_n-m_p)/m_e$ |
+| 45 | SU(3) dim | Quarks (CKM) | $\lvert V_{cb}/V_{ub}\rvert$, $\lvert V_{us}\rvert$, $(m_n-m_p)/m_e$ |
 | 60 | SU(3) Coxeter | Quark masses | $m_t/m_\tau$, $m_c/m_s$, $\sin^2\theta_{12}$ |
 | 180 | SU(2) Coxeter | Scale hierarchies | $m_Z/\Lambda_\text{QCD}$, $M_\text{Pl}/M_\text{GUT}$ |
 | 360 | U(1) | EM / full spectrum | $1/\alpha$, $m_c/m_u$, $\Omega_\text{DM}$ |
@@ -1844,7 +1844,7 @@ Testing 17 previously untested dimensionless ratios:
 | $\sin^2\theta_W(M_\text{GUT}) = 3/8$ | 0.375 | $(120, 12)$ | **$-0.62\%$** |
 | $y_b$ (bottom Yukawa) | 0.0240 | $(360, 20)$ | **$-0.88\%$** |
 | $M_\text{Pl}/v_H$ | $4.96 \times 10^{16}$ | $(45, -72)$ | $+1.15\%$ |
-| $\sin^2\theta_W(\text{on-shell})$ | 0.223 | $(45, 11)$ | $+1.40\%$ |
+| $\sin^2\theta_W$ (on-shell) | 0.223 | $(45, 11)$ | $+1.40\%$ |
 | $J_\text{CKM}$ (Jarlskog) | $3.18 \times 10^{-5}$ | $(60, 30)$ | $+1.41\%$ |
 | $y_t$ (top Yukawa) | 0.992 | $(120, 10)$ | $-1.67\%$ |
 | $y_\tau$ (tau Yukawa) | 0.0102 | $(60, 18)$ | $+1.75\%$ |
@@ -1881,7 +1881,7 @@ The five worst outliers:
 
 | Quantity | Error | Diagnosis |
 |---|---:|---|
-| $|V_{cb}|$ | $-6.5\%$ | Small CKM element; nearest site $(360, 19)$ shared with $|V_{ts}|$ |
+| $\lvert V_{cb}\rvert$ | $-6.5\%$ | Small CKM element; nearest site $(360, 19)$ shared with $\lvert V_{ts}\rvert$ |
 | $m_\mu/m_e$ | $-6.1\%$ | The muon mass problem: 206.8 sits between $(120, -1) = 194.2$ and next site |
 | $\sin^2\theta_{13}(\text{PMNS})$ | $-5.6\%$ | Smallest PMNS angle; known to be hard to accommodate |
 | $m_H/m_t$ | $-4.7\%$ | Near-criticality ratio; may require 2-loop correction |
@@ -1893,7 +1893,7 @@ The **muon mass** is the single most significant failure. All other charged lept
 
 The muon mass ratio $m_\mu/m_e = 206.768$ sits almost exactly between two lattice sites from different C-bands:
 
-$$\underbrace{(120, -1) = 120\varphi = 194.16}_{\text{SU(2) band}} \quad < \quad 206.77 \quad < \quad \underbrace{(360, 1) = 360/\varphi = 222.49}_{\text{U(1) band}}$$
+$$(120, -1) = 120\varphi = 194.16 \;\; \text{[SU(2) band]} \quad < \quad 206.77 \quad < \quad (360, 1) = 360/\varphi = 222.49 \;\; \text{[U(1) band]}$$
 
 This makes the muon unique: it is the only fermion whose mass falls in the "gap" between bands rather than near a single lattice site. Five candidate resolutions are documented below. **No selection among them is made pending further analysis.**
 
@@ -2041,7 +2041,7 @@ Under 1-loop RG running, each gauge coupling hops between lattice sites as energ
 | $\alpha_1^{-1}$ | 20 | $(60, 0)$ | 3.0 decades |
 | $\alpha_3^{-1}$ | 24 | $(120, 2)$ | 2.6 decades |
 
-The weak coupling $\alpha_2^{-1}$ is the **slowest hopper**, crossing only 6 lattice sites between $m_Z$ and $M_\text{Pl}$. It spends nearly 4 decades of energy at $(360, 5) = 32.46$ before moving to $(60, 1) = 37.08$. The strong coupling is the fastest hopper, making 24 crossings. This asymmetry reflects the different beta function magnitudes: $|b_3| > |b_1| > |b_2|$.
+The weak coupling $\alpha_2^{-1}$ is the **slowest hopper**, crossing only 6 lattice sites between $m_Z$ and $M_\text{Pl}$. It spends nearly 4 decades of energy at $(360, 5) = 32.46$ before moving to $(60, 1) = 37.08$. The strong coupling is the fastest hopper, making 24 crossings. This asymmetry reflects the different beta function magnitudes: $\lvert b_3\rvert > \lvert b_1\rvert > \lvert b_2\rvert$.
 
 ### 12.37 Cosmological phase transitions as $\varphi$-powers (`gut-struct` section 2)
 
@@ -2058,12 +2058,12 @@ The **$\varphi$-power relations** between transitions are remarkably tight:
 
 | Ratio | $\varphi$-power | Error |
 |---|---:|---:|
-| $E_\text{GUT} / E_\text{EW-crossover}$ | $\varphi^{67}$ | **$-0.0\%$** |
+| $E_\text{GUT} / E_\text{EW cross.}$ | $\varphi^{67}$ | **$-0.0\%$** |
 | $E_\text{GUT} / E_\text{EW}$ | $\varphi^{66}$ | $+0.1\%$ |
 | $E_\text{GUT} / E_\text{QCD}$ | $\varphi^{81}$ | $-0.1\%$ |
-| $E_\text{QCD} / E_{\nu\text{-decoup}}$ | $\varphi^{11}$ | $+0.1\%$ |
-| $E_{\nu\text{-decoup}} / E_\text{DE-dom}$ | $\varphi^{31}$ | **$+0.0\%$** |
-| $E_\text{EW} / E_{\nu\text{-decoup}}$ | $\varphi^{26}$ | $-0.8\%$ |
+| $E_\text{QCD} / E_{\nu\text{ dec.}}$ | $\varphi^{11}$ | $+0.1\%$ |
+| $E_{\nu\text{ dec.}} / E_\text{DE dom.}$ | $\varphi^{31}$ | **$+0.0\%$** |
+| $E_\text{EW} / E_{\nu\text{ dec.}}$ | $\varphi^{26}$ | $-0.8\%$ |
 
 The entire thermal history of the universe is encoded as integer $\varphi$-steps. The GUT-to-EW-crossover ratio is $\varphi^{67}$ to better than 0.05% precision. The QCD-to-neutrino-decoupling ratio is $\varphi^{11}$ to 0.1%. The lattice provides a **discrete clock** for cosmological history: each major phase transition is separated from every other by an integer number of $\varphi$-ticks.
 
@@ -2126,11 +2126,11 @@ Testing whether the occupied lattice configuration minimizes a simple action:
 | C-band entropy efficiency | **99.4%** |
 | Sites in golden zone ($m \in [-5, 15]$) | **96.6%** |
 | Fibonacci gap fraction | **91.7%** (11/12) |
-| Mean $|m|$ | 5.8 |
+| Mean $\lvert m\rvert$ | 5.8 |
 
 The C-band entropy is 99.4% of maximal — physics populates all six C-bands almost uniformly. But 96.6% of occupied sites cluster in $m \in [-5, 15]$, and **11 of 12 inter-site gaps are Fibonacci numbers**. This 91.7% Fibonacci fraction (vs. ~25% expected for random) is the strongest structural signature yet found in the lattice.
 
-A candidate action $S = -H(C) + \lambda \sum_i |m_i|$ (maximize C-entropy while minimizing total m-displacement) would produce configurations qualitatively like the observed one: evenly spread in C, compressed in m, with Fibonacci-spaced gaps.
+A candidate action $S = -H(C) + \lambda \sum_i \lvert m_i\rvert$ (maximize C-entropy while minimizing total m-displacement) would produce configurations qualitatively like the observed one: evenly spread in C, compressed in m, with Fibonacci-spaced gaps.
 
 ### 12.42 CP violation on the lattice (`gut-precision` section 3)
 
@@ -2159,7 +2159,7 @@ CMB observables:
 | Observable | Value | $(C, m)$ | Error |
 |---|---:|---|---:|
 | $n_s$ (spectral index) | 0.9649 | $(45, 8)$ | **$-0.73\%$** |
-| $N_\text{e-folds}$ | 60 | $(60, 0)$ | **$+0.00\%$** |
+| $N_\mathrm{efolds}$ | 60 | $(60, 0)$ | **$+0.00\%$** |
 | $1/A_s$ (inverse amplitude) | $4.76 \times 10^8$ | $(60, -33)$ | **$-0.70\%$** |
 | $1/(1-n_s)$ | 28.49 | $(120, 3)$ | **$-0.57\%$** |
 | $16(1-n_s)$ | 0.5616 | $(180, 12)$ | **$-0.46\%$** |
@@ -2269,7 +2269,7 @@ The occupied lattice sites exhibit a translation symmetry at $\Delta m = \pm 4$:
 | Sub-5% | 45 | 96% |
 | Over 5% | 2 | 4% |
 
-The only quantities exceeding 5% error are both the muon mass ratio $m_\mu/m_e$ ($-6.1\%$, see Section 12.30 for candidate resolutions). The top 5 hits: $N_\text{e-folds} = 60$ (exact), $J_\text{PMNS}$ ($-0.03\%$), $\eta/\pi^0$ ($-0.03\%$), magic ratio 82/28 ($-0.05\%$), $\Sigma^-/p$ ($+0.07\%$).
+The only quantities exceeding 5% error are both the muon mass ratio $m_\mu/m_e$ ($-6.1\%$, see Section 12.30 for candidate resolutions). The top 5 hits: $N_\mathrm{efolds} = 60$ (exact), $J_\text{PMNS}$ ($-0.03\%$), $\eta/\pi^0$ ($-0.03\%$), magic ratio 82/28 ($-0.05\%$), $\Sigma^-/p$ ($+0.07\%$).
 
 The C-band distribution is nearly uniform: $C = 360$ hosts 10, $C = 45$ hosts 10, $C = 60$ hosts 9, $C = 120$ hosts 8, $C = 15$ hosts 6, $C = 180$ hosts 4.
 
@@ -2647,7 +2647,7 @@ White's model requires $A(\omega_n) < 0$ for bound states — a reactive stop ba
 
 $$A(\omega_n) = -\frac{n^2}{a_0^2 \omega_*^2}, \qquad C(\omega_n) = \frac{2n^4}{a_0 \omega_*^2}$$
 
-The ratio $|C/A| = 2n^2 a_0$ involves the factor 2, which is the simplest lattice constant ($C = 2$, $m = 0$, i.e., $G = 2/\varphi^0 = 2$).  The Bohr radius $a_0 = \hbar/(m_e c \alpha)$ involves $1/\alpha \approx 137.036$, which is lattice-addressed.
+The ratio $\lvert C/A\rvert = 2n^2 a_0$ involves the factor 2, which is the simplest lattice constant ($C = 2$, $m = 0$, i.e., $G = 2/\varphi^0 = 2$).  The Bohr radius $a_0 = \hbar/(m_e c \alpha)$ involves $1/\alpha \approx 137.036$, which is lattice-addressed.
 
 More broadly: the existence of stop bands and pass bands in the vacuum medium is the same physics as resonant cavities and frequency-dependent mode structure.  The phi-lattice predicts the *boundaries* of these bands are organized at $\varphi$-harmonic frequencies, anchored to the dark energy scale $\Lambda_\text{DE}^{1/4} \approx 2.3$ meV (lattice address $\rho_\text{Pl}/\rho_\text{vac} = \varphi^{588}$).  Detecting $\varphi$-periodic thermal fluctuations in the GHz–THz range (Sections 13.8–13.9) would simultaneously probe White's vacuum medium structure and the phi-lattice's spectral predictions.
 
@@ -2910,7 +2910,7 @@ If any new particle is discovered (at the LHC, a future collider, or via indirec
 
 As $\alpha_s(\mu)$ runs from low to high energy, the inverse coupling $1/\alpha_s$ should pass through exact lattice points at calculable energy scales. The energy at which $1/\alpha_s = 60/\varphi^3 = 14.16$ (or $60/\varphi^2 = 22.92$, etc.) is a specific prediction testable against lattice QCD extractions of $\alpha_s$ at various scales.
 
-**10. Electron $g{-}2$ and $\alpha/(2\pi)$ share a lattice address**
+**10. Electron $g - 2$ and $\alpha/(2\pi)$ share a lattice address**
 
 Both $a_e = (g-2)_e/2 = 0.001160$ and $\alpha/(2\pi) = 0.001161$ map to the same address $(120, 24)$, with errors of $-0.20\%$ and $-0.35\%$ respectively. The lattice resolves these as the same point — it captures the Schwinger leading term and treats higher-order QED corrections as sub-lattice-spacing effects. This predicts that **any QED-dominated observable should map to the same C-band** as its leading-order coupling estimate.
 
